@@ -2880,6 +2880,19 @@ static readWordFromVSpace_ret_t readWordFromVSpace(pde_t *pd, word_t vaddr)
     return ret;
 }
 
+static void dumpRegisters(tcb_t *tptr)
+{
+    for (int i = 0; i < 6; i++) {
+        printf("R%-2d = 0x%08lx   R%-2d = 0x%08lx\n",
+            2 * i, getRegister(tptr, 2 * i),
+            2 * i + 1, getRegister(tptr, 2 * i + 1) );
+    }
+    printf("R12 = 0x%08lx   LR  = 0x%08lx\n",
+            getRegister(tptr, R12),
+            getRegister(tptr, LR) );
+
+}
+
 void Arch_userStackTrace(tcb_t *tptr)
 {
     cap_t threadRoot;
@@ -2915,6 +2928,8 @@ void Arch_userStackTrace(tcb_t *tptr)
             printf("0x%lx: INVALID\n", (long)address);
         }
     }
+
+    dumpRegisters(tptr);
 }
 #endif
 
