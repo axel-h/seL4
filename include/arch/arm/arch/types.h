@@ -14,6 +14,8 @@
 compile_assert(long_is_32bits, sizeof(unsigned long) == 4)
 #elif defined(CONFIG_ARCH_AARCH64)
 compile_assert(long_is_64bits, sizeof(unsigned long) == 8)
+#else
+#error "unsupported architecture"
 #endif
 
 typedef unsigned long word_t;

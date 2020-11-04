@@ -7,11 +7,18 @@
 
 #pragma once
 
-
 #include <config.h>
 #include <assert.h>
 #include <stdint.h>
 #include <mode/types.h>
+
+#if defined(CONFIG_ARCH_RISCV32)
+compile_assert(long_is_32bits, sizeof(unsigned long) == 4)
+#elif defined(CONFIG_ARCH_RISCV64)
+compile_assert(long_is_64bits, sizeof(unsigned long) == 8)
+#else
+#error "unsupported architecture"
+#endif
 
 typedef unsigned long word_t;
 typedef signed long sword_t;
