@@ -30,6 +30,9 @@
 #define BIT(n)       (1ul << (n))
 #define UL_CONST(x)  PASTE(x, ul)
 
+/* create dummy reference to a variable to avoid compiler warning */
+#define UNUSED_VARIABLE(x)  ((void)(x))
+
 #define PACKED       __attribute__((packed))
 #define NORETURN     __attribute__((__noreturn__))
 #define CONST        __attribute__((__const__))
