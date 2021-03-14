@@ -6,16 +6,16 @@
 
 #pragma once
 
-#define MASK(n) (BIT(n)-UL_CONST(1))
-#define IS_ALIGNED(n, b) (!((n) & MASK(b)))
-#define ROUND_DOWN(n, b) (((n) >> (b)) << (b))
-#define ROUND_UP(n, b) (((((n) - UL_CONST(1)) >> (b)) + UL_CONST(1)) << (b))
-#define ARRAY_SIZE(x) (sizeof(x) / sizeof(x[0]))
-#define MIN(a,b) (((a)<(b))?(a):(b))
-#define MAX(a,b) (((a)>(b))?(a):(b))
-#define PASTE(a, b) a ## b
-#define _STRINGIFY(a) #a
-#define STRINGIFY(a) _STRINGIFY(a)
+#define MASK(n)           (BIT(n)-UL_CONST(1))
+#define IS_ALIGNED(n, b)  (!((n) & MASK(b)))
+#define ROUND_DOWN(n, b)  (((n) >> (b)) << (b))
+#define ROUND_UP(n, b)    (((((n) - UL_CONST(1)) >> (b)) + UL_CONST(1)) << (b))
+#define ARRAY_SIZE(x)     (sizeof(x) / sizeof(x[0]))
+#define MIN(a,b)          (((a)<(b))?(a):(b))
+#define MAX(a,b)          (((a)>(b))?(a):(b))
+#define PASTE(a, b)       a ## b
+#define _STRINGIFY(a)     #a
+#define STRINGIFY(a)      _STRINGIFY(a)
 
 /* time constants */
 #define MS_IN_S     1000llu
@@ -26,9 +26,9 @@
 
 #ifndef __ASSEMBLER__
 
-#define NULL ((void *)0)
-#define BIT(n) (1ul << (n))
-#define UL_CONST(x) PASTE(x, ul)
+#define NULL         ((void *)0)
+#define BIT(n)       (1ul << (n))
+#define UL_CONST(x)  PASTE(x, ul)
 
 #define PACKED       __attribute__((packed))
 #define NORETURN     __attribute__((__noreturn__))
@@ -54,36 +54,35 @@
 /** MODIFIES: */
 void __builtin_unreachable(void);
 #define UNREACHABLE()  __builtin_unreachable()
-#define MAY_ALIAS    __attribute__((may_alias))
+#define MAY_ALIAS      __attribute__((may_alias))
 
-#define OFFSETOF(type, member) \
-    __builtin_offsetof(type, member)
+#define OFFSETOF(type, member)   __builtin_offsetof(type, member)
 
 #ifdef __GNUC__
 /* Borrowed from linux/include/linux/compiler.h */
-#define likely(x)   __builtin_expect(!!(x), 1)
-#define unlikely(x) __builtin_expect(!!(x), 0)
+#define likely(x)    __builtin_expect(!!(x), 1)
+#define unlikely(x)  __builtin_expect(!!(x), 0)
 #else
-#define likely(x)   (!!(x))
-#define unlikely(x) (!!(x))
+#define likely(x)    (!!(x))
+#define unlikely(x)  (!!(x))
 #endif
 
 /* need that for compiling with c99 instead of gnu99 */
-#define asm __asm__
+#define asm  __asm__
 
 /* Evaluate a Kconfig-provided configuration setting at compile-time. */
-#define config_set(macro) _is_set_(macro)
-#define _macrotest_1 ,
-#define _is_set_(value) _is_set__(_macrotest_##value)
-#define _is_set__(comma) _is_set___(comma 1, 0)
-#define _is_set___(_, v, ...) v
+#define config_set(macro)      _is_set_(macro)
+#define _macrotest_1           ,
+#define _is_set_(value)        _is_set__(_macrotest_##value)
+#define _is_set__(comma)       _is_set___(comma 1, 0)
+#define _is_set___(_, v, ...)  v
 
 /* Check the existence of a configuration setting, returning one value if it
  * exists and a different one if it does not */
-#define config_ternary(macro, true, false) _config_ternary(macro, true, false)
-#define _config_ternary(value, true, false) _config_ternary_(_macrotest_##value, true, false)
-#define _config_ternary_(comma, true, false) _config_ternary__(comma true, false)
-#define _config_ternary__(_, v, ...) v
+#define config_ternary(macro, true, false)    _config_ternary(macro, true, false)
+#define _config_ternary(value, true, false)   _config_ternary_(_macrotest_##value, true, false)
+#define _config_ternary_(comma, true, false)  _config_ternary__(comma true, false)
+#define _config_ternary__(_, v, ...)          v
 
 /** MODIFIES:
     FNSPEC
@@ -260,8 +259,8 @@ CONST popcountl(unsigned long mask)
 #else /* __ASSEMBLER__ */
 
 /* Some assemblers don't recognise ul (unsigned long) suffix */
-#define BIT(n) (1 << (n))
-#define UL_CONST(x) x
+#define BIT(n)       (1 << (n))
+#define UL_CONST(x)  x
 
 #endif /* !__ASSEMBLER__ */
 
