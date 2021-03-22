@@ -146,13 +146,10 @@ if(KernelFWholeProgram)
     KernelCommonFlags(-fwhole-program)
 endif()
 if(KernelDebugBuild)
-    KernelCommonFlags(-DDEBUG -g -ggdb)
-    # Pretend to CMake that we're a release build with debug info. This is because
-    # we do actually allow CMake to do the final link step, so we'd like it not to
-    # strip our binary
-    set(CMAKE_BUILD_TYPE "RelWithDebInfo")
+    KernelCommonFlags(-DNDEBUG)
+    set(CMAKE_BUILD_TYPE "MinSizeRel")
 else()
-    set(CMAKE_BUILD_TYPE "Release")
+    set(CMAKE_BUILD_TYPE "MinSizeRel")
 endif()
 if(KernelArchX86 AND Kernel64)
     KernelCommonFlags(-mcmodel=kernel)
