@@ -242,6 +242,14 @@ devices:
         macro: CONFIG_PRINTING
         user: true
 
+  # i,MX6 UART
+  - compatible:
+      - fsl,imx6q-uart
+    regions:
+      - index: 0
+        kernel: UART_PPTR
+        kernel_size: 0x10000
+
   # RISC-V PLIC
   - compatible:
       - riscv,plic0
