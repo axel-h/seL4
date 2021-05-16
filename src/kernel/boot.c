@@ -686,10 +686,7 @@ BOOT_CODE static inline pptr_t ceiling_kernel_window(pptr_t p)
     /* Adjust address if it exceeds the kernel window
      * Note that we compare physical address in case of overflow.
      */
-    if (pptr_to_paddr((void *)p) > PADDR_TOP) {
-        p = PPTR_TOP;
-    }
-    return p;
+    return (pptr_to_paddr((void *)p) > PADDR_TOP) ? PPTR_TOP : p;
 }
 
 /* we can't declare arrays on the stack, so this is space for
