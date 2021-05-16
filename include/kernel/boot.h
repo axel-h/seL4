@@ -42,11 +42,6 @@ extern ndks_boot_t ndks_boot;
 
 /* function prototypes */
 
-static inline bool_t is_reg_empty(region_t reg)
-{
-    return reg.start == reg.end;
-}
-
 bool_t init_freemem(word_t n_available, const p_region_t *available,
                     word_t n_reserved, const region_t *reserved,
                     v_region_t it_v_reg, word_t extra_bi_size_bits);

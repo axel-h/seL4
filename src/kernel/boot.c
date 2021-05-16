@@ -23,6 +23,11 @@ BOOT_BSS ndks_boot_t ndks_boot;
 BOOT_BSS rootserver_mem_t rootserver;
 BOOT_BSS static region_t rootserver_mem;
 
+BOOT_CODE static inline bool_t is_reg_empty(const region_t reg)
+{
+    return (reg.start == reg.end);
+}
+
 BOOT_CODE static void merge_regions(void)
 {
     /* Walk through reserved regions and see if any can be merged */
