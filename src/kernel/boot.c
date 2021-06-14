@@ -510,8 +510,11 @@ BOOT_CODE bool_t provide_cap(cap_t root_cnode_cap, cap_t cap)
                BIT(CONFIG_ROOT_CNODE_SIZE_BITS));
         return false;
     }
-    write_slot(SLOT_PTR(pptr_of_cap(root_cnode_cap), ndks_boot.slot_pos_cur), cap);
+
+    write_slot(SLOT_PTR(pptr_of_cap(root_cnode_cap), ndks_boot.slot_pos_cur),
+               cap);
     ndks_boot.slot_pos_cur++;
+
     return true;
 }
 
