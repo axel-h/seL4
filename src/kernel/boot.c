@@ -240,13 +240,12 @@ create_root_cnode(void)
     /* write the number of root CNode slots to global state */
     ndks_boot.slot_pos_max = BIT(CONFIG_ROOT_CNODE_SIZE_BITS);
 
-    cap_t cap =
-        cap_cnode_cap_new(
-            CONFIG_ROOT_CNODE_SIZE_BITS,      /* radix      */
-            wordBits - CONFIG_ROOT_CNODE_SIZE_BITS, /* guard size */
-            0,                                /* guard      */
-            rootserver.cnode              /* pptr       */
-        );
+    cap_t cap = cap_cnode_cap_new(
+                    CONFIG_ROOT_CNODE_SIZE_BITS, /* radix */
+                    wordBits - CONFIG_ROOT_CNODE_SIZE_BITS, /* guard size */
+                    0, /* guard */
+                    rootserver.cnode /* pptr */
+                );
 
     /* write the root CNode cap into the root CNode */
     write_slot(SLOT_PTR(rootserver.cnode, seL4_CapInitThreadCNode), cap);
