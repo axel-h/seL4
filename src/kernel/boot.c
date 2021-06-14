@@ -330,11 +330,15 @@ BOOT_CODE void populate_bi_frame(node_id_t node_id, word_t num_nodes, vptr_t ipc
 BOOT_CODE bool_t provide_cap(cap_t root_cnode_cap, cap_t cap)
 {
     if (ndks_boot.slot_pos_cur >= ndks_boot.slot_pos_max) {
-        printf("Kernel init failed: ran out of cap slots\n");
+        printf("ERROR: all %"SEL4_PRIu_word" slots used, can't add another cap\n",
+               ndks_boot.slot_pos_max);
         return false;
     }
-    write_slot(SLOT_PTR(pptr_of_cap(root_cnode_cap), ndks_boot.slot_pos_cur), cap);
+
+    write_slot(SLOT_PTR(pptr_of_cap(root_cnode_cap), ndks_boot.slot_pos_cur),
+               cap);
     ndks_boot.slot_pos_cur++;
+
     return true;
 }
 
