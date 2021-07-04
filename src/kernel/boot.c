@@ -25,6 +25,13 @@ BOOT_BSS static region_t rootserver_mem;
 
 BOOT_CODE static inline bool_t is_reg_empty(const region_t reg)
 {
+    if (reg.start > reg.end) {
+        printf("ERROR: is_reg_empty() for invalid region "
+               "start=%"SEL4_PRIx_word" end=%"SEL4_PRIx_word"\n",
+               reg.start, reg.end);
+        assert(0);
+    }
+
     return (reg.start == reg.end);
 }
 
@@ -106,9 +113,15 @@ BOOT_CODE bool_t insert_region(region_t reg)
         return true;
     }
     for (word_t i = 0; i < MAX_NUM_FREEMEM_REG; i++) {
-        if (is_reg_empty(ndks_boot.freemem[i])) {
+        region_t *free_reg = &ndks_boot.freemem[i];
+        if (reg.start > reg.end) {
+            printf("ERROR: invalid ndks_boot.freemem[%d] "
+                   "start=%"SEL4_PRIx_word" end=%"SEL4_PRIx_word"\n",
+                   (int)i, reg.start, reg.end);
+        }
+        if (is_reg_empty(*free_reg)) {
             reserve_region(pptr_to_paddr_reg(reg));
-            ndks_boot.freemem[i] = reg;
+            *free_reg = reg;
             return true;
         }
     }
@@ -593,6 +606,14 @@ BOOT_CODE static bool_t create_untypeds_for_region(
     word_t align_bits;
     word_t size_bits;
 
+    printf("create_untypeds_for_region %s "
+           "[%"SEL4_PRIx_word"..%"SEL4_PRIx_word"]\n",
+           device_memory ? "device" : "memory", reg.start, reg.end);
+
+    if (reg.start > reg.end) {
+        printf("ERROR: invalid region\n");
+    }
+
     while (!is_reg_empty(reg)) {
         /* Determine the maximum size of the region */
         size_bits = seL4_WordBits - 1 - clzl(reg.end - reg.start);
@@ -612,6 +633,9 @@ BOOT_CODE static bool_t create_untypeds_for_region(
         }
 
         if (size_bits >= seL4_MinUntypedBits) {
+            printf("provide_untyped_cap %s %"SEL4_PRIx_word" with 2^%d\n",
+                   device_memory ? "device" : "memory", reg.start, (int)size_bits);
+
             if (!provide_untyped_cap(root_cnode_cap, device_memory, reg.start, size_bits, first_untyped_slot)) {
                 return false;
             }
@@ -623,8 +647,15 @@ BOOT_CODE static bool_t create_untypeds_for_region(
 
 BOOT_CODE bool_t create_device_untypeds(cap_t root_cnode_cap, seL4_SlotPos slot_pos_before)
 {
+    printf("create_device_untypeds enter\n");
     paddr_t start = 0;
     for (word_t i = 0; i < ndks_boot.resv_count; i++) {
+
+        p_region_t *reserved_reg = &ndks_boot.reserved[i];
+        printf("ndks_boot.reserved[%d]"
+               "start=%"SEL4_PRIx_word" end=%"SEL4_PRIx_word"\n",
+               (int)i, reserved_reg->start, reserved_reg->end);
+
         if (start < ndks_boot.reserved[i].start) {
             region_t reg = paddr_to_pptr_reg((p_region_t) {
                 start, ndks_boot.reserved[i].start
@@ -637,6 +668,8 @@ BOOT_CODE bool_t create_device_untypeds(cap_t root_cnode_cap, seL4_SlotPos slot_
         start = ndks_boot.reserved[i].end;
     }
 
+    printf("create_device_untypeds las chunk\n");
+
     if (start < CONFIG_PADDR_USER_DEVICE_TOP) {
         region_t reg = paddr_to_pptr_reg((p_region_t) {
             start, CONFIG_PADDR_USER_DEVICE_TOP
@@ -646,18 +679,22 @@ BOOT_CODE bool_t create_device_untypeds(cap_t root_cnode_cap, seL4_SlotPos slot_
          * end pptr is larger than the maximum pointer size for this architecture.
          */
         if (reg.end > PPTR_TOP) {
+            printf("fix reg.end %"SEL4_PRIx_word" > PPTR_TOP\n", reg.end);
             reg.end = PPTR_TOP;
         }
         if (!create_untypeds_for_region(root_cnode_cap, true, reg, slot_pos_before)) {
             return false;
         }
     }
+    printf("create_device_untypeds exit\n");
     return true;
+
 }
 
 BOOT_CODE bool_t create_kernel_untypeds(cap_t root_cnode_cap, region_t boot_mem_reuse_reg,
                                         seL4_SlotPos first_untyped_slot)
 {
+    printf("create_kernel_untypeds enter\n");
     region_t   reg;
 
     /* if boot_mem_reuse_reg is not empty, we can create UT objs from boot code/data frames */
@@ -674,6 +711,7 @@ BOOT_CODE bool_t create_kernel_untypeds(cap_t root_cnode_cap, region_t boot_mem_
         }
     }
 
+    printf("create_kernel_untypeds exit\n");
     return true;
 }
 
