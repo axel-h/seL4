@@ -68,8 +68,10 @@ static inline void arch_pause(void)
 }
 #endif /* ENABLE_SMP_SUPPORT */
 
+/* Called by the generic kernel code in handleInterruptEntry() */
 static inline void Arch_finaliseInterrupt(void)
 {
+    /* Nothing architecture specific to be done. */
 }
 
 /* Update the value of the actual regsiter to hold the expected value */

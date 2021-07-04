@@ -211,8 +211,10 @@ static inline void setVSpaceRoot(paddr_t addr, asid_t asid)
 #endif
 }
 
+/* Called by the generic kernel code in handleInterruptEntry() */
 static inline void Arch_finaliseInterrupt(void)
 {
+    /* Nothing architecture specific to be done. */
 }
 
 int get_num_avail_p_regs(void);
