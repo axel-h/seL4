@@ -73,7 +73,12 @@ BOOT_CODE static bool_t arch_init_freemem(region_t ui_reg, v_region_t it_v_reg,
     res_reg[index].end = ui_reg.end;
     index += 1;
 
-    return init_freemem(get_num_avail_p_regs(), get_avail_p_regs(), index,
+    /* We must have full visibility into the static array avail_p_regs here,
+     * this can't just be an extern definition. There must be at least one
+     * memory region in it.
+     */
+    SEL4_COMPILE_ASSERT(have_avail_p_regs, (0 != ARRAY_SIZE(avail_p_regs)));
+    return init_freemem(ARRAY_SIZE(avail_p_regs), avail_p_regs, index,
                         res_reg, it_v_reg, extra_bi_size_bits);
 }
 
