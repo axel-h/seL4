@@ -235,18 +235,22 @@ static inline void write_fcsr(uint32_t value)
 }
 #endif
 
+static inline unsigned int get_riscv_satp_mode(void)
+{
 #if CONFIG_PT_LEVELS == 2
-#define SATP_MODE SATP_MODE_SV32
+    return SATP_MODE_SV32;
 #elif CONFIG_PT_LEVELS == 3
-#define SATP_MODE SATP_MODE_SV39
+    return SATP_MODE_SV39;
 #elif CONFIG_PT_LEVELS == 4
-#define SATP_MODE SATP_MODE_SV48
+    return SATP_MODE_SV48;
 #else
-#error "Unsupported PT levels"
+    #error "Unsupported PT levels"
 #endif
+}
+
 static inline void setVSpaceRoot(paddr_t addr, asid_t asid)
 {
-    satp_t satp = satp_new(SATP_MODE,              /* mode */
+    satp_t satp = satp_new(get_riscv_satp_mode(),  /* mode */
                            asid,                   /* asid */
                            addr >> seL4_PageBits); /* PPN */
 
