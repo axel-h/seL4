@@ -16,6 +16,16 @@
 #include <mode/machine.h>
 
 #ifdef ENABLE_SMP_SUPPORT
+static inline unsigned long get_sbi_non_local_cpu_mask(void)
+    unsigned long mask = 0;
+    for (unsigned int i = 0; i < CONFIG_MAX_NUM_NODES; i++) {
+        if (i != getCurrentCPUIndex()) {
+            mask |= BIT(cpuIndexToID(i));
+        }
+    }
+    return mask;
+}
+#endif /* ENABLE_SMP_SUPPORT */
 
 static inline void fence_rw_rw(void)
 {
@@ -42,69 +52,47 @@ static inline void ifence_local(void)
     asm volatile("fence.i":::"memory");
 }
 
+static inline void ifence(void)
+{
+    ifence_local();
+#ifdef ENABLE_SMP_SUPPORT
+    unsigned long mask = get_sbi_non_local_cpu_mask();
+    sbi_remote_fence_i(&mask);
+#endif /* ENABLE_SMP_SUPPORT */
+}
+
+/*----------------------------------------------------------------------------*/
 static inline void sfence_local(void)
 {
     asm volatile("sfence.vma" ::: "memory");
 }
 
-static inline void ifence(void)
-{
-    ifence_local();
-
-    unsigned long mask = 0;
-    for (int i = 0; i < CONFIG_MAX_NUM_NODES; i++) {
-        if (i != getCurrentCPUIndex()) {
-            mask |= BIT(cpuIndexToID(i));
-        }
-    }
-    sbi_remote_fence_i(&mask);
-}
-
 static inline void sfence(void)
 {
+#ifdef ENABLE_SMP_SUPPORT
     fence_w_rw();
+#endif
     sfence_local();
-
-    unsigned long mask = 0;
-    for (int i = 0; i < CONFIG_MAX_NUM_NODES; i++) {
-        if (i != getCurrentCPUIndex()) {
-            mask |= BIT(cpuIndexToID(i));
-        }
-    }
+#ifdef ENABLE_SMP_SUPPORT
+    unsigned long mask = get_sbi_non_local_cpu_mask();
     sbi_remote_sfence_vma(&mask, 0, 0);
+#endif /* ENABLE_SMP_SUPPORT */
 }
 
-static inline void hwASIDFlushLocal(asid_t asid)
+/*----------------------------------------------------------------------------*/
+static inline void hwASIDFlush_local(asid_t asid)
 {
     asm volatile("sfence.vma x0, %0" :: "r"(asid): "memory");
 }
 
 static inline void hwASIDFlush(asid_t asid)
 {
-    hwASIDFlushLocal(asid);
-
-    unsigned long mask = 0;
-    for (int i = 0; i < CONFIG_MAX_NUM_NODES; i++) {
-        if (i != getCurrentCPUIndex()) {
-            mask |= BIT(cpuIndexToID(i));
-        }
-    }
+    hwASIDFlush_local(asid);
+#ifdef ENABLE_SMP_SUPPORT
+    unsigned long mask = get_sbi_non_local_cpu_mask();
     sbi_remote_sfence_vma_asid(&mask, 0, 0, asid);
+#endif /* ENABLE_SMP_SUPPORT */
 }
-
-#else
-
-static inline void sfence(void)
-{
-    asm volatile("sfence.vma" ::: "memory");
-}
-
-static inline void hwASIDFlush(asid_t asid)
-{
-    asm volatile("sfence.vma x0, %0" :: "r"(asid): "memory");
-}
-
-#endif /* end of !ENABLE_SMP_SUPPORT */
 
 word_t PURE getRestartPC(tcb_t *thread);
 void setNextPC(tcb_t *thread, word_t v);
@@ -204,11 +192,7 @@ static inline void setVSpaceRoot(paddr_t addr, asid_t asid)
     write_satp(satp.words[0]);
 
     /* Order read/write operations */
-#ifdef ENABLE_SMP_SUPPORT
     sfence_local();
-#else
-    sfence();
-#endif
 }
 
 static inline void Arch_finaliseInterrupt(void)
