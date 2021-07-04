@@ -167,7 +167,7 @@ if(DEFINED KernelDTSList AND (NOT "${KernelDTSList}" STREQUAL ""))
                 --compat-strings-out "${compatibility_outfile}" --c-header --header-out
                 "${device_dest}" --hardware-config "${config_file}" --hardware-schema
                 "${config_schema}" --yaml --yaml-out "${platform_yaml}" --arch "${KernelArch}"
-                --addrspace-max "${KernelPaddrUserTop}"
+                --phys-addr-space-bits "${KernelPhysAddressSpaceBits}"
             RESULT_VARIABLE error
         )
         if(error)

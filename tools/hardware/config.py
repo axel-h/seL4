@@ -6,14 +6,17 @@
 
 
 class Config:
-    ''' Abstract config class '''
+    ''' config base class '''
     arch = 'unknown'
 
-    def __init__(self, addrspace_max):
-        self.addrspace_max = addrspace_max
+    def __init__(self, phys_addr_space_bits):
+        self.phys_addr_space_bits = phys_addr_space_bits
 
     def get_kernel_phys_align(self) -> int:
-        ''' Used to align the base of physical memory. Returns alignment size in bits. '''
+        '''
+        Returns alignment size in 2^n bits of the kernel image.
+        '''
+        # There are no special alignment needs by default.
         return 0
 
     def get_bootloader_reserve(self) -> int:
@@ -22,27 +25,38 @@ class Config:
         return 0
 
     def get_page_bits(self) -> int:
-        ''' Get page size in bits for this arch '''
-        return 12  # 4096-byte pages
+        '''
+        Returns the page size in 2^n bits
+        '''
+        # Default to 4 KiByte (2^12) pages.
+        return 12
 
     def get_device_page_bits(self) -> int:
-        ''' Get page size in bits for mapping devices for this arch '''
-        return self.get_page_bits()
+        '''
+        Return the page size in 2^n bits for mapping devices
+        '''
+        # By default, this is the same as the page size
+        raise self.get_page_bits()
+
+    def get_kernel_phys_addr_space_bits(self) -> int:
+        '''
+        Return the physical address space in 2^n bits.
+        '''
+        return self.phys_addr_space_bits
 
 
 class ARMConfig(Config):
     ''' Config class for ARM '''
-    SUPERSECTION_BITS = 24
     arch = 'arm'
 
     def get_kernel_phys_align(self) -> int:
-        ''' on ARM the ELF loader expects to be able to map a supersection page to load the kernel. '''
-        return self.SUPERSECTION_BITS
+        # the ELF loader expects to be able to map a 16 MiByte (2^24)
+        # "supersection" pages to load the kernel.
+        return 24
 
 
 class RISCVConfig(Config):
-    ''' Config class for RISCV '''
-    MEGA_PAGE_SIZE = 0x200000
+    ''' Config class for RISC-V '''
     arch = 'riscv'
 
     def get_bootloader_reserve(self) -> int:
@@ -51,19 +65,15 @@ class RISCVConfig(Config):
         return self.MEGA_PAGE_SIZE
 
     def get_device_page_bits(self) -> int:
-        ''' Get page size in bits for mapping devices for this arch '''
-        if self.addrspace_max > (1 << 32):
-            # rv39 and rv48 use 2MiB device pages
-            return 21
-        else:
-            # rv32 uses 4MiB device pages
-            return 22
+        # rv32 uses 4 MiByte (2^22) device pages, rv39 and rv48 use 2 MiByte
+        # (2^21) "megapages" device pages
+        return 22 if (self.phys_addr_space_bits <= 32) else 21
 
 
-def get_arch_config(arch: str, addrspace_max: int) -> Config:
+def get_arch_config(arch: str, phys_addr_space_bits: int) -> Config:
     ''' Return an appropriate Config object for the given architecture '''
     if arch == 'arm':
-        return ARMConfig(addrspace_max)
+        return ARMConfig(phys_addr_space_bits)
     elif arch == 'riscv':
-        return RISCVConfig(addrspace_max)
-    raise ValueError('Unsupported arch specified.')
+        return RISCVConfig(phys_addr_space_bits)
+    raise ValueError('Unsupported arch "{}" specified.'.format(arch))

@@ -50,21 +50,19 @@ endif()
 
 if(KernelSel4ArchRiscV32)
     set(KernelPTLevels 2 CACHE STRING "" FORCE)
-endif()
-if(KernelPTLevels EQUAL 2)
-    if(KernelSel4ArchRiscV32)
-        # seL4 on RISCV32 uses 32-bit ints for addresses,
-        # so limit the maximum paddr to 32-bits.
-        math(EXPR KernelPaddrUserTop "(1 << 32) - 1")
+    set(KernelPhysAddressSpaceBits 32)
+elseif(KernelSel4ArchRiscV64)
+    if(KernelPTLevels EQUAL 2)
+        set(KernelPhysAddressSpaceBits 34)
+    elseif(KernelPTLevels EQUAL 3)
+        set(KernelPhysAddressSpaceBits 39)
+    elseif(KernelPTLevels EQUAL 4)
+        set(KernelPhysAddressSpaceBits 56)
     else()
-        math(EXPR KernelPaddrUserTop "(1 << 34) - 1")
+        message(FATAL_ERROR "invalid value for KernelPTLevels")
     endif()
-elseif(KernelPTLevels EQUAL 3)
-    # RISC-V technically supports 56-bit paddrs,
-    # but structures.bf limits us to using 39 of those bits.
-    math(EXPR KernelPaddrUserTop "(1 << 39) - 1")
-elseif(KernelPTLevels EQUAL 4)
-    math(EXPR KernelPaddrUserTop "(1 << 56) - 1")
+else()
+  message(FATAL_ERROR "unsuppored RISC-V architecture")
 endif()
 
 if(KernelRiscvExtD)

@@ -101,6 +101,14 @@ def get_addrspace_exclude(regions: List[Region], config: Config):
     as_max = utils.align_down(config.addrspace_max, config.get_page_bits())
     ret.add(Region(0, as_max, None))
 
+    # initialize a set with one region for the whole address space
+    regions_ret = {
+        Region(
+            0,
+            2**config.get_kernel_phys_addr_space_bits(),
+            None)
+    }
+
     for reg in regions:
         if type(reg) == KernelRegionGroup:
             if reg.user_ok:
