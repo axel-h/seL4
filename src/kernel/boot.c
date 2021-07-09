@@ -98,6 +98,9 @@ BOOT_CODE bool_t reserve_region(p_region_t reg)
 
 BOOT_CODE static bool_t insert_region(region_t reg)
 {
+    printf("insert VA region [%"SEL4_PRIx_word"..%"SEL4_PRIx_word"]\n",
+           reg.start, reg.end);
+
     assert(reg.start <= reg.end);
     if (is_reg_empty(reg)) {
         return true;
@@ -596,7 +599,13 @@ BOOT_CODE static bool_t create_untyped_caps_for_phys_area(
         }
 
         if (size_bits >= seL4_MinUntypedBits) {
+
             word_t i = ndks_boot.slot_pos_cur - first_untyped_slot;
+
+            // printf("  list[%d] = 2^%d chunk [%p..%p]\n",
+            //        (int)i, (int)size_bits, (void *)phys_start,
+            //        (void *)(phys_start + BIT(size_bits) - 1));
+
             if (i >= ARRAY_SIZE(ndks_boot.bi_frame->untypedList)) {
                 printf("WARNING: ran out of available untyped cap slots\n");
                 /* Do not consider this as a failure, some slots got populated
@@ -623,6 +632,10 @@ BOOT_CODE static bool_t create_untyped_caps_for_phys_area(
             /* The cap way provided successfully and ndks_boot.slot_pos_cur was
              * updated.
              */
+
+        } else {
+            printf("region too small: %"SEL4_PRIx_word" - %"SEL4_PRIx_word"\n",
+                   phys_start, phys_start + BIT(size_bits) - 1);
         }
 
         word_t chunk_len = BIT(size_bits);
@@ -660,6 +673,7 @@ BOOT_CODE bool_t create_untypeds(cap_t root_cnode_cap,
      *  :                                            :
      *
      */
+    printf("create device untyped caps around the reserved regions\n");
     paddr_t phys_start = 0;
     unsigned int i = 0;
     while (phys_start < CONFIG_PADDR_USER_DEVICE_TOP) {
@@ -670,6 +684,8 @@ BOOT_CODE bool_t create_untypeds(cap_t root_cnode_cap,
         if (i < ndks_boot.resv_count) {
             /* cover area up to the next reserved region */
             p_region_t *r = &ndks_boot.reserved[i++];
+            printf("ignore reserved region %d: [%"SEL4_PRIx_word"..%"SEL4_PRIx_word"]\n",
+                   i, r->start, r->end - 1);
             if (r->start > phys_start) {
                 len = r->start - phys_start;
                 /* The new start address is the reserved region's end address.
@@ -737,13 +753,18 @@ BOOT_CODE bool_t create_untypeds(cap_t root_cnode_cap,
                    boot_mem_reuse_phys_start + boot_mem_reuse_len);
             return false;
         }
+    } else {
+        printf("no boot code to recycle into untyped caps\n");
     }
 
     /* Convert remaining freemem regions into untyped caps. These regions are
      * given as virtual addresses, so we have to convert them to physical
      * addresses. */
+    printf("create untypeds for free space\n");
     for (word_t i = 0; i < MAX_NUM_FREEMEM_REG; i++) {
         region_t *reg = &ndks_boot.freemem[i];
+        printf("freemem[%d] virtual [%"SEL4_PRIx_word"..%"SEL4_PRIx_word"]\n",
+              (int)i, reg->start, reg->end);
         assert(reg->start <= reg->end); /* region must be sane */
         word_t len = reg->end - reg->start;
         if (len > 0) {
@@ -928,6 +949,7 @@ BOOT_CODE bool_t init_freemem(word_t n_available, const p_region_t *available,
     /* try to grab the last available p region to create the root server objects
      * from. If possible, retain any left over memory as an extra p region */
     word_t size = calculate_rootserver_size(it_v_reg, extra_bi_size_bits);
+    printf("rootserver size %"SEL4_PRIu_word" (0x%"SEL4_PRIx_word")\n", size, size);
     word_t max = rootserver_max_size_bits(extra_bi_size_bits);
     for (; i >= 0; i--) {
         word_t next = i + 1;
