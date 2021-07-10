@@ -6,6 +6,21 @@
 
 #pragma once
 
+#define PASTE(a, b) a ## b
+#define _STRINGIFY(a) #a
+#define STRINGIFY(a) _STRINGIFY(a)
+
+#ifdef __ASSEMBLER__
+
+/* Some assemblers don't recognise the ul/ull (unsigned long) suffix */
+#define UL_CONST(x) x
+
+#else /* not __ASSEMBLER__ */
+
+#define UL_CONST(x) PASTE(x, ul)
+
+#endif /* [not] __ASSEMBLER__ */
+
 #define MASK(n) (BIT(n)-UL_CONST(1))
 #define IS_ALIGNED(n, b) (!((n) & MASK(b)))
 #define ROUND_DOWN(n, b) (((n) >> (b)) << (b))
@@ -13,9 +28,6 @@
 #define ARRAY_SIZE(x) (sizeof(x) / sizeof(x[0]))
 #define MIN(a,b) (((a)<(b))?(a):(b))
 #define MAX(a,b) (((a)>(b))?(a):(b))
-#define PASTE(a, b) a ## b
-#define _STRINGIFY(a) #a
-#define STRINGIFY(a) _STRINGIFY(a)
 
 /* time constants */
 #define MS_IN_S     1000llu
@@ -28,7 +40,6 @@
 
 #define NULL ((void *)0)
 #define BIT(n) (1ul << (n))
-#define UL_CONST(x) PASTE(x, ul)
 
 #define PACKED       __attribute__((packed))
 #define NORETURN     __attribute__((__noreturn__))
@@ -261,6 +272,5 @@ CONST popcountl(unsigned long mask)
 
 /* Some assemblers don't recognise ul (unsigned long) suffix */
 #define BIT(n) (1 << (n))
-#define UL_CONST(x) x
 
 #endif /* !__ASSEMBLER__ */
