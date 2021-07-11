@@ -13,8 +13,8 @@
 #ifdef __ASSEMBLER__
 
 /* Some assemblers don't recognise the ul/ull (unsigned long) suffix */
-#define UL_CONST(x) x
-#define ULL_CONST(x) x
+#define UL_CONST(x)   x
+#define ULL_CONST(x)  x
 
 #else /* not __ASSEMBLER__ */
 
@@ -22,18 +22,18 @@
  * when it comes to the printf() format specifiers, '%lu' is the only form that
  * is supported.
  */
-#define UL_CONST(x) PASTE(x, lu)
-#define ULL_CONST(x) PASTE(x, llu)
+#define UL_CONST(x)   PASTE(x, lu)
+#define ULL_CONST(x)  PASTE(x, llu)
 
 #endif /* [not] __ASSEMBLER__ */
 
-#define MASK(n) (BIT(n)-UL_CONST(1))
-#define IS_ALIGNED(n, b) (!((n) & MASK(b)))
-#define ROUND_DOWN(n, b) (((n) >> (b)) << (b))
-#define ROUND_UP(n, b) (((((n) - UL_CONST(1)) >> (b)) + UL_CONST(1)) << (b))
-#define ARRAY_SIZE(x) (sizeof(x) / sizeof(x[0]))
-#define MIN(a,b) (((a)<(b))?(a):(b))
-#define MAX(a,b) (((a)>(b))?(a):(b))
+#define MASK(n)           ( BIT(n) - UL_CONST(1) )
+#define IS_ALIGNED(n, b)  ( !((n) & MASK(b)) )
+#define ROUND_DOWN(n, b)  ( ((n) >> (b)) << (b) )
+#define ROUND_UP(n, b)    ( ((((n) - UL_CONST(1)) >> (b)) + UL_CONST(1)) << (b) )
+#define ARRAY_SIZE(x)     ( sizeof(x) / sizeof(x[0]) )
+#define MIN(a,b)          ( ((a)<(b))?(a):(b) )
+#define MAX(a,b)          ( ((a)>(b))?(a):(b) )
 
 /* Time constants enforce 'ull'. Rationale is, that the C rules define the
  * calculation result is determined by largest type involved. Thus, this avoids
