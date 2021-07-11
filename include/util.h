@@ -15,6 +15,7 @@
 /* Some assemblers don't recognise the ul/ull (unsigned long) suffix */
 #define UL_CONST(x)   x
 #define ULL_CONST(x)  x
+#define NULL          0
 
 #else /* not __ASSEMBLER__ */
 
@@ -24,9 +25,11 @@
  */
 #define UL_CONST(x)   PASTE(x, lu)
 #define ULL_CONST(x)  PASTE(x, llu)
+#define NULL          ((void *)0)
 
 #endif /* [not] __ASSEMBLER__ */
 
+#define BIT(n)            ( UL_CONST(1) << (n) )
 #define MASK(n)           ( BIT(n) - UL_CONST(1) )
 #define IS_ALIGNED(n, b)  ( !((n) & MASK(b)) )
 #define ROUND_DOWN(n, b)  ( ((n) >> (b)) << (b) )
@@ -52,9 +55,6 @@
 #define HZ_IN_MHZ   ULL_CONST(1000000)
 
 #ifndef __ASSEMBLER__
-
-#define NULL ((void *)0)
-#define BIT(n) (1ul << (n))
 
 #define PACKED       __attribute__((packed))
 #define NORETURN     __attribute__((__noreturn__))
@@ -282,10 +282,5 @@ CONST popcountl(unsigned long mask)
 
 /* Can be used to insert padding to the next L1 cache line boundary */
 #define PAD_TO_NEXT_CACHE_LN(used) char padding[L1_CACHE_LINE_SIZE - ((used) % L1_CACHE_LINE_SIZE)]
-
-#else /* __ASSEMBLER__ */
-
-/* Some assemblers don't recognise ul (unsigned long) suffix */
-#define BIT(n) (1 << (n))
 
 #endif /* !__ASSEMBLER__ */
