@@ -184,10 +184,6 @@ static BOOT_CODE bool_t try_init_kernel(
     cap_t it_pd_cap;
     cap_t it_ap_cap;
     cap_t ipcbuf_cap;
-    p_region_t boot_mem_reuse_p_reg = ((p_region_t) {
-        kpptr_to_paddr((void *)KERNEL_ELF_BASE), kpptr_to_paddr(ki_boot_end)
-    });
-    region_t boot_mem_reuse_reg = paddr_to_pptr_reg(boot_mem_reuse_p_reg);
     region_t ui_reg = paddr_to_pptr_reg((p_region_t) {
         ui_p_reg_start, ui_p_reg_end
     });
