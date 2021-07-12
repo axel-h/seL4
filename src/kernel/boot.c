@@ -94,7 +94,7 @@ BOOT_CODE bool_t reserve_region(p_region_t reg)
     return true;
 }
 
-BOOT_CODE bool_t insert_region(region_t reg)
+BOOT_CODE static bool_t insert_region(region_t reg)
 {
     assert(reg.start <= reg.end);
     if (is_reg_empty(reg)) {
