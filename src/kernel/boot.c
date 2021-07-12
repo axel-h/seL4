@@ -23,108 +23,191 @@ BOOT_BSS ndks_boot_t ndks_boot;
 BOOT_BSS rootserver_mem_t rootserver;
 BOOT_BSS static region_t rootserver_mem;
 
-BOOT_CODE static void merge_regions(void)
-{
-    /* Walk through reserved regions and see if any can be merged */
-    for (word_t i = 1; i < ndks_boot.resv_count;) {
-        if (ndks_boot.reserved[i - 1].end == ndks_boot.reserved[i].start) {
-            /* extend earlier region */
-            ndks_boot.reserved[i - 1].end = ndks_boot.reserved[i].end;
-            /* move everything else down */
-            for (word_t j = i + 1; j < ndks_boot.resv_count; j++) {
-                ndks_boot.reserved[j - 1] = ndks_boot.reserved[j];
-            }
-
-            ndks_boot.resv_count--;
-            /* don't increment i in case there are multiple adjacent regions */
-        } else {
-            i++;
-        }
-    }
-}
-
 BOOT_CODE bool_t reserve_region(p_region_t reg)
 {
-    word_t i;
+    /* region must be sane */
     assert(reg.start <= reg.end);
+
+    /* There is noting to do if the region has a zero size. */
     if (reg.start == reg.end) {
         return true;
     }
 
-    /* keep the regions in order */
+    /* The list of regions is ordered properly and no regions are overlapping
+     * or adjacent. Check where to insert the current region or if we can merge
+     * it with one or more regions.
+     */
+    word_t i;
     for (i = 0; i < ndks_boot.resv_count; i++) {
-        /* Try and merge the region to an existing one, if possible */
-        if (ndks_boot.reserved[i].start == reg.end) {
-            ndks_boot.reserved[i].start = reg.start;
-            merge_regions();
-            return true;
+        p_region_t *cur_reg = &ndks_boot.reserved[i];
+
+        if (reg.start > cur_reg->end) {
+            /* The list or properly ordered, so there is no impact on the
+             * current element if new region is after it.
+             *
+             *                   |--reg--|
+             *    |--cur_reg--|
+             */
+            continue;
         }
-        if (ndks_boot.reserved[i].end == reg.start) {
-            ndks_boot.reserved[i].end = reg.end;
-            merge_regions();
-            return true;
+
+        if (reg.end < cur_reg->start) {
+            /* The list or properly ordered, if the new element is before the
+             * current element then we have to make space and insert it.
+             *
+             *    |--reg--|
+             *               |--cur_reg--|
+             */
+            break;
         }
-        /* Otherwise figure out where it should go. */
-        if (ndks_boot.reserved[i].start > reg.end) {
-            /* move regions down, making sure there's enough room */
-            if (ndks_boot.resv_count + 1 >= MAX_NUM_RESV_REG) {
-                printf("Can't mark region 0x%"SEL4_PRIx_word"-0x%"SEL4_PRIx_word
-                       " as reserved, try increasing MAX_NUM_RESV_REG (currently %d)\n",
-                       reg.start, reg.end, (int)MAX_NUM_RESV_REG);
-                return false;
+
+        /* For all remain cases, the current region is merged with the new one.
+         *
+         * case 1a:  |--reg--|
+         *           |<------|--cur_reg--|
+         *
+         * case 1b:      |--reg--|
+         *               |<--|--cur_reg--|
+         *
+         * case 1c:      |--reg----------|
+         *               |<--|--cur_reg--|
+         *
+         * case 2a:          |----------reg--|
+         *                   |--cur_reg--|-->|
+         *
+         * case 2b:                  |--reg--|
+         *                   |--cur_reg--|-->|
+         *
+         * case 2c:                      |--reg--|
+         *                   |--cur_reg--|------>|
+         *
+         * case 3a:            |--reg--|
+         *                   |--cur_reg--|
+         *
+         * case 3b:  |------------reg------------|
+         *           |<------|--cur_reg--|------>|
+         *
+         * For case 3a there is nothing to do. Case 3b is actually a combination
+         * of case 1b and 2b
+         *
+         */
+        if (reg.start < cur_reg->start) {
+            /* Adjust the region start if the new region starts earlier. */
+            cur_reg->start = reg.start;
+        }
+
+        if (reg.end > cur_reg->end) {
+            /* Adjust the region end if the new region end later. However, the
+             * new region could spawn more than just the current region, so we
+             * may have to merge more regions.
+             */
+            cur_reg->end = reg.end;
+            word_t cnt = 0;
+            i++;
+            while (i + cnt < ndks_boot.resv_count) {
+                cur_reg = &ndks_boot.reserved[i + cnt];
+                cnt++;
+                if (reg.end < cur_reg->start) {
+                    break;
+                }
             }
-            for (word_t j = ndks_boot.resv_count; j > i; j--) {
-                ndks_boot.reserved[j] = ndks_boot.reserved[j - 1];
+
+            if (cnt > 0)
+            {
+                /* Move regions to close the gap. */
+                for ( /*nothing */; i + cnt < ndks_boot.resv_count; i++) {
+                    ndks_boot.reserved[i] = ndks_boot.reserved[i + cnt];
+                }
+
+                assert( i == ndks_boot.resv_count - cnt );
+
+                /* Mark remaining regions as empty. */
+                for ( /*nothing */; i < ndks_boot.resv_count; i++) {
+                    ndks_boot.reserved[i] = P_REG_EMPTY;
+                }
+
+                ndks_boot.resv_count -= cnt;
             }
-            /* insert the new region */
-            ndks_boot.reserved[i] = reg;
-            ndks_boot.resv_count++;
-            return true;
         }
+
+        return true;
+
     }
 
-    if (i + 1 == MAX_NUM_RESV_REG) {
-        printf("Can't mark region 0x%"SEL4_PRIx_word"-0x%"SEL4_PRIx_word
-               " as reserved, try increasing MAX_NUM_RESV_REG (currently %d)\n",
+    /* Append at the end or make space to insert - if there is space. */
+    if (i >= MAX_NUM_RESV_REG) {
+        printf("ERROR: can't reserve [%"SEL4_PRIx_word"..%"SEL4_PRIx_word"] "
+               "as it execeeds MAX_NUM_RESV_REG (%d)\n",
                reg.start, reg.end, (int)MAX_NUM_RESV_REG);
+
         return false;
     }
 
+    /* If we are inserting then we have to make space first */
+    for (word_t j = ndks_boot.resv_count; j > i; j--) {
+        ndks_boot.reserved[j] = ndks_boot.reserved[j-1];
+    }
+    /* insert or append region  */
     ndks_boot.reserved[i] = reg;
     ndks_boot.resv_count++;
-
     return true;
 }
 
-BOOT_CODE static bool_t insert_region(region_t reg)
+BOOT_CODE static bool_t insert_region(p_region_t p_reg)
 {
-    assert(reg.start <= reg.end);
-    if (is_reg_empty(reg)) {
+    assert(p_reg.start <= p_reg.end);
+    if (p_reg.start == p_reg.end) {
         return true;
     }
+
+    /* Add region to the list of reserved regions. */
+    if (!reserve_region(p_reg))
+    {
+        printf("ERROR: can't reserve region\n");
+        return false;
+    }
+
+    /* The kernel maps the physical memory completely in it's VA space starting
+     * at PPTR_BASE. However due VA space limitations, anything in the physical
+     * address space above PADDR_TOP cannot be mapped. On 64-bit platforms
+     * this is usually not a practical limitation, but on 32-bit platform it
+     * can happen that the top part of the physical address space is not
+     * accessible via the kernel window mapping. */
+    if (p_reg.start >= PADDR_TOP)
+    {
+        /* This area is completely out or reach. */
+        return true;
+    }
+
+    /* Cap the area at PADDR_TOP. */
+    if (p_reg.end > PADDR_TOP)
+    {
+        p_reg.end = PADDR_TOP;
+    }
+
+    /* Find a free slot. */
     for (word_t i = 0; i < MAX_NUM_FREEMEM_REG; i++) {
         if (is_reg_empty(ndks_boot.freemem[i])) {
-            reserve_region(pptr_to_paddr_reg(reg));
-            ndks_boot.freemem[i] = reg;
+            ndks_boot.freemem[i] = paddr_to_pptr_reg(p_reg);
             return true;
         }
     }
+
+    /* MAX_NUM_FREEMEM_REG must be increased. Note that the capDL allocation
+     * toolchain does not know about MAX_NUM_FREEMEM_REG, so throwing away
+     * regions may prevent capDL applications from being loaded!
+     */
+    printf("ERROR: can't fit memory region "
+           "[%"SEL4_PRIx_word"..%"SEL4_PRIx_word"], try increasing "
+           "MAX_NUM_FREEMEM_REG (currently %d)\n",
+           p_reg.start, p_reg.end, (int)MAX_NUM_FREEMEM_REG);
+
 #ifdef CONFIG_ARCH_ARM
-    /* boot.h should have calculated MAX_NUM_FREEMEM_REG correctly.
-     * If we've run out, then something is wrong.
-     * Note that the capDL allocation toolchain does not know about
-     * MAX_NUM_FREEMEM_REG, so throwing away regions may prevent
-     * capDL applications from being loaded! */
-    printf("Can't fit memory region 0x%"SEL4_PRIx_word"-0x%"SEL4_PRIx_word
-           ", try increasing MAX_NUM_FREEMEM_REG (currently %d)\n",
-           reg.start, reg.end, (int)MAX_NUM_FREEMEM_REG);
-    assert(!"Ran out of freemem slots");
-#else
-    printf("Dropping memory region 0x%"SEL4_PRIx_word"-0x%"SEL4_PRIx_word
-           ", try increasing MAX_NUM_FREEMEM_REG (currently %d)\n",
-           reg.start, reg.end, (int)MAX_NUM_FREEMEM_REG);
+        assert(!"Ran out of freemem slots");
 #endif
+
     return false;
+
 }
 
 BOOT_CODE static pptr_t alloc_rootserver_obj(word_t size_bits, word_t n)
@@ -686,26 +769,11 @@ BOOT_CODE void bi_finalise(void)
     };
 }
 
-BOOT_CODE static inline pptr_t ceiling_kernel_window(pptr_t p)
-{
-    /* Adjust address if it exceeds the kernel window
-     * Note that we compare physical address in case of overflow.
-     */
-    if (pptr_to_paddr((void *)p) > PADDR_TOP) {
-        p = PPTR_TOP;
-    }
-    return p;
-}
-
-/* we can't declare arrays on the stack, so this is space for
- * the function below to use. */
-BOOT_BSS static region_t avail_reg[MAX_NUM_FREEMEM_REG];
 /**
  * Dynamically initialise the available memory on the platform.
  * A region represents an area of memory.
  */
 BOOT_CODE bool_t init_freemem(word_t n_available, const p_region_t *available,
-                              word_t n_reserved, const region_t *reserved,
                               v_region_t it_v_reg, word_t extra_bi_size_bits)
 {
     /* The system configuration is broken if no region is available */
@@ -714,31 +782,9 @@ BOOT_CODE bool_t init_freemem(word_t n_available, const p_region_t *available,
         return false;
     }
 
-    printf("reserved virt address space regions: %"SEL4_PRIu_word"\n",
-           n_reserved);
-    /* Force ordering and exclusivity of reserved regions */
-    for (word_t i = 0; i < n_reserved; i++) {
-        const region_t *r = &reserved[i];
-        printf("  [%"SEL4_PRIx_word"..%"SEL4_PRIx_word"]\n", r->start, r->end);
-
-        /* Reserved regions must be sane, the size is allowed to be zero */
-        if (r->start > r->end) {
-            printf("ERROR: reserved region %"SEL4_PRIu_word" has start > end\n", i);
-            return false;
-        }
-
-        /* regions must be ordered and must not overlap */
-        if ((i > 0) && (r->start < reserved[i - 1].end)) {
-            printf("ERROR: reserved region %"SEL4_PRIu_word" in wrong order\n", i);
-            return false;
-        }
-    }
-
-    printf("available phys memory regions: %"SEL4_PRIu_word"\n", n_available);
     /* Force ordering and exclusivity of available regions */
     for (word_t i = 0; i < n_available; i++) {
         const p_region_t *r = &available[i];
-        printf("  [%"SEL4_PRIx_word"..%"SEL4_PRIx_word"]\n", r->start, r->end);
 
         /* Available regions must be sane */
         if (r->start > r->end) {
@@ -763,68 +809,80 @@ BOOT_CODE bool_t init_freemem(word_t n_available, const p_region_t *available,
         ndks_boot.freemem[i] = REG_EMPTY;
     }
 
-    /* convert the available regions to pptrs */
-    for (word_t i = 0; i < n_available; i++) {
-        avail_reg[i] = paddr_to_pptr_reg(available[i]);
-        avail_reg[i].end = ceiling_kernel_window(avail_reg[i].end);
-        avail_reg[i].start = ceiling_kernel_window(avail_reg[i].start);
-    }
-
-    word_t a = 0;
-    word_t r = 0;
+    word_t idx_a = 0;
+    word_t idx_r = 0;
+    p_region_t a_tmp = P_REG_EMPTY;
     /* Now iterate through the available regions, removing any reserved regions. */
-    while (a < n_available && r < n_reserved) {
-        if (reserved[r].start == reserved[r].end) {
-            /* reserved region is empty - skip it */
-            r++;
-        } else if (avail_reg[a].start >= avail_reg[a].end) {
-            /* skip the entire region - it's empty now after trimming */
-            a++;
-        } else if (reserved[r].end <= avail_reg[a].start) {
-            /* the reserved region is below the available region - skip it*/
-            reserve_region(pptr_to_paddr_reg(reserved[r]));
-            r++;
-        } else if (reserved[r].start >= avail_reg[a].end) {
-            /* the reserved region is above the available region - take the whole thing */
-            insert_region(avail_reg[a]);
-            a++;
-        } else {
-            /* the reserved region overlaps with the available region */
-            if (reserved[r].start <= avail_reg[a].start) {
-                /* the region overlaps with the start of the available region.
-                 * trim start of the available region */
-                avail_reg[a].start = MIN(avail_reg[a].end, reserved[r].end);
-                reserve_region(pptr_to_paddr_reg(reserved[r]));
-                r++;
-            } else {
-                assert(reserved[r].start < avail_reg[a].end);
-                /* take the first chunk of the available region and move
-                 * the start to the end of the reserved region */
-                region_t m = avail_reg[a];
-                m.end = reserved[r].start;
-                insert_region(m);
-                if (avail_reg[a].end > reserved[r].end) {
-                    avail_reg[a].start = reserved[r].end;
-                    reserve_region(pptr_to_paddr_reg(reserved[r]));
-                    r++;
-                } else {
-                    a++;
-                }
-            }
-        }
-    }
+    while ((idx_a < n_available) && (idx_r < ndks_boot.resv_count)) {
 
-    for (; r < n_reserved; r++) {
-        if (reserved[r].start < reserved[r].end) {
-            reserve_region(pptr_to_paddr_reg(reserved[r]));
+        const p_region_t *a = (0 != a_tmp.end) ? &a_tmp : &available[idx_a];
+        const p_region_t *r = &ndks_boot.reserved[idx_r];
+
+        /* There can't be any invalid or empty region in the lists. */
+        assert( r->start < r->end );
+        assert( a->start < a->end );
+
+        if (r->end <= a->start) {
+            /* The reserved region is below the available region - skip it. */
+            idx_r++;
+        } else if (r->start >= a->end) {
+            /* The reserved region is above the available region (or what is
+             * left of it) - take the whole thing (or remaining chunk).
+             */
+            insert_region(*a);
+            idx_a++;
+            a_tmp = P_REG_EMPTY;
+        } else if (r->start <= a->start) {
+            /* The reserved region overlaps with the start of the available
+             * region.
+             */
+            idx_r++;
+            /* Skip the available region if it is fully within the reserved
+             * region, otherwise trim start of the available region. */
+            if (r->end >= a->end) {
+                idx_a++;
+                a_tmp = P_REG_EMPTY;
+            }
+            else
+            {
+                a_tmp = (p_region_t) { .start = r->end, .end = a->end };
+            }
+
+        } else if (r->start < a->end) {
+            /* The reserved region overlaps with the end of the available
+             * region. Take the first chunk of the available region and move the
+             * start to the end of the reserved region
+             */
+            insert_region((p_region_t) {
+                .start = a->start,
+                .end   = r->start
+            });
+            /* Skip the available region if it is fully within the reserved
+             * region, otherwise trim start of the available region. */
+            if (a->end <= r->end) {
+                idx_a++;
+                a_tmp = P_REG_EMPTY;
+            } else {
+                idx_r++;
+                a_tmp = (p_region_t) { .start = r->end, .end = a->end };
+            }
+        } else {
+            /* We should never be here, something is wring with the regions. */
+            assert(0);
+            return false;
         }
     }
 
     /* no more reserved regions - add the rest */
-    for (; a < n_available; a++) {
-        if (avail_reg[a].start < avail_reg[a].end) {
-            insert_region(avail_reg[a]);
+    while (idx_a < n_available) {
+        if (0 != a_tmp.end) {
+            insert_region(a_tmp);
+            a_tmp = (p_region_t) { .start = 0, .end = 0 };
         }
+        else {
+            insert_region(available[idx_a]);
+        }
+        idx_a++;
     }
 
     /* now try to fit the root server objects into a region */
