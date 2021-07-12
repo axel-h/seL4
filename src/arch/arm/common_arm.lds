@@ -62,6 +62,15 @@ SECTIONS
     .bss . : AT(ADDR(.bss) - KERNEL_OFFSET)
     {
         *(.bss)
+        /* GCC before version 10 put uninitialized global variables into a
+         * 'COMMON' section. If this section is not declared explicitly, these
+         * variables end up at the end of the '.bss'. This tends to waste a page
+         * because seL4 puts large aligned data at the end. In GCC 10
+         * '-fno-common' was made the default, so handling 'COMMON' is no longer
+         * needed. See also https://gcc.gnu.org/gcc-10/changes.html.
+         */
+        *(COMMON)
+
 
         /* 4k breakpoint stack */
         _breakpoint_stack_bottom = .;
