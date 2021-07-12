@@ -68,7 +68,8 @@ BOOT_CODE bool_t reserve_region(p_region_t reg)
         if (ndks_boot.reserved[i].start > reg.end) {
             /* move regions down, making sure there's enough room */
             if (ndks_boot.resv_count + 1 >= MAX_NUM_RESV_REG) {
-                printf("Can't mark region 0x%lx-0x%lx as reserved, try increasing MAX_NUM_RESV_REG (currently %d)\n",
+                printf("Can't mark region 0x%"SEL4_PRIx_word"-0x%"SEL4_PRIx_word
+                       " as reserved, try increasing MAX_NUM_RESV_REG (currently %d)\n",
                        reg.start, reg.end, (int)MAX_NUM_RESV_REG);
                 return false;
             }
@@ -83,7 +84,8 @@ BOOT_CODE bool_t reserve_region(p_region_t reg)
     }
 
     if (i + 1 == MAX_NUM_RESV_REG) {
-        printf("Can't mark region 0x%lx-0x%lx as reserved, try increasing MAX_NUM_RESV_REG (currently %d)\n",
+        printf("Can't mark region 0x%"SEL4_PRIx_word"-0x%"SEL4_PRIx_word
+               " as reserved, try increasing MAX_NUM_RESV_REG (currently %d)\n",
                reg.start, reg.end, (int)MAX_NUM_RESV_REG);
         return false;
     }
@@ -94,7 +96,7 @@ BOOT_CODE bool_t reserve_region(p_region_t reg)
     return true;
 }
 
-BOOT_CODE bool_t insert_region(region_t reg)
+BOOT_CODE static bool_t insert_region(region_t reg)
 {
     assert(reg.start <= reg.end);
     if (is_reg_empty(reg)) {
@@ -113,11 +115,13 @@ BOOT_CODE bool_t insert_region(region_t reg)
      * Note that the capDL allocation toolchain does not know about
      * MAX_NUM_FREEMEM_REG, so throwing away regions may prevent
      * capDL applications from being loaded! */
-    printf("Can't fit memory region 0x%lx-0x%lx, try increasing MAX_NUM_FREEMEM_REG (currently %d)\n",
+    printf("Can't fit memory region 0x%"SEL4_PRIx_word"-0x%"SEL4_PRIx_word
+           ", try increasing MAX_NUM_FREEMEM_REG (currently %d)\n",
            reg.start, reg.end, (int)MAX_NUM_FREEMEM_REG);
     assert(!"Ran out of freemem slots");
 #else
-    printf("Dropping memory region 0x%lx-0x%lx, try increasing MAX_NUM_FREEMEM_REG (currently %d)\n",
+    printf("Dropping memory region 0x%"SEL4_PRIx_word"-0x%"SEL4_PRIx_word
+           ", try increasing MAX_NUM_FREEMEM_REG (currently %d)\n",
            reg.start, reg.end, (int)MAX_NUM_FREEMEM_REG);
 #endif
     return false;
@@ -616,15 +620,18 @@ BOOT_CODE static bool_t create_untypeds_for_region(
     return true;
 }
 
-BOOT_CODE bool_t create_device_untypeds(cap_t root_cnode_cap, seL4_SlotPos slot_pos_before)
+BOOT_CODE bool_t create_untypeds(cap_t root_cnode_cap,
+                                 region_t boot_mem_reuse_reg)
 {
+    seL4_SlotPos first_untyped_slot = ndks_boot.slot_pos_cur;
+
     paddr_t start = 0;
     for (word_t i = 0; i < ndks_boot.resv_count; i++) {
         if (start < ndks_boot.reserved[i].start) {
             region_t reg = paddr_to_pptr_reg((p_region_t) {
                 start, ndks_boot.reserved[i].start
             });
-            if (!create_untypeds_for_region(root_cnode_cap, true, reg, slot_pos_before)) {
+            if (!create_untypeds_for_region(root_cnode_cap, true, reg, first_untyped_slot)) {
                 return false;
             }
         }
@@ -643,17 +650,10 @@ BOOT_CODE bool_t create_device_untypeds(cap_t root_cnode_cap, seL4_SlotPos slot_
         if (reg.end > PPTR_TOP) {
             reg.end = PPTR_TOP;
         }
-        if (!create_untypeds_for_region(root_cnode_cap, true, reg, slot_pos_before)) {
+        if (!create_untypeds_for_region(root_cnode_cap, true, reg, first_untyped_slot)) {
             return false;
         }
     }
-    return true;
-}
-
-BOOT_CODE bool_t create_kernel_untypeds(cap_t root_cnode_cap, region_t boot_mem_reuse_reg,
-                                        seL4_SlotPos first_untyped_slot)
-{
-    region_t   reg;
 
     /* if boot_mem_reuse_reg is not empty, we can create UT objs from boot code/data frames */
     if (!create_untypeds_for_region(root_cnode_cap, false, boot_mem_reuse_reg, first_untyped_slot)) {
@@ -662,12 +662,17 @@ BOOT_CODE bool_t create_kernel_untypeds(cap_t root_cnode_cap, region_t boot_mem_
 
     /* convert remaining freemem into UT objects and provide the caps */
     for (word_t i = 0; i < MAX_NUM_FREEMEM_REG; i++) {
-        reg = ndks_boot.freemem[i];
+        region_t reg = ndks_boot.freemem[i];
         ndks_boot.freemem[i] = REG_EMPTY;
         if (!create_untypeds_for_region(root_cnode_cap, false, reg, first_untyped_slot)) {
             return false;
         }
     }
+
+    ndks_boot.bi_frame->untyped = (seL4_SlotRegion) {
+        .start = first_untyped_slot,
+        .end   = ndks_boot.slot_pos_cur
+    };
 
     return true;
 }
@@ -709,9 +714,12 @@ BOOT_CODE bool_t init_freemem(word_t n_available, const p_region_t *available,
         return false;
     }
 
+    printf("reserved virt address space regions: %"SEL4_PRIu_word"\n",
+           n_reserved);
     /* Force ordering and exclusivity of reserved regions */
     for (word_t i = 0; i < n_reserved; i++) {
         const region_t *r = &reserved[i];
+        printf("  [%"SEL4_PRIx_word"..%"SEL4_PRIx_word"]\n", r->start, r->end);
 
         /* Reserved regions must be sane, the size is allowed to be zero */
         if (r->start > r->end) {
@@ -726,9 +734,11 @@ BOOT_CODE bool_t init_freemem(word_t n_available, const p_region_t *available,
         }
     }
 
+    printf("available phys memory regions: %"SEL4_PRIu_word"\n", n_available);
     /* Force ordering and exclusivity of available regions */
     for (word_t i = 0; i < n_available; i++) {
         const p_region_t *r = &available[i];
+        printf("  [%"SEL4_PRIx_word"..%"SEL4_PRIx_word"]\n", r->start, r->end);
 
         /* Available regions must be sane */
         if (r->start > r->end) {
@@ -744,7 +754,7 @@ BOOT_CODE bool_t init_freemem(word_t n_available, const p_region_t *available,
 
         /* regions must be ordered and must not overlap */
         if ((i > 0) && (r->start < available[i - 1].end)) {
-            printf("ERROR: memory region %"SEL4_PRIu_word" in wrong order\n", i);
+            printf("ERROR: memory region %d in wrong order\n", (int)i);
             return false;
         }
     }

@@ -1,6 +1,7 @@
 /*
  * Copyright 2020, Data61, CSIRO (ABN 41 687 119 230)
  * Copyright 2015, 2016 Hesham Almatary <heshamelmatary@gmail.com>
+ * Copyright 2021, HENSOLDT Cyber
  *
  * SPDX-License-Identifier: GPL-2.0-only
  */
@@ -70,6 +71,14 @@ SECTIONS
     .bss . : AT(ADDR(.bss) - KERNEL_OFFSET)
     {
         *(.bss)
+        /* GCC before version 10 put uninitialized global variables into a
+         * 'COMMON' section. If this section is not declared explicitly, these
+         * variables end up at the end of the '.bss'. This tends to waste a page
+         * because seL4 puts large aligned data at the end. In GCC 10
+         * '-fno-common' was made the default, so handling 'COMMON' is no longer
+         * needed. See also https://gcc.gnu.org/gcc-10/changes.html.
+         */
+        *(COMMON)
         *(.sbss)
 
         /* 4k breakpoint stack */
@@ -79,7 +88,6 @@ SECTIONS
 
         /* large data such as the globals frame and global PD */
         *(.bss.aligned)
-        . = . + 8;
     }
 
     . = ALIGN(4K);
