@@ -23,10 +23,15 @@ BOOT_BSS ndks_boot_t ndks_boot;
 BOOT_BSS rootserver_mem_t rootserver;
 BOOT_BSS static region_t rootserver_mem;
 
+static bool_t print_active = 0;
+BOOT_CODE void hack_enable_prints(void) { print_active = 1; }
+
 BOOT_CODE bool_t reserve_region(p_region_t reg)
 {
-    printf("reserve region [%"SEL4_PRIx_word"..%"SEL4_PRIx_word"]\n",
-           reg.start, reg.end - 1);
+    if (print_active) {
+        printf("reserve region [%"SEL4_PRIx_word"..%"SEL4_PRIx_word"]\n",
+               reg.start, reg.end - 1);
+    }
 
     if (reg.start > reg.end) {
         printf("ERROR: invalid region\n");
@@ -67,7 +72,9 @@ BOOT_CODE bool_t reserve_region(p_region_t reg)
              *                   |--reg--|
              *    |--cur_reg--|
              */
-            printf("    skip\n");
+            if (print_active) {
+               printf("    skip\n");
+            }
             continue;
         }
 
@@ -78,7 +85,9 @@ BOOT_CODE bool_t reserve_region(p_region_t reg)
              *    |--reg--|
              *               |--cur_reg--|
              */
-            printf("    insert before\n");
+            if (print_active) {
+               printf("    insert before\n");
+            }
             break;
         }
 
@@ -130,8 +139,10 @@ BOOT_CODE bool_t reserve_region(p_region_t reg)
             i++;
             while (i + cnt < ndks_boot.resv_count) {
                 cur_reg = &ndks_boot.reserved[i + cnt];
-                printf("    merge %d  [%"SEL4_PRIx_word"..%"SEL4_PRIx_word"]\n",
-                       (int)(i + cnt), cur_reg->start, cur_reg->end - 1);
+                if (print_active) {
+                    printf("    merge %d  [%"SEL4_PRIx_word"..%"SEL4_PRIx_word"]\n",
+                           (int)(i + cnt), cur_reg->start, cur_reg->end - 1);
+                }
                 cnt++;
                 if (reg.end < cur_reg->start) {
                     break;
@@ -142,10 +153,12 @@ BOOT_CODE bool_t reserve_region(p_region_t reg)
             {
                 /* Move regions to close the gap. */
                 for ( /*nothing */; i + cnt < ndks_boot.resv_count; i++) {
-                    printf("    move %d -> %d  "
-                           "[%"SEL4_PRIx_word"..%"SEL4_PRIx_word"]\n",
-                           (int)(i + cnt), (int)i, cur_reg->start,
-                           cur_reg->end  - 1);
+                    if (print_active) {
+                        printf("    move %d -> %d  "
+                               "[%"SEL4_PRIx_word"..%"SEL4_PRIx_word"]\n",
+                               (int)(i + cnt), (int)i, cur_reg->start,
+                               cur_reg->end  - 1);
+                        }
                     ndks_boot.reserved[i] = ndks_boot.reserved[i + cnt];
                 }
 
@@ -153,7 +166,9 @@ BOOT_CODE bool_t reserve_region(p_region_t reg)
 
                 /* Mark remaining regions as empty. */
                 for ( /*nothing */; i < ndks_boot.resv_count; i++) {
-                    printf("    clear %d\n", (int)i);
+                    if (print_active) {
+                        printf("    clear %d\n", (int)i);
+                    }
                     ndks_boot.reserved[i] = P_REG_EMPTY;
                 }
 
@@ -813,6 +828,7 @@ BOOT_CODE void bi_finalise(void)
 BOOT_CODE bool_t init_freemem(word_t n_available, const p_region_t *available,
                               v_region_t it_v_reg, word_t extra_bi_size_bits)
 {
+    print_active = 1;
     /* The system configuration is broken if no region is available */
     if (0 == n_available) {
         printf("ERROR: no memory regions available\n");
@@ -856,7 +872,6 @@ BOOT_CODE bool_t init_freemem(word_t n_available, const p_region_t *available,
                r->start, r->end - 1);
         assert(r->start < r->end);
     }
-
 
     for (word_t i = 0; i < MAX_NUM_FREEMEM_REG; i++) {
         ndks_boot.freemem[i] = REG_EMPTY;
@@ -937,6 +952,13 @@ BOOT_CODE bool_t init_freemem(word_t n_available, const p_region_t *available,
         idx_a++;
     }
 
+    printf("reserved regions: %d\n", (int)ndks_boot.resv_count);
+    for (word_t i = 0; i < ndks_boot.resv_count; i++) {
+        p_region_t *r = &ndks_boot.reserved[i];
+        printf("  [%"SEL4_PRIx_word"..%"SEL4_PRIx_word"]\n",
+               r->start, r->end - 1);
+        assert(r->start < r->end);
+    }
     /* now try to fit the root server objects into a region */
     word_t i = MAX_NUM_FREEMEM_REG - 1;
     if (!is_reg_empty(ndks_boot.freemem[i])) {
