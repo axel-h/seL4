@@ -228,6 +228,8 @@ BOOT_CODE static bool_t insert_region(p_region_t p_reg)
     if (p_reg.start >= PADDR_TOP)
     {
         /* This area is completely out or reach. */
+        printf("  can't add region after PADDR_TOP (%"SEL4_PRIx_word")\n",
+               PADDR_TOP);
         return true;
     }
 
@@ -829,6 +831,16 @@ BOOT_CODE bool_t init_freemem(word_t n_available, const p_region_t *available,
                               v_region_t it_v_reg, word_t extra_bi_size_bits)
 {
     print_active = 1;
+    
+    printf("Kernel memory layout\n");
+    printf("  phys KERNEL_ELF_PADDR_BASE = %"SEL4_PRIx_word"\n", (word_t)KERNEL_ELF_PADDR_BASE);
+    printf("  phys PADDR_TOP             = %"SEL4_PRIx_word"\n", PADDR_TOP);
+    printf("       PPTR_BASE_OFFSET      = %"SEL4_PRIx_word"\n", (word_t)PPTR_BASE_OFFSET);
+    printf("  virt USER_TOP              = %"SEL4_PRIx_word"\n", (word_t)USER_TOP);
+    printf("  virt KERNEL_ELF_BASE       = %"SEL4_PRIx_word"\n", KERNEL_ELF_BASE);
+    printf("  virt KDEV_BASE             = %"SEL4_PRIx_word"\n", KDEV_BASE);
+    printf("  virt PPTR_TOP              = %"SEL4_PRIx_word"\n", PPTR_TOP);
+
     /* The system configuration is broken if no region is available */
     if (0 == n_available) {
         printf("ERROR: no memory regions available\n");
@@ -836,8 +848,12 @@ BOOT_CODE bool_t init_freemem(word_t n_available, const p_region_t *available,
     }
 
     /* Force ordering and exclusivity of available regions */
+    printf("available memory  regions: %d\n", (int)n_available);
     for (word_t i = 0; i < n_available; i++) {
         const p_region_t *r = &available[i];
+
+        printf("  [%"SEL4_PRIx_word"..%"SEL4_PRIx_word"]\n", r->start, r->end);
+
 
         /* Available regions must be sane */
         if (r->start > r->end) {
@@ -959,6 +975,9 @@ BOOT_CODE bool_t init_freemem(word_t n_available, const p_region_t *available,
                r->start, r->end - 1);
         assert(r->start < r->end);
     }
+
+    printf("Kernel rootserver setup\n");
+
     /* now try to fit the root server objects into a region */
     word_t i = MAX_NUM_FREEMEM_REG - 1;
     if (!is_reg_empty(ndks_boot.freemem[i])) {
@@ -966,13 +985,16 @@ BOOT_CODE bool_t init_freemem(word_t n_available, const p_region_t *available,
         return false;
     }
     /* skip any empty regions */
-    for (; is_reg_empty(ndks_boot.freemem[i]) && i >= 0; i--);
+    for (; is_reg_empty(ndks_boot.freemem[i]) && i >= 0; i--) {
+        printf("i %d free\n", (int)i);
+    }
 
     /* try to grab the last available p region to create the root server objects
      * from. If possible, retain any left over memory as an extra p region */
     word_t size = calculate_rootserver_size(it_v_reg, extra_bi_size_bits);
     word_t max = rootserver_max_size_bits(extra_bi_size_bits);
     for (; i >= 0; i--) {
+        printf("i %d\n", (int)i);
         word_t next = i + 1;
         pptr_t start = ROUND_DOWN(ndks_boot.freemem[i].end - size, max);
         if (start >= ndks_boot.freemem[i].start) {
@@ -987,6 +1009,9 @@ BOOT_CODE bool_t init_freemem(word_t n_available, const p_region_t *available,
             ndks_boot.freemem[next] = ndks_boot.freemem[i];
         }
     }
+
+
+    printf("Kernel init_freemem done\n");
 
     return true;
 }
