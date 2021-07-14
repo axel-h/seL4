@@ -25,8 +25,22 @@ BOOT_BSS static region_t rootserver_mem;
 
 BOOT_CODE bool_t reserve_region(p_region_t reg)
 {
+    printf("reserve region [%"SEL4_PRIx_word"..%"SEL4_PRIx_word"]\n",
+           reg.start, reg.end - 1);
+
+    if (reg.start > reg.end) {
+        printf("ERROR: invalid region\n");
+        return false;
+    }
+
     /* region must be sane */
     assert(reg.start <= reg.end);
+
+    /* There is noting to do if the region has a zero size. */
+    if (reg.start == reg.end) {
+        printf("  nothing to do for empty regions\n");
+        return true;
+    }
 
     /* There is noting to do if the region has a zero size. */
     if (reg.start == reg.end) {
@@ -41,6 +55,11 @@ BOOT_CODE bool_t reserve_region(p_region_t reg)
     for (i = 0; i < ndks_boot.resv_count; i++) {
         p_region_t *cur_reg = &ndks_boot.reserved[i];
 
+        if (print_active) {
+            printf("  %d  [%"SEL4_PRIx_word"..%"SEL4_PRIx_word"]\n",
+                   (int)i, cur_reg->start, cur_reg->end - 1);
+        }
+
         if (reg.start > cur_reg->end) {
             /* The list or properly ordered, so there is no impact on the
              * current element if new region is after it.
@@ -48,6 +67,7 @@ BOOT_CODE bool_t reserve_region(p_region_t reg)
              *                   |--reg--|
              *    |--cur_reg--|
              */
+            printf("    skip\n");
             continue;
         }
 
@@ -58,6 +78,7 @@ BOOT_CODE bool_t reserve_region(p_region_t reg)
              *    |--reg--|
              *               |--cur_reg--|
              */
+            printf("    insert before\n");
             break;
         }
 
@@ -91,6 +112,9 @@ BOOT_CODE bool_t reserve_region(p_region_t reg)
          * of case 1b and 2b
          *
          */
+        if (print_active) {
+            printf("    merge\n");
+        }
         if (reg.start < cur_reg->start) {
             /* Adjust the region start if the new region starts earlier. */
             cur_reg->start = reg.start;
@@ -106,6 +130,8 @@ BOOT_CODE bool_t reserve_region(p_region_t reg)
             i++;
             while (i + cnt < ndks_boot.resv_count) {
                 cur_reg = &ndks_boot.reserved[i + cnt];
+                printf("    merge %d  [%"SEL4_PRIx_word"..%"SEL4_PRIx_word"]\n",
+                       (int)(i + cnt), cur_reg->start, cur_reg->end - 1);
                 cnt++;
                 if (reg.end < cur_reg->start) {
                     break;
@@ -116,6 +142,10 @@ BOOT_CODE bool_t reserve_region(p_region_t reg)
             {
                 /* Move regions to close the gap. */
                 for ( /*nothing */; i + cnt < ndks_boot.resv_count; i++) {
+                    printf("    move %d -> %d  "
+                           "[%"SEL4_PRIx_word"..%"SEL4_PRIx_word"]\n",
+                           (int)(i + cnt), (int)i, cur_reg->start,
+                           cur_reg->end  - 1);
                     ndks_boot.reserved[i] = ndks_boot.reserved[i + cnt];
                 }
 
@@ -123,6 +153,7 @@ BOOT_CODE bool_t reserve_region(p_region_t reg)
 
                 /* Mark remaining regions as empty. */
                 for ( /*nothing */; i < ndks_boot.resv_count; i++) {
+                    printf("    clear %d\n", (int)i);
                     ndks_boot.reserved[i] = P_REG_EMPTY;
                 }
 
@@ -131,14 +162,13 @@ BOOT_CODE bool_t reserve_region(p_region_t reg)
         }
 
         return true;
-
     }
 
     /* Append at the end or make space to insert - if there is space. */
     if (i >= MAX_NUM_RESV_REG) {
         printf("ERROR: can't reserve [%"SEL4_PRIx_word"..%"SEL4_PRIx_word"] "
                "as it execeeds MAX_NUM_RESV_REG (%d)\n",
-               reg.start, reg.end, (int)MAX_NUM_RESV_REG);
+               reg.start, reg.end - 1, (int)MAX_NUM_RESV_REG);
 
         return false;
     }
@@ -146,8 +176,15 @@ BOOT_CODE bool_t reserve_region(p_region_t reg)
     /* If we are inserting then we have to make space first */
     for (word_t j = ndks_boot.resv_count; j > i; j--) {
         ndks_boot.reserved[j] = ndks_boot.reserved[j-1];
+        if (print_active) {
+            printf("    move %d -> %d "[%"SEL4_PRIx_word"..%"SEL4_PRIx_word"]\n",
+                   (int)(j-1), (int)j, cur_reg->start, cur_reg->end - 1);
+        }
     }
     /* insert or append region  */
+    if (print_active) {
+        printf("    put at %d\n", (int)i);
+    }
     ndks_boot.reserved[i] = reg;
     ndks_boot.resv_count++;
     return true;
@@ -805,6 +842,22 @@ BOOT_CODE bool_t init_freemem(word_t n_available, const p_region_t *available,
         }
     }
 
+    printf("physical memory regions: %d\n", (int)n_available);
+    for (word_t i = 0; i < n_available; i++) {
+        const p_region_t* r = &available[i];
+        printf("  [%"SEL4_PRIx_word"..%"SEL4_PRIx_word"]\n",
+               r->start, r->end - 1 );
+        assert(r->start < r->end);
+    }
+    printf("reserved regions: %d\n", (int)ndks_boot.resv_count);
+    for (word_t i = 0; i < ndks_boot.resv_count; i++) {
+        p_region_t *r = &ndks_boot.reserved[i];
+        printf("  [%"SEL4_PRIx_word"..%"SEL4_PRIx_word"]\n",
+               r->start, r->end - 1);
+        assert(r->start < r->end);
+    }
+
+
     for (word_t i = 0; i < MAX_NUM_FREEMEM_REG; i++) {
         ndks_boot.freemem[i] = REG_EMPTY;
     }
@@ -812,7 +865,6 @@ BOOT_CODE bool_t init_freemem(word_t n_available, const p_region_t *available,
     word_t idx_a = 0;
     word_t idx_r = 0;
     p_region_t a_tmp = P_REG_EMPTY;
-    /* Now iterate through the available regions, removing any reserved regions. */
     while ((idx_a < n_available) && (idx_r < ndks_boot.resv_count)) {
 
         const p_region_t *a = (0 != a_tmp.end) ? &a_tmp : &available[idx_a];
