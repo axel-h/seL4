@@ -296,7 +296,6 @@ static BOOT_CODE bool_t try_init_kernel(
     cap_t it_ap_cap;
     cap_t it_pd_cap;
     cap_t ipcbuf_cap;
-    create_frames_of_region_ret_t extra_bi_ret;
 
     /* setup virtual memory for the kernel */
     map_kernel_window();
@@ -453,7 +452,7 @@ static BOOT_CODE bool_t try_init_kernel(
             .start = rootserver.extra_bi,
             .end = rootserver.extra_bi + extra_bi_size
         };
-        extra_bi_ret =
+        create_frames_of_region_ret_t extra_bi_ret =
             create_frames_of_region(
                 root_cnode_cap,
                 it_pd_cap,

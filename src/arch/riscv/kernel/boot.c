@@ -194,7 +194,6 @@ static BOOT_CODE bool_t try_init_kernel(
     cap_t it_pd_cap;
     cap_t it_ap_cap;
     cap_t ipcbuf_cap;
-    create_frames_of_region_ret_t extra_bi_ret;
 
     /* Convert from physical addresses to userland vptrs with the parameter
      * pv_offset, which is defined as:
@@ -346,13 +345,13 @@ static BOOT_CODE bool_t try_init_kernel(
             .start = rootserver.extra_bi,
             .end = rootserver.extra_bi + extra_bi_size
         };
-        extra_bi_ret =
+        create_frames_of_region_ret_t extra_bi_ret =
             create_frames_of_region(
                 root_cnode_cap,
                 it_pd_cap,
                 extra_bi_region,
                 true,
-                pptr_to_paddr((void *)extra_bi_region.start) - extra_bi_frame_vptr
+                pptr_to_paddr((void *)rootserver.extra_bi) - extra_bi_frame_vptr
             );
         if (!extra_bi_ret.success) {
             printf("ERROR: mapping extra boot info to initial thread failed\n");
