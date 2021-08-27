@@ -30,8 +30,6 @@
 BOOT_BSS static volatile word_t node_boot_lock;
 #endif
 
-BOOT_BSS static p_region_t res_p_reg[NUM_RESERVED_REGIONS];
-
 BOOT_CODE cap_t create_mapped_it_frame_cap(cap_t pd_cap, pptr_t pptr, vptr_t vptr, asid_t asid, bool_t
                                            use_large, bool_t executable)
 {
@@ -63,30 +61,25 @@ BOOT_CODE static bool_t arch_init_freemem(p_region_t ui_p_reg,
                                           word_t extra_bi_size_bits)
 {
     /* reserve the kernel image region */
-    res_p_reg[0] = get_p_reg_kernel_img();
-    int index = 1;
-
-    /* add the dtb region, if it is not empty */
-    if (dtb_p_reg.start) {
-        if (index >= ARRAY_SIZE(res_p_reg)) {
-            printf("ERROR: no slot to add DTB to reserved regions\n");
-            return false;
-        }
-        res_p_reg[index] = dtb_p_reg;
-        index += 1;
-    }
-
-    /* reserve the user image region */
-    if (index >= ARRAY_SIZE(res_p_reg)) {
-        printf("ERROR: no slot to add user image to reserved regions\n");
+    if (!reserve_region(get_p_reg_kernel_img())) {
+        printf("ERROR: can't add reserved region for kernel image\n");
         return false;
     }
-    res_p_reg[index] = ui_p_reg;
-    index += 1;
+
+    /* Reserve the user image region. */
+    if (!reserve_region(ui_p_reg)) {
+        printf("ERROR: can't add reserved region for user image\n");
+        return false;
+    }
+
+    /* Reserve the DTB region, it's ignored if the size is zero. */
+    if (!reserve_region(dtb_p_reg)) {
+        printf("ERROR: can't add reserved region for DTB\n");
+        return false;
+    }
 
     /* avail_p_regs comes from the auto-generated code */
     return init_freemem(ARRAY_SIZE(avail_p_regs), avail_p_regs,
-                        index, res_p_reg,
                         it_v_reg, extra_bi_size_bits);
 }
 

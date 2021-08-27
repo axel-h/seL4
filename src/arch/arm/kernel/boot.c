@@ -37,66 +37,43 @@
 BOOT_BSS static volatile int node_boot_lock;
 #endif /* ENABLE_SMP_SUPPORT */
 
-BOOT_BSS static p_region_t reserved[NUM_RESERVED_REGIONS];
-
 BOOT_CODE static bool_t arch_init_freemem(p_region_t ui_p_reg,
                                           p_region_t dtb_p_reg,
                                           v_region_t it_v_reg,
                                           word_t extra_bi_size_bits)
 {
     /* reserve the kernel image region */
-    reserved[0] = get_p_reg_kernel_img();
-
-    int index = 1;
-
-    /* add the dtb region, if it is not empty */
-    if (dtb_p_reg.start) {
-        if (index >= ARRAY_SIZE(reserved)) {
-            printf("ERROR: no slot to add DTB to reserved regions\n");
-            return false;
-        }
-        reserved[index] = dtb_p_reg;
-        index++;
-    }
-
-    /* Reserve the user image region and the mode-reserved regions. For now,
-     * only one mode-reserved region is supported, because this is all that is
-     * needed.
-     */
-    if (MODE_RESERVED > 1) {
-        printf("ERROR: MODE_RESERVED > 1 unsupported!\n");
+    if (!reserve_region(get_p_reg_kernel_img())) {
+        printf("ERROR: can't add reserved region for kernel image\n");
         return false;
     }
-    p_region_t mode_reserved_p_reg = pptr_to_paddr_reg(mode_reserved_region[0]);
-    if (MODE_RESERVED == 1) {
-        if (index + 1 >= ARRAY_SIZE(reserved)) {
-            printf("ERROR: no slot to add the user image and the "
-                   "mode-reserved region to the reserved regions\n");
-            return false;
-        }
-        if (ui_p_reg.end > mode_reserved_p_reg.start) {
-            reserved[index] = mode_reserved_p_reg;
-            index++;
-            reserved[index] = ui_p_reg;
-        } else {
-            reserved[index] = ui_p_reg;
-            index++;
-            reserved[index] = mode_reserved_p_reg;
-        }
-        index++;
-    } else {
-        if (index >= ARRAY_SIZE(reserved)) {
-            printf("ERROR: no slot to add the user image to the reserved"
-                   "regions\n");
-            return false;
-        }
-        reserved[index] = ui_p_reg;
-        index++;
+
+    /* Reserve the user image region. */
+    if (!reserve_region(ui_p_reg)) {
+        printf("ERROR: can't add reserved region for user image\n");
+        return false;
     }
+
+    /* Reserve the DTB region, it's ignored if the size is zero. */
+    if (!reserve_region(dtb_p_reg)) {
+        printf("ERROR: can't add reserved region for DTB\n");
+        return false;
+    }
+
+#ifdef CONFIG_ARCH_AARCH32
+
+    /* Reserve the HW ASID region*/
+    assert(1 == MODE_RESERVED);
+    p_region_t hw_asid_p_reg = pptr_to_paddr_reg(mode_reserved_region[0]);
+    if (!reserve_region(hw_asid_p_reg)) {
+        printf("ERROR: can't add reserved region for HW ASIDs\n");
+        return false;
+    }
+
+#endif
 
     /* avail_p_regs comes from the auto-generated code */
     return init_freemem(ARRAY_SIZE(avail_p_regs), avail_p_regs,
-                        index, reserved,
                         it_v_reg, extra_bi_size_bits);
 }
 
