@@ -38,9 +38,9 @@
  * this, as the suffix is only applied when the C compiler is used and dropped
  * when the assembler runs.
  */
-#define UL_CONST(x) x
-#define ULL_CONST(x) x
-#define NULL 0
+#define UL_CONST(x)     x
+#define ULL_CONST(x)    x
+#define NULL            0
 
 #else /* not __ASSEMBLER__ */
 
@@ -49,20 +49,20 @@
  * printf() format specifiers, '%lu' is the only form that is supported. Thus
  * 'ul' is the preferred suffix to avoid confusion.
  */
-#define UL_CONST(x) _macro_concat(x, ul)
-#define ULL_CONST(x) _macro_concat(x, llu)
-#define NULL ((void *)0)
+#define UL_CONST(x)     _macro_concat(x, ul)
+#define ULL_CONST(x)    _macro_concat(x, llu)
+#define NULL            ((void *)0)
 
 #endif /* [not] __ASSEMBLER__ */
 
 /* These macros work for both the assembler and the compiler. */
-#define BIT(n) (UL_CONST(1) << (n))
-#define MASK(n) (BIT(n) - UL_CONST(1))
-#define IS_ALIGNED(n, b) (!((n) & MASK(b)))
-#define ROUND_DOWN(n, b) (((n) >> (b)) << (b))
-#define ROUND_UP(n, b) (((((n) - UL_CONST(1)) >> (b)) + UL_CONST(1)) << (b))
-#define MIN(a,b) (((a)<(b))?(a):(b))
-#define MAX(a,b) (((a)>(b))?(a):(b))
+#define BIT(n)            (UL_CONST(1) << (n))
+#define MASK(n)           (BIT(n) - UL_CONST(1))
+#define IS_ALIGNED(n, b)  (!((n) & MASK(b)))
+#define ROUND_DOWN(n, b)  (((n) >> (b)) << (b))
+#define ROUND_UP(n, b)    (((((n) - UL_CONST(1)) >> (b)) + UL_CONST(1)) << (b))
+#define MIN(a,b)          (((a) < (b)) ? (a) : (b))
+#define MAX(a,b)          (((a) > (b)) ? (a) : (b))
 
 /* Time constants are defined to use the 'unsigned long long'. Rationale is,
  * that the C rules define the calculation result is determined by largest type
@@ -112,36 +112,36 @@
 /** MODIFIES: */
 void __builtin_unreachable(void);
 #define UNREACHABLE()  __builtin_unreachable()
-#define MAY_ALIAS    __attribute__((may_alias))
+#define MAY_ALIAS      __attribute__((may_alias))
 
-#define ARRAY_SIZE(x) (sizeof(x) / sizeof((x)[0]))
+#define ARRAY_SIZE(x)            (sizeof(x) / sizeof((x)[0]))
 #define OFFSETOF(type, member)   __builtin_offsetof(type, member)
 
 #ifdef __GNUC__
 /* Borrowed from linux/include/linux/compiler.h */
-#define likely(x)   __builtin_expect(!!(x), 1)
-#define unlikely(x) __builtin_expect(!!(x), 0)
+#define likely(x)    __builtin_expect(!!(x), 1)
+#define unlikely(x)  __builtin_expect(!!(x), 0)
 #else
-#define likely(x)   (!!(x))
-#define unlikely(x) (!!(x))
+#define likely(x)    (!!(x))
+#define unlikely(x)  (!!(x))
 #endif
 
 /* need that for compiling with c99 instead of gnu99 */
-#define asm __asm__
+#define asm  __asm__
 
 /* Evaluate a Kconfig-provided configuration setting at compile-time. */
-#define config_set(macro) _is_set_(macro)
-#define _macrotest_1 ,
-#define _is_set_(value) _is_set__(_macrotest_##value)
-#define _is_set__(comma) _is_set___(comma 1, 0)
-#define _is_set___(_, v, ...) v
+#define config_set(macro)      _is_set_(macro)
+#define _macrotest_1           ,
+#define _is_set_(value)        _is_set__(_macrotest_##value)
+#define _is_set__(comma)       _is_set___(comma 1, 0)
+#define _is_set___(_, v, ...)  v
 
 /* Check the existence of a configuration setting, returning one value if it
  * exists and a different one if it does not */
-#define config_ternary(macro, true, false) _config_ternary(macro, true, false)
-#define _config_ternary(value, true, false) _config_ternary_(_macrotest_##value, true, false)
-#define _config_ternary_(comma, true, false) _config_ternary__(comma true, false)
-#define _config_ternary__(_, v, ...) v
+#define config_ternary(macro, true, false)    _config_ternary(macro, true, false)
+#define _config_ternary(value, true, false)   _config_ternary_(_macrotest_##value, true, false)
+#define _config_ternary_(comma, true, false)  _config_ternary__(comma true, false)
+#define _config_ternary__(_, v, ...)          v
 
 #define SMP_TERNARY(_smp, _up)      config_ternary(CONFIG_ENABLE_SMP_SUPPORT, _smp, _up)
 #define SMP_COND_STATEMENT(_st)     SMP_TERNARY(_st,)
