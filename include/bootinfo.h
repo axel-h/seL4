@@ -11,7 +11,6 @@
 #include <sel4/bootinfo_types.h>
 
 #define BI_PTR(r) ((seL4_BootInfo*)(r))
-#define BI_REF(p) ((word_t)(p))
 #define BI_FRAME_SIZE_BITS PAGE_BITS
 #define S_REG_EMPTY (seL4_SlotRegion){ .start = 0, .end = 0 }
 
