@@ -10,8 +10,13 @@
 #include <types.h>
 #include <sel4/bootinfo_types.h>
 
-#define BI_FRAME_SIZE_BITS PAGE_BITS
+
 #define S_REG_EMPTY (seL4_SlotRegion){ .start = 0, .end = 0 }
 
-/* adjust constants in config.h if this assert fails */
+/* The boot info takes at least one page, it must be big enough to hold the
+ * seL4_BootInfo data structure. There are many places in the boot code that
+ * have the hard-coded assumption the boot info is always one page and the size
+ * has the form 2^n.
+ */
+#define BI_FRAME_SIZE_BITS PAGE_BITS
 compile_assert(bi_size, sizeof(seL4_BootInfo) <= BIT(BI_FRAME_SIZE_BITS))

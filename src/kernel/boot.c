@@ -201,6 +201,11 @@ BOOT_CODE static void create_rootserver_objects(pptr_t start, v_region_t it_v_re
     maybe_alloc_extra_bi(seL4_PageBits, extra_bi_size_bits);
     rootserver.asid_pool = alloc_rootserver_obj(seL4_ASIDPoolBits, 1);
     rootserver.ipc_buf = alloc_rootserver_obj(seL4_PageBits, 1);
+
+    /* The current assumption is, that the boot info uses one page. Put a build
+     * breaker here to ensure this holds. If the boot info ever gets larger, the
+     * allocation has to be reworked. */
+    compile_assert(bi_size, BI_FRAME_SIZE_BITS == seL4_PageBits)
     rootserver.boot_info = alloc_rootserver_obj(seL4_PageBits, 1);
 
     /* TCBs on aarch32 can be larger than page tables in certain configs */
