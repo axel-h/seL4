@@ -4,8 +4,15 @@
 # SPDX-License-Identifier: GPL-2.0-only
 #
 
+# Type hints exist since 3.7. But only with 3.10 type hints of a custom class
+# can already use the class itself. It's a chicken-egg issue actually, because
+# the class itself as a type is not yet defined completely.
+from __future__ import annotations
+import sys
 import functools
 import hardware
+
+assert sys.version_info >= (3, 7)
 
 
 @functools.total_ordering
@@ -18,50 +25,50 @@ class Region:
         self.owner = owner
 
     @staticmethod
-    def clone(other):
+    def clone(other) -> Region:
         return Region(other.base, other.size)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         ''' Returns a string representation that is a valid Python expression
         that eval() can parse. '''
         return 'Region(base=0x{:x},size=0x{:x})'.format(self.base, self.size)
 
-    def __str__(self):
+    def __str__(self) -> str:
         ''' Returns a string representation. '''
         return 'Region [0x{:x}..0x{:x}] ({:d} bytes)'.format(
             self.base,
             self.base + self.size - (1 if self.size > 0 else 0),
             self.size)
 
-    def __eq__(self, other):
+    def __eq__(self, other) -> bool:
         return self.base == other.base and self.size == other.size
 
-    def __ne__(self, other):
+    def __ne__(self, other) -> bool:
         # Needed only for py2.
         return not self.__eq__(other)
 
-    def __gt__(self, other):
+    def __gt__(self, other) -> bool:
         return self.base > other.base
 
-    def __hash__(self):
+    def __hash__(self) -> bool:
         return hash((self.base, self.size))
 
     @staticmethod
-    def from_range(start, end, owner=None):
+    def from_range(start, end, owner=None) -> Region:
         ''' create a region from a start/end rather than start/size '''
         if start > end:
             raise ValueError(
                 'invalid rage start (0x{:x}) > end (0x{:x})'.format(start > end))
         return Region(start, end - start, owner)
 
-    def overlaps(self, other):
+    def overlaps(self, other: Region) -> bool:
         ''' returns True if this region overlaps the given region '''
         # Either our base is first, and to overlap our end must be > other.base
         # or other.base is first, and to overlap other's end must be > self.base
         return (self.base <= other.base and (self.base + self.size) > other.base) \
             or (other.base <= self.base and (other.base + other.size) > self.base)
 
-    def reserve(self, excluded):
+    def reserve(self, excluded: Region) -> List[Region]:
         ''' returns an array of regions that represent this region
         minus the excluded range '''
         if not self.overlaps(excluded):
@@ -84,7 +91,7 @@ class Region:
                                              self.base + self.size, self.owner))
         return ret
 
-    def align_base(self, align_bits):
+    def align_base(self, align_bits) -> Region:
         ''' align this region up to a given number of bits '''
         new_base = hardware.utils.align_up(self.base, align_bits)
         diff = new_base - self.base
@@ -96,7 +103,7 @@ class Region:
         # to check if this region still fits its needs.
         return Region(new_base, self.size - diff, self.owner)
 
-    def align_size(self, align_bits):
+    def align_size(self, align_bits) -> Region:
         ''' align this region's size to a given number of bits.
          will move the base address down and the region's size
          up '''
@@ -104,7 +111,7 @@ class Region:
         new_size = hardware.utils.align_up(self.size, align_bits)
         return Region(new_base, new_size, self.owner)
 
-    def make_chunks(self, chunksz):
+    def make_chunks(self, chunksz) -> List[Region]:
         base = self.base
         size = self.size
         ret = []
