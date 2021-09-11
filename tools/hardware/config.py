@@ -23,14 +23,19 @@ class Config:
         return 0
 
     def get_page_bits(self) -> int:
-        ''' Get page size in bits for this arch '''
-        return 12  # 4096-byte pages
+        '''
+        Get page size in 2^n  bits for this arch. Defaults to 2^12 (4096).
+        '''
+        return 12
 
     def get_smallest_kernel_object_alignment(self) -> int:
         return 4  # seL4_MinUntypedBits is 4 for all configurations
 
     def get_device_page_bits(self) -> int:
-        ''' Get page size in bits for mapping devices for this arch '''
+        '''
+        Get page size in 2^n  bits for mapping devices for this arch. Defaults
+        to the page size.
+        '''
         return self.get_page_bits()
 
 
