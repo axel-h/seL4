@@ -17,11 +17,28 @@
 #include <hardware.h>
 #include <util.h>
 
+typedef struct {
+#ifdef CONFIG_PRINTING
+    const char *name;
+#endif
+    pptr_t *pObj;
+    unsigned int bits;
+    unsigned int n;
+} rootserver_object_t;
+
+#ifdef CONFIG_PRINTING
+#define ROOTSERVER_OBJECT(_name_, _bits_, _n_) \
+    { .name = #_name_, .pObj = &rootserver._name_, .bits = _bits_, .n = _n_ }
+#else
+#define ROOTSERVER_OBJECT(_name_, _bits_, _n_) \
+    { .pObj = &rootserver._name_, .bits = _bits_, .n = _n_ }
+#endif
+
+
 /* (node-local) state accessed only during bootstrapping */
 BOOT_BSS ndks_boot_t ndks_boot;
 
 BOOT_BSS rootserver_mem_t rootserver;
-BOOT_BSS static region_t rootserver_mem;
 
 BOOT_CODE static void merge_regions(void)
 {
@@ -132,103 +149,189 @@ BOOT_CODE static bool_t insert_region(region_t reg)
     return false;
 }
 
-BOOT_CODE static pptr_t alloc_rootserver_obj(word_t size_bits, word_t n)
-{
-    pptr_t allocated = rootserver_mem.start;
-    /* allocated memory must be aligned */
-    assert(allocated % BIT(size_bits) == 0);
-    rootserver_mem.start += (n * BIT(size_bits));
-    /* we must not have run out of memory */
-    assert(rootserver_mem.start <= rootserver_mem.end);
-    memzero((void *) allocated, n * BIT(size_bits));
-    return allocated;
-}
-
-BOOT_CODE static word_t rootserver_max_size_bits(word_t extra_bi_size_bits)
-{
-    word_t cnode_size_bits = CONFIG_ROOT_CNODE_SIZE_BITS + seL4_SlotBits;
-    word_t max = MAX(cnode_size_bits, seL4_VSpaceBits);
-    return MAX(max, extra_bi_size_bits);
-}
-
-BOOT_CODE static word_t calculate_rootserver_size(v_region_t it_v_reg, word_t extra_bi_size_bits)
-{
-    /* work out how much memory we need for root server objects */
-    word_t size = BIT(CONFIG_ROOT_CNODE_SIZE_BITS + seL4_SlotBits);
-    size += BIT(seL4_TCBBits); // root thread tcb
-    size += BIT(seL4_PageBits); // ipc buf
-    size += BIT(BI_FRAME_SIZE_BITS); // boot info
-    size += BIT(seL4_ASIDPoolBits);
-    size += extra_bi_size_bits > 0 ? BIT(extra_bi_size_bits) : 0;
-    size += BIT(seL4_VSpaceBits); // root vspace
-#ifdef CONFIG_KERNEL_MCS
-    size += BIT(seL4_MinSchedContextBits); // root sched context
-#endif
-    /* for all archs, seL4_PageTable Bits is the size of all non top-level paging structures */
-    return size + arch_get_n_paging(it_v_reg) * BIT(seL4_PageTableBits);
-}
-
-BOOT_CODE static void maybe_alloc_extra_bi(word_t cmp_size_bits, word_t extra_bi_size_bits)
-{
-    if (extra_bi_size_bits >= cmp_size_bits && rootserver.extra_bi == 0) {
-        rootserver.extra_bi = alloc_rootserver_obj(extra_bi_size_bits, 1);
-    }
-}
-
-/* Create pptrs for all root server objects, starting at a give start address,
- * to cover the virtual memory region v_reg, and any extra boot info.
+/* Find a free memory region to create all root server objects to cover the
+ * virtual memory region v_reg and any extra boot info.
  */
-BOOT_CODE static void create_rootserver_objects(pptr_t start, v_region_t it_v_reg,
-                                                word_t extra_bi_size_bits)
+BOOT_CODE static bool_t create_rootserver_objects(v_region_t it_v_reg,
+                                                  word_t extra_bi_size_bits)
 {
-    /* the largest object the PD, the root cnode, or the extra boot info */
-    word_t cnode_size_bits = CONFIG_ROOT_CNODE_SIZE_BITS + seL4_SlotBits;
-    word_t max = rootserver_max_size_bits(extra_bi_size_bits);
-
-    word_t size = calculate_rootserver_size(it_v_reg, extra_bi_size_bits);
-    rootserver_mem.start = start;
-    rootserver_mem.end = start + size;
-
-    maybe_alloc_extra_bi(max, extra_bi_size_bits);
-
-    /* the root cnode is at least 4k, so it could be larger or smaller than a pd. */
-#if (CONFIG_ROOT_CNODE_SIZE_BITS + seL4_SlotBits) > seL4_VSpaceBits
-    rootserver.cnode = alloc_rootserver_obj(cnode_size_bits, 1);
-    maybe_alloc_extra_bi(seL4_VSpaceBits, extra_bi_size_bits);
-    rootserver.vspace = alloc_rootserver_obj(seL4_VSpaceBits, 1);
-#else
-    rootserver.vspace = alloc_rootserver_obj(seL4_VSpaceBits, 1);
-    maybe_alloc_extra_bi(cnode_size_bits, extra_bi_size_bits);
-    rootserver.cnode = alloc_rootserver_obj(cnode_size_bits, 1);
-#endif
-
-    /* at this point we are up to creating 4k objects - which is the min size of
-     * extra_bi so this is the last chance to allocate it */
-    maybe_alloc_extra_bi(seL4_PageBits, extra_bi_size_bits);
-    rootserver.asid_pool = alloc_rootserver_obj(seL4_ASIDPoolBits, 1);
-    rootserver.ipc_buf = alloc_rootserver_obj(seL4_PageBits, 1);
-    rootserver.boot_info = alloc_rootserver_obj(BI_FRAME_SIZE_BITS, 1);
-
-    /* TCBs on aarch32 can be larger than page tables in certain configs */
-#if seL4_TCBBits >= seL4_PageTableBits
-    rootserver.tcb = alloc_rootserver_obj(seL4_TCBBits, 1);
-#endif
-
-    /* paging structures are 4k on every arch except aarch32 (1k) */
-    word_t n = arch_get_n_paging(it_v_reg);
-    rootserver.paging.start = alloc_rootserver_obj(seL4_PageTableBits, n);
-    rootserver.paging.end = rootserver.paging.start + n * BIT(seL4_PageTableBits);
-
-    /* for most archs, TCBs are smaller than page tables */
-#if seL4_TCBBits < seL4_PageTableBits
-    rootserver.tcb = alloc_rootserver_obj(seL4_TCBBits, 1);
-#endif
-
+    /* The free memory regions are set up. Create the rootserver objects. The
+     * order is aligned with the filed order in rootserver_mem_t, but since we
+     * store the pointers here, that is not strictly required. The allocation
+     * order will be determined dynamically based on the bit-alignment needs.
+     */
+    rootserver_object_t objects[] = {
+        ROOTSERVER_OBJECT(cnode, CONFIG_ROOT_CNODE_SIZE_BITS + seL4_SlotBits, 1),
+        ROOTSERVER_OBJECT(vspace, seL4_VSpaceBits, 1),
+        ROOTSERVER_OBJECT(asid_pool, seL4_ASIDPoolBits, 1),
+        ROOTSERVER_OBJECT(ipc_buf, seL4_PageBits, 1),
+        ROOTSERVER_OBJECT(boot_info, BI_FRAME_SIZE_BITS, 1),
+        ROOTSERVER_OBJECT(extra_bi, extra_bi_size_bits, 1),
+        ROOTSERVER_OBJECT(tcb, seL4_TCBBits, 1),
 #ifdef CONFIG_KERNEL_MCS
-    rootserver.sc = alloc_rootserver_obj(seL4_MinSchedContextBits, 1);
+        /* root sched context */
+        ROOTSERVER_OBJECT(sc, seL4_MinSchedContextBits, 1),
 #endif
-    /* we should have allocated all our memory */
-    assert(rootserver_mem.start == rootserver_mem.end);
+        /* The size in bits of all non top-level paging structures for all
+         * architectures is seL4_PageTable
+         */
+        ROOTSERVER_OBJECT(paging.start, seL4_PageTableBits, arch_get_n_paging(it_v_reg))
+    };
+
+    /* Calculate the overall size and the max bit alignment. */
+    unsigned int align_bits = 0;
+    word_t objs_size = 0;
+    for (unsigned int i = 0; i < ARRAY_SIZE(objects); i++) {
+        rootserver_object_t *obj = &objects[i];
+        /* Ignore object that are unused. */
+        if ((0 != obj->bits) && (0 != obj->n)) {
+            objs_size += obj->n * BIT(obj->bits);
+            if (align_bits < obj->bits) {
+                align_bits = obj->bits;
+            }
+        }
+    }
+
+    /* Find a free memory region for all root server objects. Due to the
+     * alignment requirements, there will be free space before and after the
+     * objects. To keep it as free memory, we need one additional unused free
+     * memory slot. Not having a free slot is considered fatal for now, as the
+     * number of slots is just an arbitrary constant that can be updated easily
+     * and one additional slot costs almost nothing in terms of memory usage.
+     */
+    int idx_free = ARRAY_SIZE(ndks_boot.freemem) - 1;
+    if (!is_reg_empty(ndks_boot.freemem[idx_free])) {
+        printf("MAX_NUM_FREEMEM_REG (%u) to small\n",
+               (unsigned int)MAX_NUM_FREEMEM_REG);
+        return false;
+    }
+    pptr_t objs_start;
+    for (; idx_free >= 0; idx_free--) {
+        region_t *reg = &ndks_boot.freemem[idx_free];
+        if (is_reg_empty(*reg)) {
+            /* Skip any empty regions. From the check above we know there must
+             * be at least one at the end of the list. We do not really expect
+             * to see empty regions in the middle of the array.
+             */
+            continue;
+        }
+        if (reg->end - reg->start >= objs_size) {
+            objs_start = ROUND_DOWN(reg->end - objs_size, align_bits);
+            if (objs_start >= reg->start) {
+                /* Found a region for the root server objects. */
+                break;
+            }
+        }
+        /* The region is too small. Since we loop though the list from the end
+         * and we know there is an empty region at the end, we can be sure that
+         * if we arrive here, there is an empty region in the next higher slot.
+         * Swap the slots and try the next lower region:
+         *
+         *                region too small
+         *                v
+         * Free: [a] [b] [c] [empty] [...]  ->  [a] [b] [empty] [c] [...]
+         *            ^
+         *            region to check next
+         */
+        region_t *next = &ndks_boot.freemem[idx_free + 1];
+        assert(is_reg_empty(*next));
+        *next = *reg;
+        *reg = REG_EMPTY;
+    }
+
+    if (idx_free < 0) {
+        printf("ERROR: no free memory region is big enough for root server "
+               "objects, need size/alignment of 2^%u\n", align_bits);
+        /* Fatal error, can't create root server objects. */
+        return false;
+    }
+
+    /* Carve out the memory for the region of the rootserver objects from the
+     * free memory list and put the regions before and after it in instead:
+     *
+     * Free: [a] [b] [c] [empty] [...] -> [a] [b] [pre] [post] [...]
+     *                ^
+     *                region for rootserver objects
+     */
+    region_t *reg_pre = &ndks_boot.freemem[i];
+    region_t *reg_post = &ndks_boot.freemem[i + 1];
+    assert(is_reg_empty(*reg_post));
+    *reg_post = (region_t) { /* fill the empty slot */
+        .start = objs_start + objs_size,
+        .end = reg_pre->end
+    };
+    reg_pre->end = rootserver_mem.start; /* shrink the region */
+
+    /* Create pptrs for all root server objects in the memory we have carved
+     * out. We could soft the list first instead of iterating multiple times,
+     * but as long as there are just a few elements there is no significant
+     * speed gain here. So we keep iterating and zero each element once we have
+     * allocated the memory until all allocation are done.
+     */
+    printf("allocating root server objects...\n");
+    while (align_bits > 0) {
+        unsigned int next_align_bits = 0;
+        for (unsigned int i = 0; i < ARRAY_SIZE(objects); i++) {
+            rootserver_object_t *obj = &objects[i];
+            if (align_bits != obj->bits) {
+                /* The current object bit does not match. It can only be less
+                 * and we will handle this in another outer loop iteration.
+                 */
+                assert(align_bits > obj->bits);
+                if ((next_align_bits < obj->bits) && (0 != obj->n)) {
+                    /* Potential candidate for the next outer loop iteration. */
+                    next_align_bits = obj->bits;
+                }
+                continue;
+            }
+
+            /* Allocate the object of the current bit-size. Several objects can
+             * have the same bit-size, so we could end up here multiple time per
+             * loop iteration.
+             */
+            assert(objs_start % BIT(obj->bits) != 0);
+            word_t size = obj->n * BIT(obj->bits);
+            assert(size > objs_size);
+            memzero((void *)objs_start, size);
+            assert(obj->pObj);
+            *(obj->pObj) = objs_start;
+
+            printf("  [0x%"SEL4_PRIx_word"..0x%"SEL4_PRIx_word"]: "
+                   "%u object%s of 2^%u (=%"SEL4_PRIu_word") byte for %s\n",
+                   objs_start, objs_start + size - 1,
+                   obj->n, (1 != obj->n) ? "s" : "",
+                   obj->bits, BIT(obj->bits), obj->name);
+
+            /* Wipe the object in the helper array. */
+            memzero(obj, sizeof(*obj));
+            /* Adjust free memory. */
+            objs_start += size;
+            objs_size -= size;
+        }
+        /* We are done with allocations for this bit-size. Continue with the
+         * next lower size we have found.
+         */
+        assert(align_bits > next_align_bits);
+        align_bits = next_align_bits;
+    }
+
+    /* All allocation are done and thus all reserved memory should have been
+     * allocated. if there is some left, that memory is lost and it should be
+     * investigated why this happened. We consider this fatal for debug builds
+     * only, as the size calculation seem broken. Otherwise it is non-fatal,
+     * but we print a warning to highlight this.
+     */
+    if (0 != objs_size) {
+        printf("WARNING: %"SEL4_PRIu_word" bytes of unallocated root server "
+               "object memory left\n", objs_size);
+        assert(0);
+    }
+
+    /* Update the paging area. */
+    rootserver.paging.end = rootserver.paging.start
+                            + arch_get_n_paging(it_v_reg) * BIT(seL4_PageTableBits);
+
+    return true;
 }
 
 BOOT_CODE void write_slot(slot_ptr_t slot_ptr, cap_t cap)
@@ -861,84 +964,12 @@ BOOT_CODE bool_t init_freemem(word_t n_available, const p_region_t *available,
     }
 
     /* The free memory regions are set up, try to fit the root server objects
-     * into a region. There will be free space before and after the root server
-     * objects, which is to be turned into free memory. Thus we need one unused
-     * free memory slot. Not having a free slot is considered fatal for now, as
-     * the number of slots is just an arbitrary constant that can be updated
-     * easily. Also, one additional slot costs almost nothing in terms of memory
-     * usage.
+     * into one of the regions.
      */
-    int i = ARRAY_SIZE(ndks_boot.freemem) - 1;
-    if (!is_reg_empty(ndks_boot.freemem[i])) {
-        printf("ERROR: insufficient MAX_NUM_FREEMEM_REG (%u)\n",
-               (unsigned int)MAX_NUM_FREEMEM_REG);
-        return false;
-    }
-    /* skip any empty regions */
-    for (; is_reg_empty(ndks_boot.freemem[i]) && i >= 0; i--);
-
-    /* try to grab the last available p region to create the root server objects
-     * from. If possible, retain any left over memory as an extra p region */
-    word_t size = calculate_rootserver_size(it_v_reg, extra_bi_size_bits);
-    word_t max = rootserver_max_size_bits(extra_bi_size_bits);
-    pptr_t start;
-    for (; i >= 0; i--) {
-        // SimplExportAnRefine has poor handling of array indices that are sums
-        // of variables and small constants. The `next_i` variable exists to
-        // work around the deficiency.
-        word_t next_i = i + 1;
-        region_t *reg = &ndks_boot.freemem[i];
-        /* Check if the region is big enough. If so, align the start address
-         * down to ensure the required alignment and then check that the start
-         * address is still within the region.
-         */
-        if (reg->end - reg->start >= size) {
-            start = ROUND_DOWN(reg->end - size, max);
-            if (start >= reg->start) {
-                break;
-            }
-        }
-        /* The region is too small. Since we loop though the list from the end,
-         * and we know there is an empty region at the end, we can be sure that
-         * if we arrive here, there is an empty region in the next higher slot.
-         * Swap the slots and try the next lower region:
-         *
-         *                region too small
-         *                v
-         * Free: [a] [b] [c] [empty] [...]  ->  [a] [b] [empty] [c] [...]
-         *            ^
-         *            region to check next
-         */
-        region_t *next = &ndks_boot.freemem[next_i];
-        assert(is_reg_empty(*next));
-        *next = *reg;
-        *reg = REG_EMPTY;
-    }
-
-    if (i < 0) {
-        printf("ERROR: no free memory region is big enough for root server "
-               "objects, need size/alignment of 2^%"SEL4_PRIu_word"\n", max);
-        /* Fatal error, can't create root server objects. */
+    if (!create_rootserver_objects(it_v_reg, extra_bi_size_bits)) {
+        printf("ERROR: could not create root server objects\n");
         return false;
     }
 
-    /* Carve out the memory for the region of the rootserver objects from the
-     * free memory list and put the regions before and after it in instead:
-     *
-     * Free: [a] [b] [c] [empty] [...] -> [a] [b] [pre] [post] [...]
-     *                ^
-     *                region for rootserver objects
-     */
-    region_t *reg_pre = &ndks_boot.freemem[i];
-    region_t *reg_post = reg_pre + 1;
-    assert(is_reg_empty(*reg_post));
-    *reg_post = (region_t) { /* use empty slot */
-        .start = start + size,
-        .end = reg_pre->end
-    };
-    reg_pre->end = start; /* shrink */
-
-    /* The free memory list has been updated, create the root server objects */
-    create_rootserver_objects(start, it_v_reg, extra_bi_size_bits);
     return true;
 }
