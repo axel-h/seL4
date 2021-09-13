@@ -36,13 +36,17 @@ def create_yaml_file(regions_dict: Dict[str, List[Region]], outputStream):
         int,
         lambda dumper, data: yaml.ScalarNode('tag:yaml.org,2002:int', hex(data)))
 
+    yaml_obj = {
+        key: make_yaml_list_of_regions(val)
+        for key, val in regions_dict.items()
+    }
+
+    print('yaml_obj:')
+    for e in yaml_obj:
+        print('  {}: {}'.format(e, yaml_obj[e]));
+
     with outputStream:
-        yaml.dump(
-            {
-                key: make_yaml_list_of_regions(val)
-                for key, val in regions_dict.items()
-            },
-            outputStream)
+        yaml.dump(yaml_obj, outputStream)
 
 
 def run(tree: FdtParser, hw_yaml: HardwareYaml, args: argparse.Namespace):

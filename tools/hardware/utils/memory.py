@@ -139,7 +139,9 @@ def get_phys_mem_regions(tree: FdtParser, hw_yaml: HardwareYaml) \
     if hw_yaml:
         for dev in tree.get_kernel_devices():
             hw_regions = hw_yaml.get_rule(dev).get_regions(dev)
+            print('hardware: {}'.format(hw_regions))
             for reg in hw_regions:
+                print('  reg: {}'.format(reg))
                 if (type(reg) != KernelRegionGroup or not reg.user_ok):
                     all_regions = carve_out_region(all_regions, reg)
 

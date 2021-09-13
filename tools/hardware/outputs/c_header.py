@@ -142,6 +142,9 @@ def create_c_header_file(hw_yaml: HardwareYaml,
             'kernel_regions': kernel_regions,
             'physBase': physBase,
             'physical_memory': physical_memory})
+
+    print(template_args)
+
     data = template.render(template_args)
 
     with outputStream:
