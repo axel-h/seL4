@@ -1070,6 +1070,20 @@ BOOT_CODE bool_t init_freemem(word_t n_available, const p_region_t *available,
             ndks_boot.freemem[i].end = start;
             /* Regions i and (i + 1) are now well defined, ordered, disjoint,
              * and unallocated, so we can return successfully. */
+            printf("free memory regions:\n");
+#ifdef CONFIG_PRINTING
+            for (unsigned int j = 0; j < ARRAY_SIZE(ndks_boot.freemem); j++) {
+                const region_t *reg = &ndks_boot.freemem[j];
+                if (!is_reg_empty(*reg)) {
+                    printf("  PA [%"SEL4_PRIx_word"..%"SEL4_PRIx_word"], "
+                           "VA [%"SEL4_PRIx_word"..%"SEL4_PRIx_word"]\n",
+                           pptr_to_paddr((void *)reg->start),
+                           pptr_to_paddr((void *)(reg->end - 1)),
+                           reg->start,
+                           reg->end - 1);
+                }
+            }
+#endif /* CONFIG_PRINTING */
             return true;
         }
         /* Region i isn't big enough, so shuffle it up to slot (i + 1),
