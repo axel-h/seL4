@@ -971,5 +971,14 @@ BOOT_CODE bool_t init_freemem(word_t n_available, const p_region_t *available,
         return false;
     }
 
+    printf("free virtual memory regions: \n");
+    for (unsigned int i = 0; i < ARRAY_SIZE(ndks_boot.freemem); i++) {
+        const region_t *reg = &ndks_boot.freemem[i];
+        if (!is_reg_empty(*reg)) {
+            printf("  [%"SEL4_PRIx_word"..%"SEL4_PRIx_word"]\n",
+                   reg->start, reg->end - 1);
+        }
+    }
+
     return true;
 }
