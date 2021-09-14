@@ -45,4 +45,3 @@ typedef struct kernel_frame {
     pptr_t pptr;
     int userAvailable;
 } kernel_frame_t;
-
