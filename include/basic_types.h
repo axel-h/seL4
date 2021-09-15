@@ -8,8 +8,22 @@
 
 #include <stdint.h>
 #include <arch/types.h>
+#include <assert.h>
 
-/* arch/types.h is supposed to define word_t and _seL4_word_fmt */
+/* arch/types.h defines wordRadix, wordBits is 2^wordRadix. */
+#ifdef CONFIG_ARCH_RISCV
+/* Unfortunately, the proofs for RISC-V are build around using BIT() and need to
+ * be updated to unify the definitions.
+ */
+#define wordBits    BIT(wordRadix)
+#else
+#define wordBits    (1 << wordRadix)
+#endif
+
+/* Sanity check that word_t type and wordBits is consistent. */
+compile_assert(wordBits_matches_word_t, wordBits == 8 * sizeof(word_t))
+
+/* arch/types.h is supposed to define _seL4_word_fmt also besides word_t */
 #ifndef _seL4_word_fmt
 #error "missing _seL4_word_fmt"
 #endif

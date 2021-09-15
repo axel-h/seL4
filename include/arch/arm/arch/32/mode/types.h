@@ -11,7 +11,7 @@
 
 compile_assert(long_is_32bits, sizeof(unsigned long) == 4)
 
+/* a "word" holds 2^5 = 32 bit */
 #define wordRadix 5
-#define wordBits (1 << wordRadix)
 
 typedef uint32_t timestamp_t;

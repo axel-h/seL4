@@ -8,7 +8,6 @@
 #pragma once
 
 #include <config.h>
-#include <util.h>
 #include <stdint.h>
 #include <mode/types.h>
 
@@ -36,8 +35,6 @@ typedef paddr_t seL4_PAddr;
 typedef dom_t seL4_Domain;
 
 typedef uint64_t timestamp_t;
-
-#define wordBits BIT(wordRadix)
 
 typedef struct kernel_frame {
     paddr_t paddr;
