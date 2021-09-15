@@ -110,14 +110,23 @@ typedef seL4_Int8   seL4_Bool;
 
 /* Define seL4_Word */
 #if defined(SEL4_WORD_IS_UINT32)
+#define seL4_WordSizeBits 2
 typedef seL4_Uint32 seL4_Word;
 #define _seL4_word_fmt /* empty */
 #elif defined(SEL4_WORD_IS_UINT64)
+#define seL4_WordSizeBits 3
 typedef seL4_Uint64 seL4_Word;
 #define _seL4_word_fmt _seL4_int64_fmt
 #else
 #error missing definition for SEL4_WORD type
 #endif
+
+SEL4_COMPILE_ASSERT(
+    seL4_WordSizeBits_matches,
+    sizeof(seL4_Word) == (1 << seL4_WordSizeBits))
+
+#define seL4_WordBits  (8 * sizeof(seL4_Word))
+
 /* printf() format specifiers for seL4_Word */
 #define SEL4_PRId_word  _macro_str_concat(_seL4_word_fmt, d)
 #define SEL4_PRIi_word  _macro_str_concat(_seL4_word_fmt, i)
@@ -126,14 +135,3 @@ typedef seL4_Uint64 seL4_Word;
 #define SEL4_PRI_word   SEL4_PRIu_word
 
 typedef seL4_Word seL4_CPtr;
-
-/* sanity check that the seL4_Word matches the definitions of the constants */
-#include <sel4/sel4_arch/constants.h>
-
-SEL4_COMPILE_ASSERT(
-    seL4_WordSizeBits_matches,
-    sizeof(seL4_Word) == (1u << seL4_WordSizeBits))
-
-SEL4_COMPILE_ASSERT(
-    seL4_WordBits_matches,
-    8 * sizeof(seL4_Word) == seL4_WordBits)
