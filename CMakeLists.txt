@@ -46,8 +46,6 @@ message("CMAKE_C_COMPILER: ID='${CMAKE_C_COMPILER_ID}', VERSION='${CMAKE_C_COMPI
 # Define default global flag information so that users can compile with the same
 # basic architecture flags as the kernel
 
-string(APPEND common_flags " -D__KERNEL_${KernelWordSize}__")
-
 if(KernelArchX86)
     if(${KernelX86MicroArch} STREQUAL "generic")
         string(APPEND common_flags " -mtune=generic")

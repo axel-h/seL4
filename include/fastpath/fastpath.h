@@ -145,14 +145,16 @@ static inline void thread_state_ptr_mset_blockingObject_tsType(thread_state_t *t
 static inline void cap_reply_cap_ptr_new_np(cap_t *cap_ptr, word_t capReplyCanGrant,
                                             word_t capReplyMaster, word_t capTCBPtr)
 {
-#ifdef __KERNEL_64__
+#if CONFIG_WORD_SIZE == 64
     cap_ptr->words[1] = (word_t)capTCBPtr;
     cap_ptr->words[0] = (capReplyMaster) | (capReplyCanGrant << 1) |
                         ((word_t)cap_reply_cap << 59);
-#else
+#elif CONFIG_WORD_SIZE == 32
     cap_ptr->words[0] = TCB_REF(capTCBPtr) | (capReplyMaster << 4) |
                         (capReplyCanGrant << 5) | cap_reply_cap ;
-#endif
+#else
+#error invalid CONFIG_WORD_SIZE
+#endif /* CONFIG_WORD_SIZE */
 }
 #endif /* CONFIG_KERNEL_MCS */
 
