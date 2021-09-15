@@ -42,7 +42,6 @@
 #define seL4_NumASIDPoolsBits 2
 #define seL4_ASIDPoolBits    12
 #define seL4_ASIDPoolIndexBits 10
-#define seL4_WordSizeBits 2
 
 #define seL4_HugePageBits    30 /* 1GB */
 #define seL4_PDPTBits         0
@@ -57,8 +56,6 @@ SEL4_SIZE_SANITY(seL4_WordSizeBits, seL4_ASIDPoolIndexBits, seL4_ASIDPoolBits);
 /* Previously large frames were explicitly assumed to be 4M. If not using
  * PAE assuming a legacy environment and leave the old definition */
 #define seL4_4MBits           seL4_LargePageBits
-
-#define seL4_WordBits (sizeof(seL4_Word) * 8)
 
 /* Untyped size limits */
 #define seL4_MinUntypedBits 4

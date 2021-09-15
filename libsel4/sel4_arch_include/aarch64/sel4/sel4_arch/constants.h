@@ -195,7 +195,6 @@ typedef enum {
 #define seL4_ASIDPoolBits 12
 #define seL4_ASIDPoolIndexBits 9
 #define seL4_IOPageTableBits 12
-#define seL4_WordSizeBits 3
 
 #define seL4_PUDEntryBits 3
 
@@ -226,9 +225,6 @@ typedef enum {
 
 #define seL4_ARM_VCPUBits   12
 #define seL4_VCPUBits       12
-
-/* word size */
-#define seL4_WordBits (sizeof(seL4_Word) * 8)
 
 /* Untyped size limits */
 #define seL4_MinUntypedBits 4
