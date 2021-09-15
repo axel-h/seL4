@@ -87,12 +87,6 @@ if(KernelArchRiscV)
     endif()
 endif()
 string(APPEND common_flags " ${build_arch}")
-if(Kernel64)
-    string(APPEND common_flags " -D__KERNEL_64__")
-else()
-    string(APPEND common_flags " -D__KERNEL_32__")
-endif()
-
 set(
     BASE_ASM_FLAGS "${asm_common_flags} ${common_flags}"
     CACHE INTERNAL "Default ASM flags for compilation \
