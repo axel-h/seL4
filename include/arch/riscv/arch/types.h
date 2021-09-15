@@ -38,8 +38,6 @@ typedef dom_t seL4_Domain;
 
 typedef uint64_t timestamp_t;
 
-#define wordBits BIT(wordRadix)
-
 typedef struct kernel_frame {
     paddr_t paddr;
     pptr_t pptr;

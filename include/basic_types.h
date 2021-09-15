@@ -8,8 +8,15 @@
 
 #include <stdint.h>
 #include <arch/types.h>
+#include <assert.h>
 
-/* arch/types.h is supposed to define word_t and _seL4_word_fmt */
+/* arch/types.h defines wordRadix, wordBits is 2^wordRadix */
+#define wordBits     BIT(wordRadix)
+
+/* Sanity check that word_t type and wordBits is consistent. */
+compile_assert(wordBits_matches_word_t, wordBits == 8 * sizeof(word_t))
+
+/* arch/types.h is supposed to define _seL4_word_fmt also besides word_t */
 #ifndef _seL4_word_fmt
 #error "missing _seL4_word_fmt"
 #endif

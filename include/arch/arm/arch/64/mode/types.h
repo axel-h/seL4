@@ -12,7 +12,7 @@
 
 compile_assert(long_is_64bits, sizeof(unsigned long) == 8)
 
+/* a "word" holds 2^6 = 64 bit */
 #define wordRadix 6
-#define wordBits (1 << wordRadix)
 
 typedef uint64_t timestamp_t;
