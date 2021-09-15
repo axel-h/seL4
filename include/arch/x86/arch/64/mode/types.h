@@ -6,5 +6,11 @@
 
 #pragma once
 
+#include <config.h>
+#include <assert.h>
+#include <stdint.h>
+
+compile_assert(long_is_64bits, sizeof(unsigned long) == 8)
+
 #define wordRadix 6
 #define wordBits (1 << wordRadix)
