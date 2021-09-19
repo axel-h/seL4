@@ -1002,18 +1002,27 @@ BOOT_CODE bool_t init_freemem(word_t n_available, const p_region_t *available,
         }
     }
 
-    /* now try to fit the root server objects into a region */
+    /* Now that the free physical memory regions are set up, try to fit the root
+     * server objects into one region. These objects likely will not use the
+     * whole region. Furthermore, due to alignment needs, there will be unused
+     * space before the root server objects also. Thus two new free physical
+     * memory regions are to be created from the one region, which means using
+     * one additional unused free memory region slot. Not having such a free
+     * slot is considered fatal for now, because the number of slots is just an
+     * arbitrary constant that can be updated easily. Also, one additional slot
+     * costs almost nothing in terms of memory usage.
+     */
     int i = ARRAY_SIZE(ndks_boot.freemem) - 1;
     if (!is_reg_empty(ndks_boot.freemem[i])) {
         printf("ERROR: insufficient MAX_NUM_FREEMEM_REG (%u)\n",
                (unsigned int)MAX_NUM_FREEMEM_REG);
         return false;
     }
-    /* skip any empty regions */
+    /* skip any empty regions at the end of the list */
     for (; i >= 0 && is_reg_empty(ndks_boot.freemem[i]); i--);
 
-    /* try to grab the last available p region to create the root server objects
-     * from. If possible, retain any left over memory as an extra p region */
+    /* Try to grab the last available region to create the root server objects
+     * from. Retain any left over memory before and after. */
     word_t size = calculate_rootserver_size(it_v_reg, extra_bi_size_bits);
     word_t max = rootserver_max_size_bits(extra_bi_size_bits);
     for (; i >= 0; i--) {

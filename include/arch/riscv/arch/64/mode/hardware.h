@@ -27,44 +27,38 @@
  * This means that the 1GiB kernel ELF mapping will correspond to physical memory with a 1GiB
  * alignment.
  *
- *                   +-----------------------------+ 2^64
- *                   |        Kernel Devices       |
- *                -> +-------------------KDEV_BASE-+ 2^64 - 1GiB
- *                |  |         Kernel ELF          |
- *            ----|  +-------------KERNEL_ELF_BASE-+ --+ 2^64 - 2GiB + (KERNEL_ELF_PADDR_BASE % 1GiB)
- *            |   |  |                             |
- *            |   -> +-----------------------------+ --+ 2^64 - 2GiB = (KERNEL_ELF_BASE % 1GiB)
- * Shared 1GiB|      |                             |   |
- * table entry|      |           PSpace            |   |
- *            |      |  (direct kernel mappings)   |   +----+
- *            ------>|                             |   |    |
- *                   |                             |   |    |
- *                   +-------------------PPTR_BASE-+ --+ 2^64 - 2^b
- *                   |                             |        |         +-------------------------+
- *                   |                             |        |         |                         |
- *                   |                             |        |         |                         |
- *                   |          Invalid            |        |         |                         |
- *                   |                             |        |         |           not           |
- *                   |                             |        |         |         kernel          |
- *                   |                             |        |         |       addressable       |
- *                   +--------------------USER_TOP-+  2^c   |         |                         |
- *                   |                             |        |         |                         |
- *                   |                             |        |         |                         |
- *                   |                             |        |      +- --------------------------+  PADDR_TOP =
- *                   |                             |        |      |  |                         |    PPTR_TOP - PPTR_BASE
- *                   |                             |        |      |  |                         |
- *                   |                             |        |      |  |                         |
- *                   |            User             |        |      |  |                         |
- *                   |                             |        |      |  |                         |
- *                   |                             |        +------+  +-------------------------+  KDEV_BASE - KERNEL_ELF_BASE + PADDR_LOAD
- *                   |                             |     kernel    |  |        Kernel ELF       |
- *                   |                             |   addressable |  +-------------------------+  KERNEL_ELF_PADDR_BASE
- *                   |                             |               |  |                         |
- *                   |                             |               |  |                         |
- *                   +-----------------------------+  0            +- +-------------------------+  0 PADDR_BASE
+ *             +---------------------------------+ 2^64
+ *             | Kernel Devices                  |
+ *             +--------------------+------------+ 2^64 - 1GiB ( = KDEV_BASE)
+ *             |                    |            |
+ *             |                    +------------+
+ * Share  +--> |                    | Kernel ELF |
+ * same   |    |                    +------------+ KERNEL_ELF_BASE = PPTR_TOP + (KERNEL_ELF_PADDR_BASE % 1GiB)
+ * 1 GiB  |    |                    |            |
+ * page   |    +--------------------+------------+ 2^64 - 2GiB (= PPTR_TOP)
+ * table  +--> | PSpace (direct kernel mappings) |
+ *             +---------------------------------+ 2^64 - 2^b (= PPTR_BASE)
+ *             .                                 .
+ *             . invalid                         .
+ *             .                                 .
+ *             +---------------------------------+ 2^c (= USER_TOP)
+ *             | User                            |
+ *             +---------------------------------+ 0
+ *                 virtual address space
  *
- *                      virtual address space                          physical address space
- *
+ *    PSpace
+ *      |          +------------------------+ CONFIG_PADDR_USER_DEVICE_TOP
+ *      |          .                        .
+ *      |          . not kernel addressable .
+ *      |          .                        .
+ *      |          +------------------------+ PADDR_TOP = PADDR_BASE + (PPTR_TOP - PPTR_BASE)
+ *      |          |           |            |
+ *      |          |           +------------+ KDEV_BASE - KERNEL_ELF_BASE + PADDR_LOAD
+ *      +--------> |           | Kernel ELF |
+ *   kernel        |           +------------+ KERNEL_ELF_PADDR_BASE
+ * addressable     |           |            |
+ *                 +------------------------+ 0 (= PADDR_BASE)
+ *                  physical address space
  *
  *  c = one less than number of bits the page tables can translate
  *    = sign extension bit for canonical addresses
@@ -82,10 +76,10 @@
 #define PADDR_BASE UL_CONST(0x0)
 
 /* The base address in virtual memory to use for the 1:1 physical memory
- * mapping */
+ * mapping (= 2^64 - 256 GiByte) */
 #define PPTR_BASE UL_CONST(0xFFFFFFC000000000)
 
-/* Top of the physical memory window */
+/* Top of the physical memory window (= 2^64 - 2 GiB) */
 #define PPTR_TOP UL_CONST(0xFFFFFFFF80000000)
 
 /* The physical memory address to use for mapping the kernel ELF */
