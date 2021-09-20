@@ -45,6 +45,13 @@ BOOT_CODE p_region_t get_p_reg_kernel_img(void)
 
 BOOT_CODE static inline bool_t is_reg_empty(const region_t reg)
 {
+    if (reg.start > reg.end) {
+        printf("ERROR: is_reg_empty() for invalid region "
+               "start=%"SEL4_PRIx_word" end=%"SEL4_PRIx_word"\n",
+               reg.start, reg.end);
+        // assert(0);
+    }
+
     return (reg.start == reg.end);
 }
 
@@ -129,9 +136,16 @@ BOOT_CODE static bool_t insert_region(region_t reg)
     }
 
     for (word_t i = 0; i < ARRAY_SIZE(ndks_boot.freemem); i++) {
-        if (is_reg_empty(ndks_boot.freemem[i])) {
+        region_t *free_reg = &ndks_boot.freemem[i];
+        if (reg.start > reg.end) {
+            printf("ERROR: invalid ndks_boot.freemem[%d] "
+                   "start=%"SEL4_PRIx_word" end=%"SEL4_PRIx_word"\n",
+                   (int)i, reg.start, reg.end);
+            // assert(0);
+        }
+        if (is_reg_empty(*free_reg)) {
             reserve_region(pptr_to_paddr_reg(reg));
-            ndks_boot.freemem[i] = reg;
+            *free_reg = reg;
             return true;
         }
     }
