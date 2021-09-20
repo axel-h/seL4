@@ -667,14 +667,24 @@ BOOT_CODE bool_t create_untypeds(cap_t root_cnode_cap,
     }
 
     if (start < CONFIG_PADDR_USER_DEVICE_TOP) {
+
         region_t reg = paddr_to_pptr_reg((p_region_t) {
             start, CONFIG_PADDR_USER_DEVICE_TOP
         });
+
+        printf("max device [%"SEL4_PRIx_word"..%"SEL4_PRIx_word"] -> "
+               "[%"SEL4_PRIx_word"..%"SEL4_PRIx_word"]\n",
+               start, CONFIG_PADDR_USER_DEVICE_TOP, reg.start, reg.end);
+
         /*
          * The auto-generated bitfield code will get upset if the
          * end pptr is larger than the maximum pointer size for this architecture.
          */
         if (reg.end > PPTR_TOP) {
+
+            printf("max device end %"SEL4_PRIx_word" -> PPTR_TOP (%"SEL4_PRIx_word")\n",
+                   reg.end, PPTR_TOP);
+
             reg.end = PPTR_TOP;
         }
         if (!create_untypeds_for_region(root_cnode_cap, true, reg, first_untyped_slot)) {
