@@ -569,40 +569,22 @@ BOOT_CODE void init_core_state(tcb_t *scheduler_action)
 #endif
 }
 
-BOOT_CODE static bool_t provide_untyped_cap(
-    cap_t      root_cnode_cap,
-    bool_t     device_memory,
-    pptr_t     pptr,
-    word_t     size_bits,
-    seL4_SlotPos first_untyped_slot
-)
-{
-    bool_t ret;
-    cap_t ut_cap;
-    word_t i = ndks_boot.slot_pos_cur - first_untyped_slot;
-    if (i < CONFIG_MAX_NUM_BOOTINFO_UNTYPED_CAPS) {
-        ndks_boot.bi_frame->untypedList[i] = (seL4_UntypedDesc) {
-            pptr_to_paddr((void *)pptr), size_bits, device_memory, {0}
-        };
-        ut_cap = cap_untyped_cap_new(MAX_FREE_INDEX(size_bits),
-                                     device_memory, size_bits, pptr);
-        ret = provide_cap(root_cnode_cap, ut_cap);
-    } else {
-        printf("Kernel init: Too many untyped regions for boot info\n");
-        ret = true;
-    }
-    return ret;
-}
-
 BOOT_CODE static bool_t create_untypeds_for_region(
     cap_t      root_cnode_cap,
-    bool_t     device_memory,
+    bool_t     is_device_memory,
     region_t   reg,
-    seL4_SlotPos first_untyped_slot
-)
+    seL4_SlotPos first_untyped_slot)
 {
-    while (!is_reg_empty(reg)) {
+    printf("create untypeds for region "
+           "[%"SEL4_PRIx_word"..%"SEL4_PRIx_word"] (%s)\n",
+           reg.start, reg.end, is_device_memory ? "device" : "memory");
 
+    if (reg.end < reg.start) {
+        printf("ERROR: invalid region\n");
+        return false;
+    }
+
+    while (reg.end > reg.start) {
         /* Calculate the bit size of the region. */
         unsigned int size_bits = seL4_WordBits - 1 - clzl(reg.end - reg.start);
         /* The size can't exceed the largest possible untyped size. */
@@ -623,12 +605,44 @@ BOOT_CODE static bool_t create_untypeds_for_region(
          * be used anyway.
          */
         if (size_bits >= seL4_MinUntypedBits) {
-            if (!provide_untyped_cap(root_cnode_cap, device_memory, reg.start, size_bits, first_untyped_slot)) {
-                return false;
+
+            printf("provide untyped cap for '%s' at %"SEL4_PRIx_word" with 2^%u\n",
+                   is_device_memory ? "device" : "memory", reg.start, size_bits);
+
+            word_t idx = ndks_boot.slot_pos_cur - first_untyped_slot;
+            if (idx >= CONFIG_MAX_NUM_BOOTINFO_UNTYPED_CAPS) {
+
+                printf("Dropping %s region [%"SEL4_PRIx_word"..%"SEL4_PRIx_word"],"
+                       " would exceed CONFIG_MAX_NUM_BOOTINFO_UNTYPED_CAPS (%d)\n",
+                       is_device_memory ? "device" : "memory", reg.start,
+                       reg.end, (int)CONFIG_MAX_NUM_BOOTINFO_UNTYPED_CAPS);
+                /* We consider this fatal for debug builds. */
+                assert(0);
+
+            } else {
+
+                ndks_boot.bi_frame->untypedList[idx] = (seL4_UntypedDesc) {
+                    .paddr = pptr_to_paddr((void *)reg.start),
+                    .sizeBits = size_bits,
+                    .isDevice = is_device_memory,
+                    .padding = {0}
+                };
+
+                cap_t ut_cap = cap_untyped_cap_new(MAX_FREE_INDEX(size_bits),
+                                                   is_device_memory,
+                                                   size_bits,
+                                                   reg.start);
+                /* This will increment ndks_boot.slot_pos_cur if successful. */
+                if (!provide_cap(root_cnode_cap, ut_cap)) {
+                    return false;
+                }
+
             }
         }
+
         reg.start += BIT(size_bits);
     }
+
     return true;
 }
 
