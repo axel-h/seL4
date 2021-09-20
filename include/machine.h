@@ -16,6 +16,9 @@
  * referred to a kernel virtual address. */
 static inline void *CONST ptrFromPAddr(paddr_t paddr)
 {
+    /* sanity check for overflows */
+    assert(paddr < paddr + PPTR_BASE_OFFSET);
+
     return (void *)(paddr + PPTR_BASE_OFFSET);
 }
 
@@ -23,6 +26,9 @@ static inline void *CONST ptrFromPAddr(paddr_t paddr)
  * the physical mapping window, this function must be used. */
 static inline paddr_t CONST addrFromPPtr(const void *pptr)
 {
+    /* sanity check for underflows */
+    assert((paddr_t)pptr >= PPTR_BASE_OFFSET);
+
     return (paddr_t)pptr - PPTR_BASE_OFFSET;
 }
 
