@@ -761,6 +761,7 @@ BOOT_CODE bool_t create_untypeds(cap_t root_cnode_cap,
                 start, ndks_boot.reserved[i].start
             });
             if (!create_untypeds_for_region(root_cnode_cap, true, reg, first_untyped_slot)) {
+                printf("ERROR: create_untypeds_for_region() for device failed\n");
                 return false;
             }
         }
@@ -780,12 +781,14 @@ BOOT_CODE bool_t create_untypeds(cap_t root_cnode_cap,
             reg.end = PPTR_TOP;
         }
         if (!create_untypeds_for_region(root_cnode_cap, true, reg, first_untyped_slot)) {
+            printf("ERROR: create_untypeds_for_region() max device failed\n");
             return false;
         }
     }
 
     /* if boot_mem_reuse_reg is not empty, we can create UT objs from boot code/data frames */
     if (!create_untypeds_for_region(root_cnode_cap, false, boot_mem_reuse_reg, first_untyped_slot)) {
+        printf("ERROR: create_untypeds_for_region() for boot_mem failed\n");
         return false;
     }
 
@@ -794,6 +797,7 @@ BOOT_CODE bool_t create_untypeds(cap_t root_cnode_cap,
         region_t reg = ndks_boot.freemem[i];
         ndks_boot.freemem[i] = REG_EMPTY;
         if (!create_untypeds_for_region(root_cnode_cap, false, reg, first_untyped_slot)) {
+            printf("ERROR: create_untypeds_for_region() for freemem failed\n");
             return false;
         }
     }
