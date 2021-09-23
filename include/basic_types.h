@@ -6,9 +6,9 @@
 
 #pragma once
 
-#include <stdint.h>
-#include <arch/types.h>
-#include <assert.h>
+#include <config.h> /* included by convention, regardless of dependency */
+#include <arch/types.h> /* included by convention, regardless of dependency */
+// #include <stdint.h> /* included by convention, regardless of dependency */
 
 /* arch/types.h defines wordRadix, wordBits is 2^wordRadix. */
 #ifdef CONFIG_ARCH_RISCV

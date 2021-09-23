@@ -6,8 +6,9 @@
 
 #pragma once
 
-#include <basic_types.h>
-#include <compound_types.h>
+#include <config.h> /* included by convention, regardless of dependency */
+#include <basic_types.h> /* included by convention, regardless of dependency */
+#include <compound_types.h> /* included by convention, regardless of dependency */
 
 /* for libsel4 headers that the kernel shares */
 typedef word_t seL4_Word;

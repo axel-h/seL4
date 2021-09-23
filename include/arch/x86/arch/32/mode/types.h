@@ -6,7 +6,7 @@
 
 #pragma once
 
-#include <assert.h>
+#include <config.h> /* included by convention, regardless of dependency */
 
 compile_assert(long_is_32bits, sizeof(unsigned long) == 4)
 

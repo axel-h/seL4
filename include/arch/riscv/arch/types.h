@@ -7,9 +7,9 @@
 
 #pragma once
 
-#include <config.h>
+#include <config.h> /* included by convention, regardless of dependency */
+#include <mode/types.h> /* included by convention, regardless of dependency */
 #include <stdint.h>
-#include <mode/types.h>
 
 typedef unsigned long word_t;
 typedef signed long sword_t;
