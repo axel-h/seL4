@@ -6,10 +6,9 @@
 
 #pragma once
 
-#include <stdint.h>
+#include <basic_types.h>
 #include <api/types.h>
 #include <object/structures.h>
-#include <arch/types.h>
 
 struct pde_range {
     pde_t *base;

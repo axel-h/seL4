@@ -8,7 +8,7 @@
 #pragma once
 
 #include <config.h>
-#include <assert.h>
+#include <util.h>
 #include <stdint.h>
 #include <mode/types.h>
 
