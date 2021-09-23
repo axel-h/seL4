@@ -8,3 +8,14 @@
 
 #include <basic_types.h>
 #include <compound_types.h>
+
+/* for libsel4 headers that the kernel shares */
+typedef word_t seL4_Word;
+typedef uint64_t seL4_Uint64;
+typedef uint32_t seL4_Uint32;
+typedef uint16_t seL4_Uint16;
+typedef uint8_t seL4_Uint8;
+typedef cptr_t seL4_CPtr;
+typedef node_id_t seL4_NodeId;
+typedef paddr_t seL4_PAddr;
+typedef dom_t seL4_Domain;
