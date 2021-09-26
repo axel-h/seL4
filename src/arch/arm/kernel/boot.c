@@ -77,11 +77,9 @@ BOOT_CODE static bool_t arch_init_freemem(p_region_t ui_p_reg,
             if (ui_reg.end > mode_reserved_region[0].start) {
                 reserved[index] = mode_reserved_region[0];
                 index++;
-                reserved[index].start = ui_reg.start;
-                reserved[index].end = ui_reg.end;
+                reserved[index] = ui_reg;
             } else {
-                reserved[index].start = ui_reg.start;
-                reserved[index].end = ui_reg.end;
+                reserved[index] = ui_reg;
                 index++;
                 reserved[index] = mode_reserved_region[0];
             }
@@ -92,8 +90,7 @@ BOOT_CODE static bool_t arch_init_freemem(p_region_t ui_p_reg,
                        "regions\n");
                 return false;
             }
-            reserved[index].start = ui_reg.start;
-            reserved[index].end = ui_reg.end;
+            reserved[index] = ui_reg;
             index++;
         }
     } else if (MODE_RESERVED == 1) {
