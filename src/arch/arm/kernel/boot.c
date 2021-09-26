@@ -58,6 +58,7 @@ BOOT_CODE static bool_t arch_init_freemem(p_region_t ui_p_reg,
         index++;
     }
 
+#ifdef CONFIG_ARCH_AARCH32
     /* Reserve the user image region and the mode-reserved regions. For now,
      * only one mode-reserved region is supported, because this is all that is
      * needed.
@@ -66,8 +67,11 @@ BOOT_CODE static bool_t arch_init_freemem(p_region_t ui_p_reg,
         printf("ERROR: MODE_RESERVED > 1 unsupported!\n");
         return false;
     }
+#endif /* CONFIG_ARCH_AARCH32 */
+
     if (ui_p_reg.start < PADDR_TOP) {
         region_t ui_reg = paddr_to_pptr_reg(ui_p_reg);
+#ifdef CONFIG_ARCH_AARCH32
         if (MODE_RESERVED == 1) {
             if (index + 1 >= ARRAY_SIZE(reserved)) {
                 printf("ERROR: no slot to add the user image and the "
@@ -85,6 +89,7 @@ BOOT_CODE static bool_t arch_init_freemem(p_region_t ui_p_reg,
             }
             index++;
         } else {
+#endif /* CONFIG_ARCH_AARCH32 */
             if (index >= ARRAY_SIZE(reserved)) {
                 printf("ERROR: no slot to add the user image to the reserved"
                        "regions\n");
@@ -92,6 +97,7 @@ BOOT_CODE static bool_t arch_init_freemem(p_region_t ui_p_reg,
             }
             reserved[index] = ui_reg;
             index++;
+#ifdef CONFIG_ARCH_AARCH32
         }
     } else if (MODE_RESERVED == 1) {
         if (index >= ARRAY_SIZE(reserved)) {
@@ -100,6 +106,7 @@ BOOT_CODE static bool_t arch_init_freemem(p_region_t ui_p_reg,
         }
         reserved[index] = mode_reserved_region[0];
         index++;
+#endif /* CONFIG_ARCH_AARCH32 */
     }
 
     /* avail_p_regs comes from the auto-generated code */

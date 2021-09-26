@@ -8,7 +8,12 @@
 
 #include <config.h>
 #include <plat/machine/devices_gen.h>
-#include <kernel/vspace.h>
+
+#ifdef CONFIG_ARCH_AARCH32
+#define MODE_RESERVED 1 /* hw_asid_region declared in kernel/vspace.h */
+#else
+#define MODE_RESERVED 0
+#endif
 
 /* The max number of free memory regions is:
  * +1 for each available physical memory region (elements in avail_p_regs)
