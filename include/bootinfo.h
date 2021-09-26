@@ -8,6 +8,7 @@
 
 #include <config.h>
 #include <types.h>
+#include <arch/bootinfo.h>
 #include <sel4/bootinfo_types.h>
 
 /* declare object-specific macros to hide the casting */

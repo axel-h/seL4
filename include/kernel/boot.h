@@ -9,7 +9,6 @@
 #include <config.h>
 #include <types.h>
 #include <bootinfo.h>
-#include <arch/bootinfo.h>
 
 /*
  * Resolve naming differences between the abstract specifications

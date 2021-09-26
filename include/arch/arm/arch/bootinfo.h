@@ -8,29 +8,34 @@
 
 #include <config.h>
 #include <plat/machine/devices_gen.h>
-#include <kernel/vspace.h>
 
-/* The max number of free memory regions is:
- * +1 for each available physical memory region (elements in avail_p_regs)
- * +1 for each MODE_RESERVED region, there might be none
- * +1 to allow the kernel to release its own boot data region
- * +1 for a possible gap between ELF images and rootserver objects
- */
-#define MAX_NUM_FREEMEM_REG (ARRAY_SIZE(avail_p_regs) + MODE_RESERVED + 1 + 1)
+enum {
+    FREEMEM_REG_BOOT_DATA, /* allow kernel to release its own boot data region */
+    FREEMEM_REG_GAP, /* possible gap between ELF images and rootserver objects */
+#ifdef CONFIG_ARCH_AARCH32
+    FREEMEM_REG_HW_ASID, /* hw_asid_region from vspace.h */
+#endif
+    /* --- */
+    NUM_FREEMEM_REGS,
+    /* --- */
+    MAX_NUM_FREEMEM_REG = ARRAY_SIZE(avail_p_regs) + NUM_FREEMEM_REGS
+};
 
-/* The regions reserved by the boot code are:
- * +1 for kernel
- * +1 for device tree binary
- * +1 for user image.
- * +1 for each the MODE_RESERVED region, there might be none
- */
-#define NUM_RESERVED_REGIONS (3 + MODE_RESERVED)
-
+enum {
+    RESERVED_REG_KERNEL,
+    RESERVED_REG_DEVICE_TREE_BINARY,
+    RESERVED_REG_USER_IMAGE,
+#ifdef CONFIG_ARCH_AARCH32
+    RESERVED_REG_HW_ASID,
+#endif
+    /* --- */
+    NUM_RESERVED_REGIONS
+};
 
 /* The maximum number of reserved regions is:
- * +1 for each free memory region (MAX_NUM_FREEMEM_REG)
- * +1 for each kernel frame (NUM_KERNEL_DEVICE_FRAMES, there might be none)
- * +1 for each region reserved by the boot code (NUM_RESERVED_REGIONS)
+ * -  each free memory region (MAX_NUM_FREEMEM_REG)
+ * -  each kernel frame (NUM_KERNEL_DEVICE_FRAMES, there might be none)
+ * -  each region reserved by the boot code (NUM_RESERVED_REGIONS)
  */
 #define MAX_NUM_RESV_REG (MAX_NUM_FREEMEM_REG + NUM_KERNEL_DEVICE_FRAMES + \
                           NUM_RESERVED_REGIONS)

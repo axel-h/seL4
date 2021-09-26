@@ -60,54 +60,52 @@ BOOT_CODE static bool_t arch_init_freemem(p_region_t ui_p_reg,
         index++;
     }
 
-    /* Reserve the user image region and the mode-reserved regions. For now,
-     * only one mode-reserved region is supported, because this is all that is
-     * needed.
-     */
-    if (MODE_RESERVED > 1) {
-        printf("ERROR: MODE_RESERVED > 1 unsupported!\n");
-        return false;
-    }
     if (ui_p_reg.start < PADDR_TOP) {
         region_t ui_reg = paddr_to_pptr_reg(ui_p_reg);
-        if (MODE_RESERVED == 1) {
-            if (index + 1 >= ARRAY_SIZE(reserved)) {
-                printf("ERROR: no slot to add the user image and the "
-                       "mode-reserved region to the reserved regions\n");
-                return false;
-            }
-            if (ui_reg.end > mode_reserved_region[0].start) {
-                reserved[index] = mode_reserved_region[0];
-                index++;
-                reserved[index] = ui_reg;
-            } else {
-                reserved[index] = ui_reg;
-                index++;
-                reserved[index] = mode_reserved_region[0];
-            }
+
+#ifdef CONFIG_ARCH_AARCH32
+
+        if (index + 1 >= ARRAY_SIZE(reserved)) {
+            printf("ERROR: no reserved region slots left for user image and"
+                   " mode-reserved region\n");
+            return false;
+        }
+        if (ui_reg.end > hw_asid_region.start) {
+            reserved[index] = hw_asid_region;
+            index++;
+            reserved[index] = ui_reg;
             index++;
         } else {
-            if (index >= ARRAY_SIZE(reserved)) {
-                printf("ERROR: no slot to add the user image to the reserved"
-                       "regions\n");
-                return false;
-            }
             reserved[index] = ui_reg;
+            index++;
+            reserved[index] = hw_asid_region;
             index++;
         }
     } else {
-        if (MODE_RESERVED == 1) {
-            if (index >= ARRAY_SIZE(reserved)) {
-                printf("ERROR: no slot to add the mode-reserved region\n");
-                return false;
-            }
-            reserved[index] = mode_reserved_region[0];
-            index++;
+        if (index >= ARRAY_SIZE(reserved)) {
+            printf("ERROR: no reserved region slot left\n");
+            return false;
         }
+        reserved[index] = hw_asid_region;
+        index++;
 
-        /* Reserve the ui_p_reg region still so it doesn't get turned into device UT. */
-        reserve_region(ui_p_reg);
+#else /* not CONFIG_ARCH_AARCH32 */
+
+        if (index >= ARRAY_SIZE(reserved)) {
+            printf("ERROR: no reserved region slot for user image\n");
+            return false;
+        }
+        reserved[index] = ui_reg;
+        index++;
+
+#endif /* [not] CONFIG_ARCH_AARCH32 */
+
     }
+
+    /* Reserve the ui_p_reg region still so it doesn't get turned
+     * into device UT.
+     */
+    reserve_region(ui_p_reg);
 
     /* avail_p_regs comes from the auto-generated code */
     return init_freemem(ARRAY_SIZE(avail_p_regs), avail_p_regs,
