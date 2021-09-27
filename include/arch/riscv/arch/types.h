@@ -8,9 +8,9 @@
 #pragma once
 
 #include <config.h>
-#include <assert.h>
-#include <stdint.h>
 #include <mode/types.h>
+#include <util.h>
+#include <stdint.h>
 
 typedef unsigned long word_t;
 typedef signed long sword_t;

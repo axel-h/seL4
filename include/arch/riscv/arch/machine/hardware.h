@@ -7,8 +7,8 @@
 
 #pragma once
 
+#include <config.h>
 #include <util.h>
-
 #include <mode/hardware.h>
 
 /* Privileged CSR definitions */
@@ -27,10 +27,6 @@
 
 #ifndef __ASSEMBLER__
 
-#include <config.h>
-#include <linker.h>
-
-#include <arch/types.h>
 #include <sel4/sel4_arch/constants.h>
 
 /* The size is for HiFive Unleashed */

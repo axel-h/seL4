@@ -7,6 +7,10 @@
 #pragma once
 
 #include <util.h>
+/* physBase is defined in plat/machine/devices_gen.h, but due to some quirks we
+ * can't include this header file here
+ */
+#include <sel4/plat/api/constants.h> /* seL4_UserTop */
 
 #if CONFIG_PT_LEVELS == 3
 

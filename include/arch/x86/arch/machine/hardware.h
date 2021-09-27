@@ -6,9 +6,8 @@
 
 #pragma once
 
-#include <basic_types.h>
 #include <config.h>
-#include <arch/types.h>
+#include <basic_types.h>
 #include <linker.h>
 #include <sel4/sel4_arch/constants.h>
 

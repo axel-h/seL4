@@ -42,6 +42,8 @@
 
 #else /* not __ASSEMBLER__ */
 
+#include <stdint.h>
+
 /* There is no difference between using 'ul' or 'lu' as suffix for numbers to
  * enforce a specific type besides the default 'int'. Just when it comes to the
  * printf() format specifiers, '%lu' is the only form that is supported. Thus

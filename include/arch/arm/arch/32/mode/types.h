@@ -6,6 +6,8 @@
 
 #pragma once
 
+#include <config.h>
+#include <stdint.h>
 #include <assert.h>
 
 compile_assert(long_is_32bits, sizeof(unsigned long) == 4)

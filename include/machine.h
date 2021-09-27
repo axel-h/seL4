@@ -6,7 +6,9 @@
 
 #pragma once
 
+#include <config.h>
 #include <plat/machine.h>
+#include <mode/machine.h>
 #include <machine/registerset.h>
 #include <hardware.h>
 
@@ -60,5 +62,3 @@ static inline p_region_t CONST pptr_to_paddr_reg(const region_t reg)
     };
 }
 
-
-#include <mode/machine.h>

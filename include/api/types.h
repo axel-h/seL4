@@ -7,15 +7,14 @@
 #pragma once
 
 #include <config.h>
-#include <stdint.h>
 #include <util.h>
-#include <sel4/shared_types_gen.h>
+#include <basic_types.h>
 #include <arch/api/types.h>
-#include <arch/types.h>
+#include <machine/io.h>
+#include <sel4/shared_types_gen.h>
 #include <sel4/macros.h>
 #include <sel4/constants.h>
 #include <sel4/shared_types.h>
-#include <machine/io.h>
 
 /* seL4_CapRights_t defined in mode/api/shared_types.bf */
 
