@@ -9,7 +9,8 @@
 #include <config.h>
 #include <util.h>
 #include <arch/machine/hardware.h>
-#include <sel4/plat/api/constants.h>
+#include <plat/machine/devices_gen.h> /* physBase */
+#include <sel4/plat/api/constants.h> /* seL4_UserTop */
 
 /* EL2 kernel address map:
  *

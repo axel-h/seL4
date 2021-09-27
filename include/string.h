@@ -6,7 +6,7 @@
 
 #pragma once
 
-#include <stdint.h>
+#include <basic_types.h>
 
 word_t strnlen(const char *s, word_t maxlen);
 word_t strlcpy(char *dest, const char *src, word_t size);

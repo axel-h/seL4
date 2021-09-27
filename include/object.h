@@ -6,6 +6,7 @@
 
 #pragma once
 
+#include <config.h>
 #include <object/structures.h>
 #include <object/objecttype.h>
 #include <object/notification.h>

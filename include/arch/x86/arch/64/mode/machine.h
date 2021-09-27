@@ -7,11 +7,11 @@
 #pragma once
 
 #include <config.h>
-#include <hardware.h>
 #include <arch/model/statedata.h>
 #include <arch/machine/cpu_registers.h>
 #include <arch/model/smp.h>
 #include <arch/machine.h>
+#include <hardware.h>
 
 /*
  * SYSEXIT  0F 35     ; Return to compatibility mode from fast system call.

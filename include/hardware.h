@@ -5,6 +5,8 @@
  */
 #pragma once
 
+#include <mode/hardware.h>
+
 /* Each architecture defines a set of constants in #defines. These
  * constants describe the memory regions of the kernel's portion of the
  * address space including the physical memory window, the kernel ELF
@@ -41,5 +43,3 @@
  * for for the entire segment (i.e. the kernel image must be contiguous
  * both virtually and physically) */
 #define KERNEL_ELF_BASE_OFFSET (KERNEL_ELF_BASE - KERNEL_ELF_PADDR_BASE)
-
-#include <mode/hardware.h>
