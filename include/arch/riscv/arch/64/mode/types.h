@@ -6,7 +6,9 @@
 
 #pragma once
 
+/* includes by convention, regardless of a dependency */
 #include <config.h>
+/* includes due to an actual dependency */
 #include <assert.h>
 
 compile_assert(long_is_64bits, sizeof(unsigned long) == 8)

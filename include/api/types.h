@@ -6,6 +6,7 @@
 
 #pragma once
 
+/* includes by convention, regardless of a dependency */
 #include <config.h>
 #include <util.h>
 #include <basic_types.h>
