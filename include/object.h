@@ -6,6 +6,7 @@
 
 #pragma once
 
+/* includes by convention, regardless of a dependency */
 #include <config.h>
 #include <object/structures.h>
 #include <object/objecttype.h>
@@ -16,3 +17,4 @@
 #include <object/structures.h>
 #include <object/tcb.h>
 #include <object/untyped.h>
+/* includes due to an actual dependency: none */

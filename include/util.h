@@ -6,6 +6,9 @@
 
 #pragma once
 
+/* includes by convention, regardless of a dependency */
+#include <config.h>
+
 /* Using multiple macro layers may look strange, but this is required to make
  * the preprocessor fully evaluate all macro parameters first and then pass the
  * result as parameter to the next macro layer. This allows passing macros as
@@ -42,6 +45,7 @@
 
 #else /* not __ASSEMBLER__ */
 
+/* includes due to an actual dependency */
 #include <stdint.h>
 
 /* There is no difference between using 'ul' or 'lu' as suffix for numbers to

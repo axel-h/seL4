@@ -6,7 +6,9 @@
 
 #pragma once
 
+/* includes by convention, regardless of a dependency */
 #include <config.h>
+/* includes due to an actual dependency */
 #include <basic_types.h>
 
 

@@ -6,11 +6,11 @@
 
 #pragma once
 
+/* includes by convention, regardless of a dependency */
 #include <config.h>
 #include <stdint.h>
 #include <arch/types.h>
-#include <util.h>
-#include <assert.h>
+/* includes due to an actual dependency: none */
 
 /* On RISC-V, the proofs expect wordBits to be a UL_CONST(), on other
  * architectures there is no such assumption. One day, the proofs should be

@@ -6,10 +6,12 @@
 
 #pragma once
 
+/* includes by convention, regardless of a dependency */
 #include <config.h>
 #include <basic_types.h> /* includes stdint.h and arch/types.h */
 #include <api/types.h>
 #include <object/structures.h>
+/* includes due to an actual dependency: none */
 
 typedef struct pde_range {
     pde_t *base;
