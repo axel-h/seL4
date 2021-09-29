@@ -137,10 +137,27 @@ int PURE strncmp(const char *s1, const char *s2, int n);
 long CONST char_to_long(char c);
 long PURE str_to_long(const char *str);
 
-// Library functions for counting leading/trailing zeros.
-// GCC's builtins will emit calls to these functions when the platform
-// does not provide suitable inline assembly.
-// We only emit function definitions if CONFIG_CLZL_IMPL etc are set.
+/* Library functions for counting leading/trailing zeros.
+ * GCC provides the following builtin function for this:
+ *   __builtin_clz(unsigned int x)
+ *   __builtin_clzl(unsigned long x)
+ * At https://gcc.gnu.org/onlinedocs/gccint/Integer-library-routines.html it
+ * says that GCC will call helper functions in case the hardware does not
+ * provide instruction for counting leading/trailing zeros:
+ *   int __clzsi2 (unsigned int a)
+ *   int __clzdi2 (unsigned long a)
+ *   int __ctzsi2 (unsigned int a)
+ *   int __ctzdi2 (unsigned long a)
+ * Tests with __builtin_clzl() on RISC-V have shown that actual GCC behavior
+ * depends on the size of 'unsigned long'.
+ *   'unsigned long' is 32 bits: __builtin_clzl() uses __clzsi2().
+ *   'unsigned long' is 64 bits: __builtin_clzl() uses __clzdi2().
+ * Based on this observation, the suffix 'si' seems to indicate 32-bit integers
+ * and 'di' 64-bit integer. Thus using the types uint32_t and uint64_t in the
+ * signatures below appears to be semantically correct. We only emit function
+ * implementations if CONFIG_CLZ_32 etc are set. Otherwise, the compiler's own
+ * internal implementation may get used or compilation fails.
+ */
 CONST int __clzsi2(uint32_t x);
 CONST int __clzdi2(uint64_t x);
 CONST int __ctzsi2(uint32_t x);
