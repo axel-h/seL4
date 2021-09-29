@@ -9,6 +9,7 @@
 #include <basic_types.h>
 #include <api/types.h>
 #include <object/structures.h>
+#include <machine_util.h>
 
 typedef struct pde_range {
     pde_t *base;

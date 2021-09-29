@@ -34,7 +34,7 @@ HEADER_TEMPLATE = '''/*
 #include <config.h>
 #include <mode/hardware.h>  /* for KDEV_BASE */
 #include <linker.h>         /* for BOOT_RODATA */
-#include <basic_types.h>    /* for p_region_t, kernel_frame_t (arch/types.h) */
+#include <types.h>          /* for p_region_t, kernel_frame_t */
 
 /* INTERRUPTS */
 {% for irq in kernel_irqs %}
