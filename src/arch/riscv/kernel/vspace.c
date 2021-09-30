@@ -62,22 +62,16 @@ static inline bool_t isPTEPageTable(pte_t *pte)
  */
 static pte_t pte_next(word_t phys_addr, bool_t is_leaf)
 {
-    word_t ppn = (word_t)(phys_addr >> 12);
-
-    uint8_t read = is_leaf ? 1 : 0;
-    uint8_t write = read;
-    uint8_t exec = read;
-
-    return pte_new(ppn,
-                   0,     /* sw */
-                   is_leaf ? 1 : 0,     /* dirty (leaf)/reserved (non-leaf) */
-                   is_leaf ? 1 : 0,     /* accessed (leaf)/reserved (non-leaf) */
-                   1,     /* global */
-                   is_leaf ? 0 : 0,     /* user (leaf)/reserved (non-leaf) */
-                   exec,  /* execute */
-                   write, /* write */
-                   read,  /* read */
-                   1      /* valid */
+    return pte_new(phys_addr >> seL4_PageBits,  /* ppn */
+                   0,               /* sw */
+                   is_leaf ? 1 : 0, /* dirty (leaf) / reserved (non-leaf) */
+                   is_leaf ? 1 : 0, /* accessed (leaf) / reserved (non-leaf) */
+                   1,               /* global */
+                   0,               /* user (leaf) / reserved (non-leaf) */
+                   is_leaf ? 1 : 0, /* execute (leaf) / 0 (non-leaf) */
+                   is_leaf ? 1 : 0, /* write (leaf) / 0 (non-leaf) */
+                   is_leaf ? 1 : 0, /* read (leaf) / 0 (non-leaf) */
+                   1                /* valid */
                   );
 }
 
