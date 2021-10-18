@@ -197,66 +197,64 @@ void handleInterrupt(irq_t irq)
          */
         printf("Received IRQ %d, which is above the platforms maxIRQ of %d\n", (int)IRQT_TO_IRQ(irq), (int)maxIRQ);
         maskInterrupt(true, irq);
-        ackInterrupt(irq);
-        return;
-    }
-
-    switch (intStateIRQTable[IRQT_TO_IDX(irq)]) {
-    case IRQSignal: {
-        /* Merging the variable declaration and initialization into one line
-         * requires an update in the proofs first. Might be a c89 legacy.
-         */
-        cap_t cap;
-        cap = intStateIRQNode[IRQT_TO_IDX(irq)].cap;
-        if (cap_get_capType(cap) == cap_notification_cap &&
-            cap_notification_cap_get_capNtfnCanSend(cap)) {
-            sendSignal(NTFN_PTR(cap_notification_cap_get_capNtfnPtr(cap)),
-                       cap_notification_cap_get_capNtfnBadge(cap));
-        } else {
+    } else {
+        switch (intStateIRQTable[IRQT_TO_IDX(irq)]) {
+        case IRQSignal: {
+            /* Merging the variable declaration and initialization into one line
+             * requires an update in the proofs first. Might be a c89 legacy.
+             */
+            cap_t cap;
+            cap = intStateIRQNode[IRQT_TO_IDX(irq)].cap;
+            if (cap_get_capType(cap) == cap_notification_cap &&
+                cap_notification_cap_get_capNtfnCanSend(cap)) {
+                sendSignal(NTFN_PTR(cap_notification_cap_get_capNtfnPtr(cap)),
+                           cap_notification_cap_get_capNtfnBadge(cap));
+            } else {
 #ifdef CONFIG_IRQ_REPORTING
-            printf("Undelivered IRQ: %d\n", (int)IRQT_TO_IRQ(irq));
+                printf("Undelivered IRQ: %d\n", (int)IRQT_TO_IRQ(irq));
 #endif
-        }
+            }
 #ifndef CONFIG_ARCH_RISCV
-        maskInterrupt(true, irq);
+            maskInterrupt(true, irq);
 #endif
-        break;
-    }
+            break;
+        }
 
-    case IRQTimer:
+        case IRQTimer:
 #ifdef CONFIG_KERNEL_MCS
-        ackDeadlineIRQ();
-        NODE_STATE(ksReprogram) = true;
+            ackDeadlineIRQ();
+            NODE_STATE(ksReprogram) = true;
 #else
-        timerTick();
-        resetTimer();
+            timerTick();
+            resetTimer();
 #endif
-        break;
+            break;
 
 #ifdef ENABLE_SMP_SUPPORT
-    case IRQIPI:
-        handleIPI(irq, true);
-        break;
+        case IRQIPI:
+            handleIPI(irq, true);
+            break;
 #endif /* ENABLE_SMP_SUPPORT */
 
-    case IRQReserved:
-        handleReservedIRQ(irq);
-        break;
+        case IRQReserved:
+            handleReservedIRQ(irq);
+            break;
 
-    case IRQInactive:
-        /* This case shouldn't happen anyway unless the hardware or platform
-         * code is broken. Hopefully masking it again should make the interrupt
-         * go away.
-         */
-        maskInterrupt(true, irq);
+        case IRQInactive:
+            /* This case shouldn't happen anyway unless the hardware or platform
+             * code is broken. Hopefully masking it again should make the
+             * interrupt go away.
+             */
+            maskInterrupt(true, irq);
 #ifdef CONFIG_IRQ_REPORTING
-        printf("Received disabled IRQ: %d\n", (int)IRQT_TO_IRQ(irq));
+            printf("Received disabled IRQ: %d\n", (int)IRQT_TO_IRQ(irq));
 #endif
-        break;
+            break;
 
-    default:
-        /* No corresponding haskell error */
-        fail("Invalid IRQ state");
+        default:
+            /* No corresponding haskell error */
+            fail("Invalid IRQ state");
+        }
     }
 
     /* Every interrupt is ack'd, even if it is an inactive one. Rationale is,
