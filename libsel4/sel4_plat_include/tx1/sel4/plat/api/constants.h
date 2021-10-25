@@ -7,3 +7,4 @@
 #pragma once
 
 #include <autoconf.h>
+#include <sel4/arch/constants-cortex-a57.h>

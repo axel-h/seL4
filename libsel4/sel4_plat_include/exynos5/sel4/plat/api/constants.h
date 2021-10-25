@@ -7,14 +7,20 @@
 
 #include <autoconf.h>
 
-/* Cortex a15 manual, section 10.2.2 */
-#define seL4_NumHWBreakpoints (10)
-#define seL4_NumExclusiveBreakpoints (6)
-#define seL4_NumExclusiveWatchpoints (4)
-#ifdef CONFIG_HARDWARE_DEBUG_API
-#define seL4_FirstWatchpoint (6)
-#define seL4_NumDualFunctionMonitors (0)
-#endif
+/* This is used for multiple SOCs:
+ * - Exynos5250 (A15)
+ * - Exynos5410 (A7/A15)
+ * - Exynos5422 (A7/A15)
+ * Since the A7 was designed as big.LITTLE companion for the A15, their settings
+ * are identical.
+ */
+#if defined(CONFIG_ARM_CORTEX_A7)
+#include <sel4/arch/constants-cortex-a7.h>
+#el#if defined(CONFIG_ARM_CORTEX_A15)
+#include <sel4/arch/constants-cortex-a15.h>
+#else
+#error "unsupported core"
+#enidf
 
 /* First address in the virtual address space that is not accessible to user level */
 #define seL4_UserTop 0xe0000000

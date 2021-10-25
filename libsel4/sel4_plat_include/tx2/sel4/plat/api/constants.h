@@ -7,3 +7,6 @@
 #pragma once
 
 #include <autoconf.h>
+
+/* Actually, it's a NVIDIA-Denver2/A57 HMP big.LITTLE system */
+#include <sel4/arch/constants-cortex-a57.h>
