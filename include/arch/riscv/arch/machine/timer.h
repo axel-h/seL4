@@ -18,7 +18,9 @@
 
 static inline CONST time_t getKernelWcetUs(void)
 {
-    /* Copied from x86_64. Hopefully it's an overestimate here. */
+    /* The value is copied from x86_64, hopefully it's an overestimate here.
+     * Making this an explicit unsigned type simplifies verification.
+     */
     return 10u;
 }
 

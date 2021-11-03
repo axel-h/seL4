@@ -16,6 +16,7 @@
 
 static inline CONST time_t getKernelWcetUs(void)
 {
+    /* Making this an explicit unsigned type simplifies verification. */
     return 10u;
 }
 
