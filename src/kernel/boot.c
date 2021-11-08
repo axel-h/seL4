@@ -647,10 +647,10 @@ BOOT_CODE static bool_t pptr_in_kernel_window(pptr_t pptr)
  * @return true on success, false on failure
  */
 BOOT_CODE static bool_t provide_untyped_cap(
-    cap_t      root_cnode_cap,
-    bool_t     is_device_memory,
-    pptr_t     pptr,
-    word_t     size_bits,
+    cap_t           root_cnode_cap,
+    bool_t          is_device_memory,
+    pptr_t          pptr,
+    word_t          size_bits,
     seL4_SlotRegion *slot_region
 )
 {
@@ -735,9 +735,9 @@ BOOT_CODE static bool_t provide_untyped_cap(
  * @return true on success, false on failure.
  */
 BOOT_CODE static bool_t create_untypeds_for_region(
-    cap_t      root_cnode_cap,
-    bool_t     is_device_memory,
-    region_t   reg,
+    cap_t           root_cnode_cap,
+    bool_t          is_device_memory,
+    region_t        reg,
     seL4_SlotRegion *slot_region
 )
 {
