@@ -571,10 +571,10 @@ BOOT_CODE void init_core_state(tcb_t *scheduler_action)
 }
 
 BOOT_CODE static bool_t provide_untyped_cap(
-    cap_t      root_cnode_cap,
-    bool_t     device_memory,
-    pptr_t     pptr,
-    word_t     size_bits)
+    cap_t  root_cnode_cap,
+    bool_t device_memory,
+    pptr_t pptr,
+    word_t size_bits)
 {
     bool_t ret;
     cap_t ut_cap;
@@ -607,10 +607,9 @@ BOOT_CODE static bool_t provide_untyped_cap(
 }
 
 BOOT_CODE static bool_t create_untypeds_for_region(
-    cap_t      root_cnode_cap,
-    bool_t     device_memory,
-    region_t   reg
-)
+    cap_t    root_cnode_cap,
+    bool_t   device_memory,
+    region_t reg)
 {
     while (!is_reg_empty(reg)) {
 
