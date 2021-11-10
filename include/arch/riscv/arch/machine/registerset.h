@@ -227,4 +227,3 @@ declare_helper_riscv_read_csr(instreth, RISCV_CSR_INSTRETH)
 #endif
 
 #endif /* __ASSEMBLER__ */
-
