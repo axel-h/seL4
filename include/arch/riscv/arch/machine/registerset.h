@@ -185,4 +185,3 @@ static inline word_t CONST sanitiseRegister(register_t reg, word_t v, bool_t arc
 }
 
 #endif /* __ASSEMBLER__ */
-
