@@ -35,11 +35,11 @@ static inline paddr_t CONST addrFromPPtr(const void *pptr)
 
 /* When obtaining a physical address from a reference to an address from
  * the kernel ELF mapping, this function must be used. */
-static inline paddr_t CONST addrFromKPPtr(const void *pptr)
+static inline paddr_t CONST addrFromKPPtr(const void *kpptr)
 {
-    assert((uintptr_t)pptr >= KERNEL_ELF_BASE);
-    assert((uintptr_t)pptr <= (uintptr_t)ki_end);
-    return (uintptr_t)pptr - KERNEL_ELF_BASE_OFFSET;
+    assert((paddr_t)kpptr >= KERNEL_ELF_BASE);
+    assert((paddr_t)kpptr <= (paddr_t)ki_end);
+    return (paddr_t)kpptr - KERNEL_ELF_BASE_OFFSET;
 }
 
 #define paddr_to_pptr(x)   ptrFromPAddr(x)
@@ -54,11 +54,11 @@ static inline region_t CONST paddr_to_pptr_reg(const p_region_t p_reg)
     };
 }
 
-static inline p_region_t CONST pptr_to_paddr_reg(const region_t reg)
+static inline p_region_t CONST pptr_to_paddr_reg(const region_t pptr_reg)
 {
     return (p_region_t) {
-        .start = pptr_to_paddr((const void *)reg.start),
-        .end   = pptr_to_paddr((const void *)reg.end),
+        .start = pptr_to_paddr((const void *)pptr_reg.start),
+        .end   = pptr_to_paddr((const void *)pptr_reg.end),
     };
 }
 
