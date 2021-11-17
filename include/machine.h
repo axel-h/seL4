@@ -31,7 +31,7 @@ static inline void *CONST ptrFromPAddr(paddr_t paddr)
 
     assert(paddr >= PADDR_BASE);
     assert(paddr <= PADDR_TOP); /* purposely include end */
-    return (void *)(paddr + PPTR_BASE_OFFSET);
+    return (void *)PADDR_TO_PPTR(paddr);
 }
 
 /* When obtaining a physical address from a reference to any object in
@@ -45,7 +45,7 @@ static inline paddr_t CONST addrFromPPtr(const void *pptr)
 
     assert((uintptr_t)pptr >= PPTR_BASE);
     assert((uintptr_t)pptr <= PPTR_TOP); /* purposely include end */
-    return (paddr_t)((uintptr_t)pptr - PPTR_BASE_OFFSET);
+    return PPTR_TO_PADDR(pptr);
 }
 
 /* When obtaining a physical address from a reference to an address from
@@ -54,7 +54,7 @@ static inline paddr_t CONST addrFromKPPtr(const void *kpptr)
 {
     assert((paddr_t)kpptr >= KERNEL_ELF_BASE);
     assert((paddr_t)kpptr <= (paddr_t)ki_end);
-    return (paddr_t)kpptr - KERNEL_ELF_BASE_OFFSET;
+    return KPPTR_TO_PADDR((paddr_t)kpptr);
 }
 
 #define paddr_to_pptr(x)   ptrFromPAddr(x)

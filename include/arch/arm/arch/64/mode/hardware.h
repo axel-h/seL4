@@ -191,7 +191,14 @@
 #define KERNEL_ELF_PADDR_BASE_RAW PHYS_BASE_RAW
 
 /* The base address in virtual memory to use for the kernel ELF mapping */
-#define KERNEL_ELF_BASE (PPTR_BASE_OFFSET + KERNEL_ELF_PADDR_BASE)
+//#define KERNEL_ELF_BASE (PPTR_BASE_OFFSET + KERNEL_ELF_PADDR_BASE)
+/* The base address in virtual memory to use for the kernel ELF mapping. The
+ * kernel ELF is supposed to be linked in a way, that its virtual addresses
+ * match exactly the place where it is visible in the kernel physical memory
+ * window.
+ */
+#define KERNEL_ELF_BASE PADDR_TO_PPTR(KERNEL_ELF_PADDR_BASE)
+
 /* For use by the linker (only integer constants allowed) */
 #define KERNEL_ELF_BASE_RAW (PPTR_BASE_OFFSET + KERNEL_ELF_PADDR_BASE_RAW)
 

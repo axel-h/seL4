@@ -141,7 +141,7 @@ BOOT_CODE VISIBLE void map_kernel_window(void)
     /* The kernel image is mapped twice, locating the two indexes in the
      * root page table, pointing them to the same second level page table.
      */
-    kernel_root_pageTable[RISCV_GET_PT_INDEX(KERNEL_ELF_PADDR_BASE + PPTR_BASE_OFFSET, 0)] =
+    kernel_root_pageTable[RISCV_GET_PT_INDEX(KERNEL_ELF_PPTR_BASE, 0)] =
         pte_next(kpptr_to_paddr(kernel_image_level2_pt), false);
     kernel_root_pageTable[RISCV_GET_PT_INDEX(pptr, 0)] =
         pte_next(kpptr_to_paddr(kernel_image_level2_pt), false);
