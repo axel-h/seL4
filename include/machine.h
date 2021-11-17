@@ -23,6 +23,8 @@ extern char ki_end[1];
  * referred to a kernel virtual address. */
 static inline void *CONST ptrFromPAddr(paddr_t paddr)
 {
+    assert(paddr >= PADDR_BASE);
+    assert(paddr <= PADDR_TOP); /* purposely include end */
     return (void *)(paddr + PPTR_BASE_OFFSET);
 }
 
@@ -30,6 +32,8 @@ static inline void *CONST ptrFromPAddr(paddr_t paddr)
  * the physical mapping window, this function must be used. */
 static inline paddr_t CONST addrFromPPtr(const void *pptr)
 {
+    assert((uintptr_t)pptr >= PPTR_BASE);
+    assert((uintptr_t)pptr <= PPTR_TOP); /* purposely include end */
     return (paddr_t)((uintptr_t)pptr - PPTR_BASE_OFFSET);
 }
 
