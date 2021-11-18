@@ -173,7 +173,6 @@ static BOOT_CODE bool_t try_boot_sys_node(cpu_id_t cpu_id)
             cpu_id,
             &boot_state.mem_p_regs,
             boot_state.ui_info,
-            get_p_reg_kernel_img_boot(),
             /* parameters below not modeled in abstract specification */
             boot_state.num_drhu,
             boot_state.drhu_list,
