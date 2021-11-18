@@ -632,8 +632,7 @@ BOOT_CODE static bool_t create_untypeds_for_region(
     return true;
 }
 
-BOOT_CODE bool_t create_untypeds(cap_t root_cnode_cap,
-                                 region_t boot_mem_reuse_reg)
+BOOT_CODE bool_t create_untypeds(cap_t root_cnode_cap)
 {
     seL4_SlotPos first_untyped_slot = ndks_boot.slot_pos_cur;
 
@@ -668,6 +667,7 @@ BOOT_CODE bool_t create_untypeds(cap_t root_cnode_cap,
     }
 
     /* if boot_mem_reuse_reg is not empty, we can create UT objs from boot code/data frames */
+    region_t boot_mem_reuse_reg = paddr_to_pptr_reg(get_p_reg_kernel_img_boot());
     if (!create_untypeds_for_region(root_cnode_cap, false, boot_mem_reuse_reg, first_untyped_slot)) {
         printf("ERROR: creation of untypeds for recycled boot memory"
                " [%"SEL4_PRIx_word"..%"SEL4_PRIx_word"] failed\n",
