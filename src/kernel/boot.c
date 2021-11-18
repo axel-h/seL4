@@ -43,6 +43,11 @@ BOOT_CODE p_region_t get_p_reg_kernel_img(void)
     };
 }
 
+BOOT_CODE static bool_t is_p_reg_empty(p_region_t p_reg)
+{
+    return p_reg.start == p_reg.end;
+}
+
 BOOT_CODE static void merge_regions(void)
 {
     /* Walk through reserved regions and see if any can be merged */
@@ -67,7 +72,7 @@ BOOT_CODE bool_t reserve_region(p_region_t reg)
 {
     word_t i;
     assert(reg.start <= reg.end);
-    if (reg.start == reg.end) {
+    if (is_p_reg_empty(reg)) {
         return true;
     }
 
@@ -124,9 +129,9 @@ BOOT_CODE static bool_t insert_region(region_t reg)
     }
 
     for (word_t i = 0; i < ARRAY_SIZE(ndks_boot.freemem); i++) {
-        if (is_reg_empty(ndks_boot.freemem[i])) {
-            reserve_region(pptr_to_paddr_reg(reg));
-            ndks_boot.freemem[i] = reg;
+        if (is_p_reg_empty(ndks_boot.freemem[i])) {
+            ndks_boot.freemem[i] = pptr_to_paddr_reg(reg);
+            reserve_region(ndks_boot.freemem[i]);
             return true;
         }
     }
@@ -814,8 +819,8 @@ BOOT_CODE bool_t create_untypeds(cap_t root_cnode_cap)
 
     /* convert remaining freemem into UT objects and provide the caps */
     for (word_t i = 0; i < ARRAY_SIZE(ndks_boot.freemem); i++) {
-        region_t reg = ndks_boot.freemem[i];
-        ndks_boot.freemem[i] = REG_EMPTY;
+        region_t reg = paddr_to_pptr_reg(ndks_boot.freemem[i]);
+        ndks_boot.freemem[i] = P_REG_EMPTY;
         if (!create_untypeds_for_region(root_cnode_cap, false, reg, first_untyped_slot)) {
             printf("ERROR: creation of untypeds for free memory region #%u at"
                    " [%"SEL4_PRIx_word"..%"SEL4_PRIx_word"] failed\n",
@@ -981,7 +986,7 @@ BOOT_CODE bool_t init_freemem(word_t n_available, const p_region_t *available,
     }
 
     for (word_t i = 0; i < ARRAY_SIZE(ndks_boot.freemem); i++) {
-        ndks_boot.freemem[i] = REG_EMPTY;
+        ndks_boot.freemem[i] = P_REG_EMPTY;
     }
 
     word_t a = 0;
@@ -1043,13 +1048,13 @@ BOOT_CODE bool_t init_freemem(word_t n_available, const p_region_t *available,
 
     /* now try to fit the root server objects into a region */
     int i = ARRAY_SIZE(ndks_boot.freemem) - 1;
-    if (!is_reg_empty(ndks_boot.freemem[i])) {
+    if (!is_p_reg_empty(ndks_boot.freemem[i])) {
         printf("ERROR: insufficient MAX_NUM_FREEMEM_REG (%u)\n",
                (unsigned int)MAX_NUM_FREEMEM_REG);
         return false;
     }
     /* skip any empty regions */
-    for (; i >= 0 && is_reg_empty(ndks_boot.freemem[i]); i--);
+    for (; i >= 0 && is_p_reg_empty(ndks_boot.freemem[i]); i--);
 
     /* try to grab the last available p region to create the root server objects
      * from. If possible, retain any left over memory as an extra p region */
@@ -1061,7 +1066,7 @@ BOOT_CODE bool_t init_freemem(word_t n_available, const p_region_t *available,
         /* Invariant; the region at index i is the current candidate.
          * Invariant: regions 0 up to (i - 1), if any, are additional candidates.
          * Invariant: region (i + 1) is empty. */
-        assert(is_reg_empty(ndks_boot.freemem[i + 1]));
+        assert(is_p_reg_empty(ndks_boot.freemem[i + 1]));
         /* Invariant: regions above (i + 1), if any, are empty or too small to use.
          * Invariant: all non-empty regions are ordered, disjoint and unallocated. */
 
@@ -1070,22 +1075,26 @@ BOOT_CODE bool_t init_freemem(word_t n_available, const p_region_t *available,
          * indices that are sums of variables and small constants. */
         int empty_index = i + 1;
 
-        /* Try to take the top-most suitably sized and aligned chunk. */
-        pptr_t unaligned_start = ndks_boot.freemem[i].end - size;
+        /* Try to take the top-most suitably sized and aligned chunk. Convert
+         * to a region in the kernel window for the alignment checks.
+         */
+        region_t free_reg = paddr_to_pptr_reg(ndks_boot.freemem[i]);
+        pptr_t unaligned_start = free_reg.end - size;
         pptr_t start = ROUND_DOWN(unaligned_start, max);
         /* if unaligned_start didn't underflow, and start fits in the region,
          * then we've found a region that fits the root server objects. */
-        if (unaligned_start <= ndks_boot.freemem[i].end
-            && start >= ndks_boot.freemem[i].start) {
+        if ((unaligned_start <= free_reg.end) && (start >= free_reg.start)) {
             create_rootserver_objects(start, it_v_reg, extra_bi_size_bits);
             /* There may be leftovers before and after the memory we used. */
+            word_t p_start = ndks_boot.freemem[i].start + (start - free_reg.start);
+            assert(ndks_boot.freemem[i].end >= p_start + size);
             /* Shuffle the after leftover up to the empty slot (i + 1). */
-            ndks_boot.freemem[empty_index] = (region_t) {
-                .start = start + size,
+            ndks_boot.freemem[empty_index] = (p_region_t) {
+                .start = p_start + size,
                 .end = ndks_boot.freemem[i].end
             };
             /* Leave the before leftover in current slot i. */
-            ndks_boot.freemem[i].end = start;
+            ndks_boot.freemem[i].end = p_start;
             /* Regions i and (i + 1) are now well defined, ordered, disjoint,
              * and unallocated, so we can return successfully. */
             return true;
@@ -1095,7 +1104,7 @@ BOOT_CODE bool_t init_freemem(word_t n_available, const p_region_t *available,
         ndks_boot.freemem[empty_index] = ndks_boot.freemem[i];
         /* Now region i is unused, so make it empty to reestablish the invariant
          * for the next iteration (when it will be slot i + 1). */
-        ndks_boot.freemem[i] = REG_EMPTY;
+        ndks_boot.freemem[i] = P_REG_EMPTY;
     }
 
     /* We didn't find a big enough region. */
