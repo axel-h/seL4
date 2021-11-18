@@ -25,7 +25,7 @@ typedef cte_t *slot_ptr_t;
 typedef struct ndks_boot {
     p_region_t reserved[MAX_NUM_RESV_REG];
     word_t resv_count;
-    region_t   freemem[MAX_NUM_FREEMEM_REG];
+    p_region_t freemem[MAX_NUM_FREEMEM_REG];
     seL4_BootInfo      *bi_frame;
     seL4_SlotPos slot_pos_cur;
 } ndks_boot_t;
