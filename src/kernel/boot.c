@@ -572,7 +572,7 @@ BOOT_CODE void init_core_state(tcb_t *scheduler_action)
 
 BOOT_CODE static bool_t provide_untyped_cap(
     cap_t  root_cnode_cap,
-    bool_t device_memory,
+    bool_t is_device_memory,
     pptr_t pptr,
     word_t size_bits)
 {
@@ -589,10 +589,13 @@ BOOT_CODE static bool_t provide_untyped_cap(
     word_t i = ndks_boot.slot_pos_cur - ndks_boot.bi_frame->untyped.start;
     if (i < CONFIG_MAX_NUM_BOOTINFO_UNTYPED_CAPS) {
         ndks_boot.bi_frame->untypedList[i] = (seL4_UntypedDesc) {
-            pptr_to_paddr((void *)pptr), size_bits, device_memory, {0}
+            .paddr    = pptr_to_paddr((void *)pptr),
+            .sizeBits = size_bits,
+            .isDevice = is_device_memory,
+            .padding  = {0}
         };
         ut_cap = cap_untyped_cap_new(MAX_FREE_INDEX(size_bits),
-                                     device_memory, size_bits, pptr);
+                                     is_device_memory, size_bits, pptr);
         /* This increments ndks_boot.slot_pos_cur on success. */
         ret = provide_cap(root_cnode_cap, ut_cap);
         if (ret) {
@@ -608,7 +611,7 @@ BOOT_CODE static bool_t provide_untyped_cap(
 
 BOOT_CODE static bool_t create_untypeds_for_region(
     cap_t    root_cnode_cap,
-    bool_t   device_memory,
+    bool_t   is_device_memory,
     region_t reg)
 {
     while (!is_reg_empty(reg)) {
@@ -633,7 +636,7 @@ BOOT_CODE static bool_t create_untypeds_for_region(
          * be used anyway.
          */
         if (size_bits >= seL4_MinUntypedBits) {
-            if (!provide_untyped_cap(root_cnode_cap, device_memory, reg.start, size_bits)) {
+            if (!provide_untyped_cap(root_cnode_cap, is_device_memory, reg.start, size_bits)) {
                 return false;
             }
         }
