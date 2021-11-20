@@ -42,7 +42,7 @@ static inline bool_t is_reg_empty(region_t reg)
 BOOT_CODE p_region_t get_p_reg_kernel_img_boot(void);
 BOOT_CODE p_region_t get_p_reg_kernel_img(void);
 bool_t init_freemem(word_t n_available, const p_region_t *available,
-                    word_t n_reserved, const region_t *reserved,
+                    word_t n_reserved, const p_region_t *reserved,
                     v_region_t it_v_reg, word_t extra_bi_size_bits);
 bool_t reserve_region(p_region_t reg);
 void write_slot(slot_ptr_t slot_ptr, cap_t cap);
