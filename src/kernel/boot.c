@@ -377,7 +377,7 @@ BOOT_CODE static bool_t create_rootserver_objects(v_region_t it_v_reg,
     return true;
 }
 
-BOOT_CODE void write_slot(slot_ptr_t slot_ptr, cap_t cap)
+BOOT_CODE void write_slot(cte_t *slot_ptr, cap_t cap)
 {
     slot_ptr->cap = cap;
 

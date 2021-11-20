@@ -14,9 +14,7 @@
  * Resolve naming differences between the abstract specifications
  * of the bootstrapping phase and the runtime phase of the kernel.
  */
-typedef cte_t  slot_t;
-typedef cte_t *slot_ptr_t;
-#define SLOT_PTR(pptr, pos) (((slot_ptr_t)(pptr)) + (pos))
+#define SLOT_PTR(pptr, pos) (((cte_t *)(pptr)) + (pos))
 #define pptr_of_cap(cap) ((pptr_t)cap_get_capPtr(cap))
 
 /* (node-local) state accessed only during bootstrapping */
@@ -39,7 +37,7 @@ bool_t init_freemem(word_t n_available, const p_region_t *available,
                     word_t n_reserved, const region_t *reserved,
                     v_region_t it_v_reg, word_t extra_bi_size_bits);
 bool_t reserve_region(p_region_t reg);
-void write_slot(slot_ptr_t slot_ptr, cap_t cap);
+void write_slot(cte_t * slot_ptr, cap_t cap);
 cap_t create_root_cnode(void);
 bool_t provide_cap(cap_t root_cnode_cap, cap_t cap);
 cap_t create_it_asid_pool(cap_t root_cnode_cap);
