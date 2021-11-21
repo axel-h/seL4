@@ -979,28 +979,27 @@ BOOT_CODE bool_t init_freemem(word_t n_available, const p_region_t *available,
             /* the reserved region is above the available region - take the whole thing */
             insert_region(avail_reg[a]);
             a++;
+        } else if (reserved[r].start <= avail_reg[a].start) {
+            /* the region overlaps with the start of the available region.
+             * trim start of the available region */
+            avail_reg[a].start = MIN(avail_reg[a].end, reserved[r].end);
+            reserve_region(reserved[r]);
+            r++;
         } else {
             /* the reserved region overlaps with the available region */
-            if (reserved[r].start <= avail_reg[a].start) {
-                /* the region overlaps with the start of the available region.
-                 * trim start of the available region */
-                avail_reg[a].start = MIN(avail_reg[a].end, reserved[r].end);
+            assert(reserved[r].start < avail_reg[a].end);
+            /* take the first chunk of the available region and move
+             * the start to the end of the reserved region */
+            insert_region((p_region_t) {
+                .start = avail_reg[a].start,
+                .end   = reserved[r].start
+            });
+            if (avail_reg[a].end > reserved[r].end) {
+                avail_reg[a].start = reserved[r].end;
                 reserve_region(reserved[r]);
                 r++;
             } else {
-                assert(reserved[r].start < avail_reg[a].end);
-                /* take the first chunk of the available region and move
-                 * the start to the end of the reserved region */
-                p_region_t m = avail_reg[a];
-                m.end = reserved[r].start;
-                insert_region(m);
-                if (avail_reg[a].end > reserved[r].end) {
-                    avail_reg[a].start = reserved[r].end;
-                    reserve_region(reserved[r]);
-                    r++;
-                } else {
-                    a++;
-                }
+                a++;
             }
         }
     }
