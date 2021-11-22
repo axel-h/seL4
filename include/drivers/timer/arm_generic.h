@@ -13,7 +13,7 @@
 #ifdef CONFIG_KERNEL_MCS
 #include <api/types.h>
 /** DONT_TRANSLATE **/
-static inline ticks_t getCurrentTime(void)
+static inline ticks_t driver_getSystemTime(void)
 {
     ticks_t time;
     SYSTEM_READ_64(CNT_CT, time);
