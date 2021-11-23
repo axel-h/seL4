@@ -386,44 +386,41 @@ BOOT_CODE bool_t provide_cap(cap_t root_cnode_cap, cap_t cap)
     return true;
 }
 
-BOOT_CODE create_frames_of_region_ret_t create_frames_of_region(
-    cap_t    root_cnode_cap,
-    cap_t    pd_cap,
-    region_t reg,
-    bool_t   do_map,
-    sword_t  pv_offset
-)
+BOOT_CODE bool_t create_frames_of_phys_region(
+    cap_t            root_cnode_cap,
+    cap_t            pd_cap,
+    p_region_t       p_reg,
+    sword_t          pv_offset,
+    seL4_SlotRegion  *slot_reg)
 {
-    pptr_t     f;
-    cap_t      frame_cap;
-    seL4_SlotPos slot_pos_before;
-    seL4_SlotPos slot_pos_after;
+    seL4_SlotPos slot_pos_before = ndks_boot.slot_pos_cur;
 
-    slot_pos_before = ndks_boot.slot_pos_cur;
-
-    for (f = reg.start; f < reg.end; f += BIT(PAGE_BITS)) {
-        if (do_map) {
-            frame_cap = create_mapped_it_frame_cap(pd_cap, f, pptr_to_paddr((void *)(f - pv_offset)), IT_ASID, false, true);
-        } else {
-            frame_cap = create_unmapped_it_frame_cap(f, false);
+    /* Frames can only be created for physical pages that are accessible via the
+     * kernel window.
+     */
+    p_region_t mappable_p_reg = get_mappable_p_reg(p_reg);
+    for (paddr_t paddr = mappable_p_reg.start;
+         paddr < mappable_p_reg.end;
+         paddr += BIT(PAGE_BITS)) {
+        cap_t cap = create_mapped_it_frame_cap(pd_cap,
+                                               (pptr_t)paddr_to_pptr(paddr),
+                                               paddr - pv_offset,
+                                               IT_ASID,
+                                               false,
+                                               true);
+        if (!provide_cap(root_cnode_cap, cap)) {
+            return false;
         }
-        if (!provide_cap(root_cnode_cap, frame_cap)) {
-            return (create_frames_of_region_ret_t) {
-                .region  = S_REG_EMPTY,
-                .success = false
-            };
-        }
+        /* ndks_boot.slot_pos_cur has been updated */
     }
 
-    slot_pos_after = ndks_boot.slot_pos_cur;
-
-    return (create_frames_of_region_ret_t) {
-        .region = (seL4_SlotRegion) {
+    if (slot_reg) {
+        *slot_reg = (seL4_SlotRegion) {
             .start = slot_pos_before,
-            .end   = slot_pos_after
-        },
-        .success = true
-    };
+            .end   = ndks_boot.slot_pos_cur
+        };
+    }
+    return true;
 }
 
 BOOT_CODE cap_t create_it_asid_pool(cap_t root_cnode_cap)
