@@ -65,18 +65,13 @@ void create_bi_frame_cap(cap_t root_cnode_cap, cap_t pd_cap, vptr_t vptr);
 bool_t init_sched_control(cap_t root_cnode_cap, word_t num_nodes);
 #endif
 
-typedef struct create_frames_of_region_ret {
-    seL4_SlotRegion region;
-    bool_t success;
-} create_frames_of_region_ret_t;
-
-create_frames_of_region_ret_t
-create_frames_of_region(
-    cap_t    root_cnode_cap,
-    cap_t    pd_cap,
-    region_t reg,
-    bool_t   do_map,
-    sword_t  pv_offset
+bool_t
+create_frames_of_phys_region(
+    cap_t           root_cnode_cap,
+    cap_t           pd_cap,
+    p_region_t      p_reg,
+    sword_t         pv_offset,
+    seL4_SlotRegion *slot_reg
 );
 
 cap_t
