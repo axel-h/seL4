@@ -395,6 +395,20 @@ BOOT_CODE bool_t create_frames_of_phys_region(
      * kernel window.
      */
     p_region_t mappable_p_reg = get_mappable_p_reg(p_reg);
+
+    printf("map [%"SEL4_PRIx_word"..%"SEL4_PRIx_word"]"
+            " at virt [%p..%p]\n",
+            p_reg.start,
+            p_reg.end,
+            paddr_to_pptr(mappable_p_reg.start),
+            paddr_to_pptr(mappable_p_reg.start));
+    if ((p_reg.start != make_mappable_paddr(p_reg.start)) ||
+        (p_reg.end != make_mappable_paddr(p_reg.end))) {
+         printf("   mappable phys [%"SEL4_PRIx_word"..%"SEL4_PRIx_word"]\n",
+                make_mappable_paddr(p_reg.start),
+                make_mappable_paddr(p_reg.end));
+     }
+
     for (paddr_t paddr = mappable_p_reg.start;
          paddr < mappable_p_reg.end;
          paddr += BIT(PAGE_BITS)) {
@@ -727,6 +741,11 @@ BOOT_CODE static bool_t create_untypeds_for_phys_region(
      * kernel's mapping window.
      */
     if ((p_reg.start > PADDR_TOP) || (p_reg.end <= PADDR_BASE)) {
+        printf("can't create create %s untypeds, phys region "
+               "[%"SEL4_PRIx_word"..%"SEL4_PRIx_word"] no in kernel window\n",
+                device_memory ? "device" : "memory",
+                p_reg.start, p_reg.end);
+
         return true;
     }
 
@@ -734,6 +753,20 @@ BOOT_CODE static bool_t create_untypeds_for_phys_region(
         .start = MAX(p_reg.start, PADDR_BASE),
         .end   = MIN(p_reg.end, PADDR_TOP)
     };
+
+    if ((p_reg.start != reg.start) || (p_reg.end != reg.end)) {
+         printf("phys [%"SEL4_PRIx_word"..%"SEL4_PRIx_word"]"
+                " -> mappable [%"SEL4_PRIx_word"..%"SEL4_PRIx_word"]\n",
+                p_reg.start, p_reg.end
+                reg.start, reg.end);
+    }
+
+    printf("create %s untypeds [%"SEL4_PRIx_word"..%"SEL4_PRIx_word"]"
+            " -> VA [%"SEL4_PRIx_word"..%"SEL4_PRIx_word"]\n",
+            device_memory ? "device" : "memory",
+            p_reg.start, p_reg.end,
+            paddr_to_pptr(reg.start),
+            paddr_to_pptr(reg.end));
 
     while (reg.start != reg.end) {
         assert(reg.start < reg.end);
@@ -771,6 +804,15 @@ BOOT_CODE static bool_t create_untypeds_for_phys_region(
 
 BOOT_CODE bool_t create_untypeds(cap_t root_cnode_cap)
 {
+
+    printf("free phys memory regions:\n");
+    for (unsigned int i = 0; i < ARRAY_SIZE(ndks_boot.freemem); i++) {
+        if (!is_p_reg_empty(ndks_boot.freemem[i])) {
+            printf("  [%"SEL4_PRIx_word"..%"SEL4_PRIx_word"]\n",
+                   ndks_boot.freemem[i].start, ndks_boot.freemem[i].end - 1);
+        }
+    }
+
     seL4_SlotPos first_untyped_slot = ndks_boot.slot_pos_cur;
 
     paddr_t start = 0;
@@ -1030,6 +1072,14 @@ BOOT_CODE bool_t init_freemem(word_t n_available, const p_region_t *available,
     /* skip any empty regions */
     for (; i >= 0 && is_p_reg_empty(ndks_boot.freemem[i]); i--);
 
+    printf("free phys memory regions:\n");
+    for (unsigned int i = 0; i < ARRAY_SIZE(ndks_boot.freemem); i++) {
+        if (!is_p_reg_empty(ndks_boot.freemem[i])) {
+            printf("  [%"SEL4_PRIx_word"..%"SEL4_PRIx_word"]\n",
+                   ndks_boot.freemem[i].start, ndks_boot.freemem[i].end - 1);
+        }
+    }
+
     /* try to grab the last available p region to create the root server objects
      * from. If possible, retain any left over memory as an extra p region */
     word_t size = calculate_rootserver_size(it_v_reg, extra_bi_size_bits);
@@ -1069,6 +1119,11 @@ BOOT_CODE bool_t init_freemem(word_t n_available, const p_region_t *available,
             };
             /* Leave the before leftover in current slot i. */
             ndks_boot.freemem[i].end = p_start;
+            printf("created rootserver objects at phys"
+               " [%"SEL4_PRIx_word"..%"SEL4_PRIx_word"]"
+               ", virt [%"SEL4_PRIx_word"..%"SEL4_PRIx_word"]\n",
+               ndks_boot.freemem[i].end, ndks_boot.freemem[empty_index].start,
+               start, start + size);
             /* Regions i and (i + 1) are now well defined, ordered, disjoint,
              * and unallocated, so we can return successfully. */
             return true;

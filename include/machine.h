@@ -23,6 +23,12 @@ extern char ki_end[1];
  * referred to a kernel virtual address. */
 static inline void *CONST ptrFromPAddr(paddr_t paddr)
 {
+    if ((paddr < PADDR_BASE) || (paddr > PADDR_TOP))  {
+        printf("ERROR: paddr %"SEL4_PRIx_word" outside"
+               " [%"SEL4_PRIx_word"..%"SEL4_PRIx_word"]\n",
+               paddr, (paddr_t)PADDR_BASE, (paddr_t)PADDR_TOP);
+    }
+
     assert(paddr >= PADDR_BASE);
     assert(paddr <= PADDR_TOP); /* purposely include end */
     return (void *)(paddr + PPTR_BASE_OFFSET);
@@ -32,6 +38,11 @@ static inline void *CONST ptrFromPAddr(paddr_t paddr)
  * the physical mapping window, this function must be used. */
 static inline paddr_t CONST addrFromPPtr(const void *pptr)
 {
+    if (((paddr_t)pptr < PPTR_BASE) || ((paddr_t)pptr > PPTR_TOP))  {
+        printf("ERROR: pptr %p outside [%p..%p]\n",
+               pptr, (void *)PPTR_BASE, (void *)PPTR_TOP);
+    }
+
     assert((uintptr_t)pptr >= PPTR_BASE);
     assert((uintptr_t)pptr <= PPTR_TOP); /* purposely include end */
     return (paddr_t)((uintptr_t)pptr - PPTR_BASE_OFFSET);
