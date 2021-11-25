@@ -8,18 +8,17 @@
 
 #include <object.h>
 
+void handleFault(tcb_t *tptr);
+
 #ifdef CONFIG_KERNEL_MCS
-static inline bool_t validTimeoutHandler(tcb_t *tptr)
+
+static inline bool_t validTimeoutHandler(tcb_t *tcb)
 {
-    return cap_get_capType(TCB_PTR_CTE_PTR(tptr, tcbTimeoutHandler)->cap) == cap_endpoint_cap;
+    cte_t *cte = TCB_PTR_CTE_PTR(tcb, tcbTimeoutHandler);
+    word_t cap_type = cap_get_capType(cte->cap);
+    return (cap_endpoint_cap == cap_type);
 }
 
 void handleTimeout(tcb_t *tptr);
-void handleNoFaultHandler(tcb_t *tptr);
-bool_t sendFaultIPC(tcb_t *tptr, cap_t handlerCap, bool_t can_donate);
-#else
-exception_t sendFaultIPC(tcb_t *tptr);
-void handleDoubleFault(tcb_t *tptr, seL4_Fault_t ex1);
-#endif
-void handleFault(tcb_t *tptr);
 
+#endif /* CONFIG_KERNEL_MCS */
