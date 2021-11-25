@@ -8,37 +8,29 @@
 
 #include <util.h>
 #include <arch/model/smp.h>
+#include <arch/machine/registerset.h>
 #include <stdint.h>
+
+/* create get_riscv_csr_timeh() */
+declare_helper_get_riscv_csr(timeh, RISCV_CSR_TIMEH)
+/* create get_riscv_csr64_timeh_time() */
+declare_helper_get_riscv_counter_csr64(timeh_time, RISCV_CSR_TIMEH,
+                                       RISCV_CSR_TIME)
+
+/* create get_riscv_csr_cycleh() */
+declare_helper_get_riscv_csr(cycleh, RISCV_CSR_CYCLEH)
+/* create get_riscv_csr64_cycleh_cycle() */
+declare_helper_get_riscv_counter_csr64(cycleh_cycle, RISCV_CSR_CYCLEH,
+                                       RISCV_CSR_CYCLE)
+
 
 static inline uint64_t riscv_read_time(void)
 {
-    word_t nH1, nL, nH2;
-    asm volatile(
-        "rdtimeh %0\n"
-        "rdtime  %1\n"
-        "rdtimeh %2\n"
-        : "=r"(nH1), "=r"(nL), "=r"(nH2));
-    if (nH1 != nH2) {
-        /* Ensure that the time is correct if there is a rollover in the
-         * high bits between reading the low and high bits. */
-        asm volatile("rdtime  %0\n" : "=r"(nL));
-    }
-    return (((uint64_t)nH2) << 32) | nL;
+    return get_riscv_csr64_counter_timeh_time();
 }
 
 
 static inline uint64_t riscv_read_cycle(void)
 {
-    word_t nH1, nL, nH2;
-    asm volatile(
-        "rdcycleh %0\n"
-        "rdcycle  %1\n"
-        "rdcycleh %2\n"
-        : "=r"(nH1), "=r"(nL), "=r"(nH2));
-    if (nH1 != nH2) {
-        /* Ensure that the cycles are correct if there is a rollover in the
-         * high bits between reading the low and high bits. */
-        asm volatile("rdcycle  %0\n" : "=r"(nL));
-    }
-    return (((uint64_t)nH2) << 32) | nL;
+    return get_riscv_csr64_counter_cycleh_cycle();
 }

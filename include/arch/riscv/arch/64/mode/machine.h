@@ -8,18 +8,15 @@
 
 #include <util.h>
 #include <arch/model/smp.h>
+#include <arch/machine/registerset.h>
 #include <stdint.h>
 
 static inline uint64_t riscv_read_time(void)
 {
-    word_t n;
-    asm volatile("rdtime %0" : "=r"(n));
-    return n;
+    return get_riscv_csr_time();
 }
 
 static inline uint64_t riscv_read_cycle(void)
 {
-    word_t n;
-    asm volatile("rdcycle %0" : "=r"(n));
-    return n;
+    return get_riscv_csr_cycle();
 }

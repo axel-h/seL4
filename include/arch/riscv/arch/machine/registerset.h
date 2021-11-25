@@ -184,4 +184,49 @@ static inline word_t CONST sanitiseRegister(register_t reg, word_t v, bool_t arc
     [seL4_TimeoutReply_TP] = TP, \
 }
 
+#define RISCV_CSR_READ(_id_, _var_) \
+    asm volatile("csrr %0, " #_id_ : "=r" (_var_) : : "memory")
+
+#define declare_helper_get_riscv_csr(_name_, _id_) \
+    static inline word_t get_riscv_csr_##_name_(void) \
+    { \
+        register word_t val; \
+        RISCV_CSR_READ(_id_, val); \
+        return val; \
+    }
+
+#ifdef CONFIG_ARCH_RISCV32
+/* Read a consistent 64-bit counter value from two 32-bit registers. The value
+ * from the low register is used only if there was no roll over, otherwise it is
+ * simply taken as 0. This is an acceptable optimization if the value must have
+ * been 0 at some point anyway and certain jitter is acceptable. For high
+ * frequency counters the preference usually not on getting an exact value, but
+ * a value close to the point in time where the read function was called. For a
+ * low frequency counter, the low value is likely 0 anyway when a roll over
+ * happens.
+ */
+#define declare_helper_get_riscv_counter_csr64(_name_, _id_hi_, _id_lo_) \
+    static inline uint64_t get_riscv_csr64_counter_##_name_(void) \
+    { \
+        register  word_t nH_prev, nH, nL; \
+        RISCV_CSR_READ(_id_hi_, nH_prev); \
+        RISCV_CSR_READ(_id_lo_, nL); \
+        RISCV_CSR_READ(_id_hi_, nH); \
+        return ((uint64_t)nH << 32) | ((nH_prev == nH) ? nL : 0); \
+    }
+#endif /* CONFIG_ARCH_RISCV32 */
+
+#define RISCV_CSR_CYCLE     0xc00
+#define RISCV_CSR_TIME      0xc01
+#ifdef CONFIG_ARCH_RISCV32
+#define RISCV_CSR_CYCLEH    0xc80
+#define RISCV_CSR_TIMEH     0xc81
+#endif /* CONFIG_ARCH_RISCV32 */
+
+/* create get_riscv_csr_cycle() */
+declare_helper_get_riscv_csr(cycle, RISCV_CSR_CYCLE)
+
+/* create get_riscv_csr_time() */
+declare_helper_get_riscv_csr(time, RISCV_CSR_TIME)
+
 #endif /* __ASSEMBLER__ */
