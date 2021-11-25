@@ -64,7 +64,8 @@ void handleFault(tcb_t *tptr)
     lookup_fault_t original_lookup_fault = current_lookup_fault;
     cptr_t handlerCPtr = tptr->tcbFaultHandler;
     lookupCap_ret_t lu_ret = lookupCap(tptr, handlerCPtr);
-    if (EXCEPTION_NONE == lu_ret.status) {
+    exception_t status = lu_ret.status;
+    if (EXCEPTION_NONE == status) {
         cap_t handlerCap = lu_ret.cap;
         if (cap_get_capType(handlerCap) == cap_endpoint_cap &&
             cap_endpoint_cap_get_capCanSend(handlerCap) &&
@@ -95,7 +96,11 @@ void handleFault(tcb_t *tptr)
      */
 
 #ifdef CONFIG_PRINTING
-    print_unhandled_fault(tptr, fault);
+    print_unhandled_fault(tptr,
+                          fault,
+                          config_ternary(CONFIG_KERNEL_MCS,
+                                         EXCEPTION_NONE,
+                                         status));
 #endif /* CONFIG_PRINTING */
 
     setThreadState(tptr, ThreadState_Inactive);

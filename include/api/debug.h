@@ -12,7 +12,7 @@
 
 #include <types.h>
 
-void print_unhandled_fault(tcb_t *tptr, seL4_Fault_t fault);
+void print_unhandled_fault(tcb_t *tptr, seL4_Fault_t fault, exception_t status);
 
 #ifdef CONFIG_DEBUG_BUILD
 
