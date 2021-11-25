@@ -165,61 +165,120 @@ void debug_printUserState(void)
     Arch_userStackTrace(tptr);
 }
 
-void debug_printTCB(tcb_t *tcb)
+static const char *string_from_ThreadState(thread_state_t state)
 {
-    printf("%40s\t", TCB_PTR_DEBUG_PTR(tcb)->tcbName);
-    char *state;
-    switch (thread_state_get_tsType(tcb->tcbState)) {
+    switch (thread_state_get_tsType(state)) {
     case ThreadState_Inactive:
-        state = "inactive";
-        break;
+        return "inactive";
     case ThreadState_Running:
-        state = "running";
-        break;
+        return "running";
     case ThreadState_Restart:
-        state = "restart";
-        break;
+        return "restart";
     case ThreadState_BlockedOnReceive:
-        state = "blocked on recv";
-        break;
+        return "blocked/recv";
     case ThreadState_BlockedOnSend:
-        state = "blocked on send";
-        break;
+        return "blocked/send";
     case ThreadState_BlockedOnReply:
-        state = "blocked on reply";
-        break;
+        return "blocked/reply";
     case ThreadState_BlockedOnNotification:
-        state = "blocked on ntfn";
-        break;
+        return "blocked/ntfn";
 #ifdef CONFIG_VTX
     case ThreadState_RunningVM:
-        state = "running VM";
-        break;
+        return "running VM";
 #endif
     case ThreadState_IdleThreadState:
-        state = "idle";
-        break;
+        return "idle";
     default:
-        fail("Unknown thread state");
+        break;
+    } /* end switch */
+
+    return "???";
+}
+
+static void debug_dumpSchedulerEx(tcb_t *specific_tcb)
+{
+    /* enough dashes to fill space used by an u64 in hex */
+    static const char *DASHES = "----------------";
+    unsigned int num_tcb = 0;
+
+    if (!specific_tcb) {
+        /* ToDo: if we iterate over all cores, we should consider getting the
+         *       BKL to ensure the other cores are not changing the state in
+         *       parallel, so strange things get printed or this even crashes.
+         */
+        for (int i = 0; i < CONFIG_MAX_NUM_NODES; i++) {
+            for (tcb_t *tcb = NODE_STATE_ON_CORE(ksDebugTCBs, i);
+                 tcb != NULL;
+                 tcb = TCB_PTR_DEBUG_PTR(tcb)->tcbDebugNext) {
+                num_tcb++;
+            }
+        }
+        printf("Dump of all TCBs (%u):\n", num_tcb);
     }
 
-    word_t core = SMP_TERNARY(tcb->tcbAffinity, 0);
-    printf("%15s\t%p\t%20lu\t%lu", state, (void *) getRestartPC(tcb), tcb->tcbPriority, core);
-#ifdef CONFIG_KERNEL_MCS
-    printf("\t%lu", (word_t) thread_state_get_tcbInReleaseQueue(tcb->tcbState));
+    printf(
+        "  %-*s "
+        "| %-13s "
+        "| %-*s "
+        "| Prio "
+        config_ternary(CONFIG_ENABLE_SMP_SUPPORT, "| Core ", "")
+        config_ternary(CONFIG_KERNEL_MCS, "| RelQ ", "")
+        "| Name"
+        "\n"
+        "  %.*s-" /* dashes for length of SEL4_PRIx_word */
+        "+---------------"
+        "+-%.*s-" /* dashes for length of SEL4_PRIx_word */
+        "+------"
+        config_ternary(CONFIG_ENABLE_SMP_SUPPORT, "+------", "")
+        config_ternary(CONFIG_KERNEL_MCS, "+------", "")
+        "+----------------"
+        "\n",
+        CONFIG_WORD_SIZE / 4, "TCB",
+        "State",
+        CONFIG_WORD_SIZE / 4, "PC",
+        CONFIG_WORD_SIZE / 4, DASHES,
+        CONFIG_WORD_SIZE / 4, DASHES);
+
+    for (int i = 0; i < CONFIG_MAX_NUM_NODES; i++) {
+        for (tcb_t *tcb = specific_tcb ? specific_tcb :  NODE_STATE_ON_CORE(ksDebugTCBs, i);
+             tcb != NULL;
+             tcb = specific_tcb ? NULL : TCB_PTR_DEBUG_PTR(tcb)->tcbDebugNext) {
+            printf("  %-*"SEL4_PRIx_word " "
+                   "| %-13s "
+                   "| %-*"SEL4_PRIx_word" "
+                   "| %4" SEL4_PRIu_word " "
+#ifdef CONFIG_ENABLE_SMP_SUPPORT
+                   "| %4" SEL4_PRIu_word " "
 #endif
-    printf("\n");
+#ifdef CONFIG_KERNEL_MCS
+                   "| %4s "
+#endif
+                   "| %s"
+                   "\n",
+                   CONFIG_WORD_SIZE / 4, (word_t)tcb,
+                   string_from_ThreadState(tcb->tcbState),
+                   CONFIG_WORD_SIZE / 4, getRestartPC(tcb),
+                   tcb->tcbPriority,
+#ifdef CONFIG_ENABLE_SMP_SUPPORT
+                   tcb->tcbAffinity,
+#endif
+#ifdef CONFIG_KERNEL_MCS
+                   thread_state_get_tcbInReleaseQueue(tcb->tcbState) ? "yes" : "no",
+#endif
+                   TCB_PTR_DEBUG_PTR(tcb)->tcbName);
+        }
+    }
+}
+
+void debug_printTCB(tcb_t *tcb)
+{
+    assert(tcb);
+    debug_dumpSchedulerEx(tcb);
 }
 
 void debug_dumpScheduler(void)
 {
-    printf("Dumping all tcbs!\n");
-    printf("Name                                    \tState          \tIP                  \t Prio \t Core%s\n",
-           config_set(CONFIG_KERNEL_MCS) ?  "\t InReleaseQueue" : "");
-    printf("--------------------------------------------------------------------------------------\n");
-    for (tcb_t *curr = NODE_STATE(ksDebugTCBs); curr != NULL; curr = TCB_PTR_DEBUG_PTR(curr)->tcbDebugNext) {
-        debug_printTCB(curr);
-    }
+    debug_dumpSchedulerEx(NULL);
 }
 
 #endif /* CONFIG_DEBUG_BUILD */
