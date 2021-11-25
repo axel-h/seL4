@@ -52,5 +52,4 @@ typedef struct readWordFromStack_ret {
  */
 readWordFromStack_ret_t Arch_readWordFromThreadStack(tcb_t *tptr, word_t i);
 
-
 #endif /* CONFIG_PRINTING */
