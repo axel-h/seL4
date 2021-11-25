@@ -163,49 +163,60 @@ void debug_thread_fault(tcb_t *tptr)
 void debug_printKernelEntryReason(void)
 {
     printf("\nKernel entry via ");
+
     switch (ksKernelEntry.path) {
     case Entry_Interrupt:
-        printf("Interrupt, irq %lu\n", (unsigned long) ksKernelEntry.word);
+        printf("interrupt %"SEL4_PRIu_word"\n", (seL4_Word)ksKernelEntry.word);
         break;
     case Entry_UnknownSyscall:
-        printf("Unknown syscall, word: %lu", (unsigned long) ksKernelEntry.word);
+        printf("unknown syscall %"SEL4_PRIu_word"\n",
+               (seL4_Word)ksKernelEntry.word);
         break;
     case Entry_VMFault:
-        printf("VM Fault, fault type: %lu\n", (unsigned long) ksKernelEntry.word);
+        printf("VM fault %"SEL4_PRIu_word"\n", (seL4_Word)ksKernelEntry.word);
         break;
     case Entry_UserLevelFault:
-        printf("User level fault, number: %lu", (unsigned long) ksKernelEntry.word);
+        printf("user level fault (number: %"SEL4_PRIu_word")\n",
+               (seL4_Word)ksKernelEntry.word);
         break;
 #ifdef CONFIG_HARDWARE_DEBUG_API
     case Entry_DebugFault:
-        printf("Debug fault. Fault Vaddr: 0x%lx", (unsigned long) ksKernelEntry.word);
+        printf("debug fault (vaddr: 0x%"SEL4_PRIu_word")\n",
+               (seL4_Word)ksKernelEntry.word);
         break;
 #endif
     case Entry_Syscall:
-        printf("Syscall, number: %ld, %s\n", (long) ksKernelEntry.syscall_no, syscall_names[ksKernelEntry.syscall_no]);
-        if (ksKernelEntry.syscall_no == -SysSend ||
-            ksKernelEntry.syscall_no == -SysNBSend ||
-            ksKernelEntry.syscall_no == -SysCall) {
-
-            printf("Cap type: %lu, Invocation tag: %lu\n", (unsigned long) ksKernelEntry.cap_type,
-                   (unsigned long) ksKernelEntry.invocation_tag);
-        }
+        printf("syscall %"SEL4_PRIu_word" (%s)",
+               (seL4_Word)ksKernelEntry.syscall_no,
+               syscall_names[ksKernelEntry.syscall_no]);
+        switch (-ksKernelEntry.syscall_no) {
+        case SysSend:
+        case SysNBSend:
+        case SysCall:
+            printf(", cap type %"SEL4_PRIu_word
+                   ", invocation tag %"SEL4_PRIu_word"\n",
+                   (seL4_Word)ksKernelEntry.cap_type,
+                   (seL4_Word)ksKernelEntry.invocation_tag);
+            break;
+        default:
+            break; /* nothing special to log for other syscalls */
+        } /* end switch (-ksKernelEntry.syscall_no) */
         break;
 #ifdef CONFIG_ARCH_ARM
     case Entry_VCPUFault:
-        printf("VCPUFault\n");
+        printf("VCPU Fault\n");
         break;
-#endif
+#endif /* CONFIG_ARCH_ARM */
 #ifdef CONFIG_ARCH_x86
     case Entry_VMExit:
-        printf("VMExit\n");
+        printf("VM Exit\n");
         break;
-#endif
+#endif /* CONFIG_ARCH_x86*/
     default:
-        printf("Unknown (%u)\n", ksKernelEntry.path);
+        printf("unknown path %"SEL4_PRIu_word"\n",
+               (seL4_Word)ksKernelEntry.path);
         break;
-
-    }
+    } /* end switch (ksKernelEntry.path) */
 }
 
 void debug_printUserState(void)
