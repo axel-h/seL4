@@ -311,45 +311,51 @@ exception_t decodeIA32PageDirectoryInvocation(
 }
 
 #ifdef CONFIG_PRINTING
-typedef struct readWordFromVSpace_ret {
-    exception_t status;
-    word_t value;
-} readWordFromVSpace_ret_t;
 
 static readWordFromVSpace_ret_t readWordFromVSpace(vspace_root_t *vspace, word_t vaddr)
 {
-    readWordFromVSpace_ret_t ret;
-    lookupPTSlot_ret_t ptSlot;
-    lookupPDSlot_ret_t pdSlot;
-    paddr_t paddr;
-    word_t offset;
-    pptr_t kernel_vaddr;
-    word_t *value;
+    paddr_t paddr_base;
+    word_t mask;
 
-    pdSlot = lookupPDSlot(vspace, vaddr);
+    lookupPDSlot_ret_t pdSlot = lookupPDSlot(vspace, vaddr);
     if (pdSlot.status == EXCEPTION_NONE &&
         ((pde_ptr_get_page_size(pdSlot.pdSlot) == pde_pde_large) &&
          pde_pde_large_ptr_get_present(pdSlot.pdSlot))) {
 
-        paddr = pde_pde_large_ptr_get_page_base_address(pdSlot.pdSlot);
-        offset = vaddr & MASK(seL4_LargePageBits);
+        paddr_base = pde_pde_large_ptr_get_page_base_address(pdSlot.pdSlot);
+        mask = MASK(seL4_LargePageBits);
     } else {
-        ptSlot = lookupPTSlot(vspace, vaddr);
+        lookupPTSlot_ret_t ptSlot = lookupPTSlot(vspace, vaddr);
         if (ptSlot.status == EXCEPTION_NONE && pte_ptr_get_present(ptSlot.ptSlot)) {
-            paddr = pte_ptr_get_page_base_address(ptSlot.ptSlot);
-            offset = vaddr & MASK(seL4_PageBits);
+            paddr_base = pte_ptr_get_page_base_address(ptSlot.ptSlot);
+            mask = MASK(seL4_PageBits);
         } else {
-            ret.status = EXCEPTION_LOOKUP_FAULT;
-            return ret;
+            return (readWordFromVSpace_ret_t) {
+                .status = VSPACE_LOOKUP_FAILED,
+                .paddr  = 0,
+                .value  = 0
+            };
         }
     }
 
+    offset = vaddr & mask;
+    paddr_t paddr = paddr_base + offset;
+    paddr_t pptr = (pptr_t)paddr_to_pptr(paddr);
 
-    kernel_vaddr = (word_t)paddr_to_pptr(paddr);
-    value = (word_t *)(kernel_vaddr + offset);
-    ret.status = EXCEPTION_NONE;
-    ret.value = *value;
-    return ret;
+    /* Ensure this word-aligned, so the access does not fault */
+    if (!IS_ALIGNED(pptr, seL4_WordSizeBits)) {
+        return (readWordFromVSpace_ret_t) {
+            .status = VSPACE_INVALID_ALIGNMENT,
+            .paddr  = paddr,
+            .value  = 0
+        };
+    }
+
+    return (readWordFromVSpace_ret_t) {
+        .status = VSPACE_ACCESS_SUCCESSFUL,
+        .paddr  = paddr,
+        .value  = *((word_t *)pptr)
+    };
 }
 
 void Arch_userStackTrace(tcb_t *tptr)
