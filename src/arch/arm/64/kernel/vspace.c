@@ -2455,71 +2455,71 @@ void kernelDataAbort(word_t pc)
 #endif /* CONFIG_DEBUG_BUILD */
 
 #ifdef CONFIG_PRINTING
-typedef struct readWordFromVSpace_ret {
-    exception_t status;
-    word_t value;
-} readWordFromVSpace_ret_t;
 
-static readWordFromVSpace_ret_t readWordFromVSpace(vspace_root_t *pd, word_t vaddr)
+readWordFromVSpace_ret_t Arch_readWordFromVSpace(vspace_root_t *vspace_root,
+                                                 word_t vaddr)
 {
-    lookupFrame_ret_t lookup_frame_ret;
-    readWordFromVSpace_ret_t ret;
-    word_t offset;
-    pptr_t kernel_vaddr;
-    word_t *value;
-
-    lookup_frame_ret = lookupFrame(pd, vaddr);
-
+    lookupFrame_ret_t lookup_frame_ret = lookupFrame(vspace_root, vaddr);
     if (!lookup_frame_ret.valid) {
-        ret.status = EXCEPTION_LOOKUP_FAULT;
-        return ret;
+    return (readWordFromVSpace_ret_t) {
+        .status = VSPACE_LOOKUP_FAILED,
+        .value = 0
+    };
+
+    word_t offset = vaddr & MASK(pageBitsForSize(lookup_frame_ret.frameSize));
+    paddr_t paddr_base = lookup_frame_ret.frameBase;
+    paddr_t paddr = getPaddrFromHWPTE(ret.ptSlot) + offset;
+    pptr_t pptr = (pptr_t)paddr_to_pptr(paddr_base) + offset;
+
+    if (!IS_ALIGNED(pptr, seL4_WordSizeBits)) {
+        return (readWordFromVSpace_ret_t) {
+            .status       = VSPACE_INVALID_ALIGNMENT,
+            .vspace_root  = vspace_root,
+            .paddr        = paddr,
+            .vaddr        = vaddr
+        };
     }
 
-    offset = vaddr & MASK(pageBitsForSize(lookup_frame_ret.frameSize));
-    kernel_vaddr = (word_t)paddr_to_pptr(lookup_frame_ret.frameBase);
-    value = (word_t *)(kernel_vaddr + offset);
+    /* After all the checks, this access should not cause a fault ... */
+    word_t data = *((word_t *)pptr);
 
-    ret.status = EXCEPTION_NONE;
-    ret.value = *value;
-    return ret;
+    return (readWordFromVSpace_ret_t) {
+        .status = VSPACE_ACCESS_SUCCESSFUL,
+        .value  = data
+    }
 }
 
-void Arch_userStackTrace(tcb_t *tptr)
+readWordFromStack_ret_t Arch_readWordFromThreadStack(tcb_t *tptr, word_t i)
 {
-    cap_t threadRoot;
-    vspace_root_t *vspaceRoot;
-    word_t sp;
+    /* Lookup the stack pointer and the requested stack word address. */
+    word_t sp = getRegister(tptr, SP);
+    /* Stack grows to lower addresses */
+    word_t vaddr = sp + (i * sizeof(word_t));
 
-    threadRoot = TCB_PTR_CTE_PTR(tptr, tcbVTable)->cap;
-
-    /* lookup the vspace root */
+    /* Lookup the vspace root. */
+    cap_t threadRoot = TCB_PTR_CTE_PTR(tptr, tcbVTable)->cap;
     if (cap_get_capType(threadRoot) != cap_vtable_root_cap) {
-        printf("Invalid vspace\n");
-        return;
+        /* Seems the capabilities are broken, so we can't access the stack. All
+         * we can tell the caller is the virtual address of the stack word.
+         */
+        return (readWordFromStack_ret_t) {
+            .status = VSPACE_INVALID_ROOT,
+            .vaddr  = vaddr,
+        };
+
     }
 
-    vspaceRoot = cap_vtable_root_get_basePtr(threadRoot);
-    sp = getRegister(tptr, SP_EL0);
-
-    /* check for alignment so we don't have to worry about accessing
-     * words that might be on two different pages */
-    if (!IS_ALIGNED(sp, seL4_WordSizeBits)) {
-        printf("SP not aligned\n");
-        return;
-    }
-
-    for (unsigned int i = 0; i < CONFIG_USER_STACK_TRACE_LENGTH; i++) {
-        word_t address = sp + (i * sizeof(word_t));
-        readWordFromVSpace_ret_t result = readWordFromVSpace(vspaceRoot,
-                                                             address);
-        if (result.status == EXCEPTION_NONE) {
-            printf("0x%"SEL4_PRIx_word": 0x%"SEL4_PRIx_word"\n",
-                   address, result.value);
-        } else {
-            printf("0x%"SEL4_PRIx_word": INVALID\n", address);
-        }
-    }
+    vspace_root_t *vspace_root = VSPACE_PTR(cap_vtable_root_get_basePtr(threadRoot));
+    readWordFromVSpace_ret_t ret = Arch_readWordFromVSpace(vspace_root, vaddr);
+    return (readWordFromStack_ret_t) {
+        .status      = ret.status,
+        .vspace_root = vspace_root,
+        .vaddr       = ret.vaddr,
+        .paddr       = ret.paddr,
+        .value       = ret.value
+    };
 }
+
 #endif /* CONFIG_PRINTING */
 
 #if defined(CONFIG_KERNEL_LOG_BUFFER)
