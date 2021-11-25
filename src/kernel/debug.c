@@ -31,7 +31,68 @@
 #else
 #error "unsupported CONFIG_WORD_SIZE"
 #endif
+static void debug_printThreadStack(tcb_t *tptr, const char *prefix)
+{
+    /* We don't make any assumption about how exactly a thread stack works on a
+     * specific architecture. There is also no need to optimize the speed of the
+     * dump, as printing to a serial port would be the bottle neck eventually.
+     *
+     * Assuming a stack is a block of memory in the vspace and the stack pointer
+     * is growing to lower addresses, this would also work:
+     *
+     *     stack_base = Arch_readWordFromThreadStack(tptr, 0)
+     *     loop:
+     *         ret = Arch_readWordFromVSpace(
+     *                   stack_base.vspace_root,
+     *                   stack_base.vaddr + (i * sizeof(word_t)
+     *
+     * But we could also just have an arch specific helper that popultes
+     *
+     *     word_t stack_trace[CONFIG_USER_STACK_TRACE_LENGTH];
+     *   Arch_getStackTrce(tptr &stack_trace, CONFIG_USER_STACK_TRACE_LENGTH);
+     *
+     */
 
+    for (int i = 0; i < CONFIG_USER_STACK_TRACE_LENGTH; i++) {
+        readWordFromStack_ret_t ret = Arch_readWordFromThreadStack(tptr, i);
+        printf("%s0x%"SEL4_PRIx_word": ", prefix, ret.vaddr);
+        switch(ret.status) {
+        case VSPACE_INVALID_ROOT:
+            /* If the thread's vspace can't be resolved there is no point to
+             * continue trying to dump the stack. We have printed the value
+             * stack pointer already, so
+             */
+            printf("invalid vspace\n");
+            return;
+        case VSPACE_INVALID_ALIGNMENT:
+            printf("invalid alignment (phys addr 0x%"SEL4_PRIx_word")", ret.paddr);
+            break;
+        case VSPACE_LOOKUP_FAILED:
+            printf("inaccessible (phys addr 0x%"SEL4_PRIx_word")", ret.paddr);
+            break;
+        case VSPACE_ACCESS_SUCCESSFUL:
+            printf("0x%-*"SEL4_PRIx_word, CONFIG_WORD_SIZE / 4, ret.value);
+            // #if 32 bit
+            //   printf("[%2u] 0x%"SEL4_PRIx_word": 0x%08"SEL4_PRIx_word"\n",
+            //       i, address, *pValue);
+            // #if 64 bit
+            //   /* Print 64 bit values from the stack as 0x01234567'89abcdef,
+            //    * this is much easier to read. */
+            //   printf("[%2u] 0x%"SEL4_PRIx_word": 0x%08x'%08x\n",
+            //       i, address, (uint32_t)(*pValue >> 32), (uint32_t)(*pValue));
+            // #else
+            // #error "128 bit machine?"
+            // #endif
+            break;
+        } /* end switch(ret.status) */
+        printf("\n");
+    }
+}
+
+/* This function is also available in release builds when printing is enabled,
+ * in this case it will not print any register content to avoid leaking
+ * potentially sensitive data.
+ */
 static void print_fault(seL4_Fault_t f)
 {
     const char *name = config_ternary(CONFIG_DEBUG_BUILD,
@@ -104,12 +165,13 @@ static void print_fault(seL4_Fault_t f)
         int col = i & 1;
         bool_t is_last = (num_regs == i + 1);
         word_t reg = user_ctx->registers[i];
-        printf("%*s: 0x"PRI_reg"%s",
-               max_reg_name_len[col] + 2, register_names[i], PRI_reg_param(reg),
-               (col || is_last) ? "\n" : "");
+        printf("%s%*s: 0x"PRI_reg"%s",
+               col ? "" : "##  ", max_reg_name_len[col] + 2, register_names[i],
+               PRI_reg_param(reg), (col || is_last) ? "\n" : "");
     }
-    printf("\nStack:\n");
-    Arch_userStackTrace(tptr);
+    printf("## Stack trace:\n");
+    debug_printThreadStack(tptr, "##    ");
+
 #endif /* CONFIG_DEBUG_BUILD */
 
     printf("\nThread suspended, no userland fault handler\n");
@@ -182,10 +244,11 @@ void debug_printKernelEntryReason(void)
 void debug_printUserState(void)
 {
     tcb_t *tptr = NODE_STATE(ksCurThread);
+    /* This function only exists for CONFIG_DEBUG_BUILD, thus tcbName exists */
     printf("Current thread: %s\n", TCB_PTR_DEBUG_PTR(tptr)->tcbName);
-    printf("Next instruction adress: %lx\n", getRestartPC(tptr));
+    printf("Next instruction address: 0x%"SEL4_PRIx_word"\n", getRestartPC(tptr));
     printf("Stack:\n");
-    Arch_userStackTrace(tptr);
+    debug_printThreadStack(tptr, "  ");
 }
 
 static const char *string_from_ThreadState(thread_state_t state)
