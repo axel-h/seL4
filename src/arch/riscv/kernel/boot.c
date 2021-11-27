@@ -149,6 +149,7 @@ BOOT_CODE static void init_plat(void)
 
 
 #ifdef ENABLE_SMP_SUPPORT
+
 BOOT_CODE static bool_t try_init_kernel_secondary_core(word_t hart_id, word_t core_id)
 {
     while (!node_boot_lock);
@@ -174,7 +175,8 @@ BOOT_CODE static void release_secondary_cores(void)
     }
 }
 
-#endif
+#endif /* ENABLE_SMP_SUPPORT*/
+
 /* Main kernel initialisation function. */
 
 static BOOT_CODE bool_t try_init_kernel(

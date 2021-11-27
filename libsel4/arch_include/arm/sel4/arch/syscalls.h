@@ -65,7 +65,7 @@ LIBSEL4_INLINE_FUNC void seL4_ReplyWithMRs(seL4_MessageInfo_t msgInfo,
                   mr3 != seL4_Null && seL4_MessageInfo_get_length(msgInfo) > 0 ? *mr3 : 0
                  );
 }
-#endif
+#endif /* not CONFIG_KERNEL_MCS */
 
 LIBSEL4_INLINE_FUNC void seL4_Signal(seL4_CPtr dest)
 {
@@ -482,7 +482,7 @@ LIBSEL4_INLINE_FUNC seL4_MessageInfo_t seL4_NBSendWaitWithMRs(seL4_CPtr dest, se
 
     return info;
 }
-#endif
+#endif /* CONFIG_KERNEL_MCS */
 
 LIBSEL4_INLINE_FUNC void seL4_Yield(void)
 {
@@ -569,7 +569,7 @@ LIBSEL4_INLINE_FUNC seL4_MessageInfo_t seL4_NBWait(seL4_CPtr src, seL4_Word *sen
     }
     return info;
 }
-#endif
+#endif /* CONFIG_KERNEL_MCS */
 
 #ifdef CONFIG_PRINTING
 LIBSEL4_INLINE_FUNC void seL4_DebugPutChar(char c)
@@ -603,7 +603,7 @@ LIBSEL4_INLINE_FUNC void seL4_DebugDumpScheduler(void)
 
     arm_sys_send_recv(seL4_SysDebugDumpScheduler, 0, &unused0, 0, &unused1, &unused2, &unused3, &unused4, &unused5, 0);
 }
-#endif
+#endif /* CONFIG_PRINTING */
 
 #if CONFIG_DEBUG_BUILD
 LIBSEL4_INLINE_FUNC void seL4_DebugHalt(void)
@@ -650,7 +650,7 @@ LIBSEL4_INLINE_FUNC void seL4_DebugSendIPI(seL4_Uint8 target, unsigned irq)
     arm_sys_send(seL4_SysDebugSendIPI, target, irq, 0, 0, 0, 0);
 }
 #endif /* CONFIG_ENABLE_SMP_SUPPORT */
-#endif
+#endif /* CONFIG_DEBUG_BUILD */
 
 #ifdef CONFIG_DANGEROUS_CODE_INJECTION
 LIBSEL4_INLINE_FUNC void seL4_DebugRun(void (* userfn)(void *), void *userarg)
@@ -658,7 +658,7 @@ LIBSEL4_INLINE_FUNC void seL4_DebugRun(void (* userfn)(void *), void *userarg)
     arm_sys_send_null(seL4_SysDebugRun, (seL4_Word)userfn, (seL4_Word)userarg);
     asm volatile("" ::: "memory");
 }
-#endif
+#endif /* CONFIG_DANGEROUS_CODE_INJECTION */
 
 #ifdef CONFIG_ENABLE_BENCHMARKS
 /* set the log index back to 0 */
@@ -775,7 +775,7 @@ LIBSEL4_INLINE_FUNC void seL4_BenchmarkResetAllThreadsUtilisation(void)
                       &unused5, 0);
 }
 
-#endif
+#endif /* CONFIG_DEBUG_BUILD */
 #endif /* CONFIG_BENCHMARK_TRACK_UTILISATION */
 #endif /* CONFIG_ENABLE_BENCHMARKS */
 
@@ -792,7 +792,7 @@ LIBSEL4_INLINE_FUNC void seL4_Wait(seL4_CPtr src, seL4_Word *sender)
 {
     seL4_Recv(src, sender);
 }
-#endif
+#endif /* CONFIG_KERNEL_MCS */
 
 LIBSEL4_INLINE_FUNC seL4_MessageInfo_t seL4_Poll(seL4_CPtr src, seL4_Word *sender)
 {
