@@ -156,4 +156,3 @@ static void inline doRemoteOp3Arg(IpiRemoteCall_t func, word_t data1, word_t dat
 void doMaskReschedule(word_t mask);
 
 #endif /* ENABLE_SMP_SUPPORT */
-
