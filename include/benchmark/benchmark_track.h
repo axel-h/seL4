@@ -57,4 +57,3 @@ static inline void benchmark_debug_syscall_start(word_t cptr, word_t msgInfo, wo
     ksKernelEntry.invocation_tag = seL4_MessageInfo_get_label(info);
 }
 #endif
-

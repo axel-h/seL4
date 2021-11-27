@@ -30,4 +30,3 @@ static inline void armv_handleOverflowIRQ(void)
     MCR(PMOVSR, val);
 }
 #endif /* CONFIG_ENABLE_BENCHMARKS */
-

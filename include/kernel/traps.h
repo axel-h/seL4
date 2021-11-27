@@ -43,4 +43,3 @@ static inline void c_exit_hook(void)
 
     arch_c_exit_hook();
 }
-

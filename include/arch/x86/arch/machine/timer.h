@@ -80,4 +80,3 @@ static inline void resetTimer(void)
 
 
 BOOT_CODE uint32_t tsc_init(void);
-
