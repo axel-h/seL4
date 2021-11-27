@@ -69,6 +69,7 @@ static inline void setDeadline(ticks_t deadline)
 /* ack previous deadline irq */
 static inline void ackDeadlineIRQ(void)
 {
+    /* nothing to do */
 }
 
 #endif /* CONFIG_KERNEL_MCS */
