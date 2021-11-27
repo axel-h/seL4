@@ -37,6 +37,7 @@ static inline PURE ticks_t getTimerPrecision(void)
 
 static inline void ackDeadlineIRQ(void)
 {
+    /* nothing to do */
 }
 
 static inline ticks_t getCurrentTime(void)
