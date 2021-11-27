@@ -66,6 +66,12 @@ broadcom/bcm2711-rpi-4-b=rpi4
 avnet/maaxboard=maaxboard
 "
 
+RISCV_DTBS="
+sifive/hifive-unleashed-a00=hifive
+sifive/hifive-unmatched-a00=hifive-unmatched
+allwinner/sun20i-d1-nezha=nezha
+"
+
 extract_dts() {
     dtb=`echo $1| sed 's/=.*$//'`
     platform=`echo $1| sed 's/^.*=//'`
@@ -82,4 +88,8 @@ done
 
 for entry in $ARM64_DTBS; do
     extract_dts $entry $destdir arch/arm64/boot/dts
+done
+
+for entry in $RISCV_DTBS; do
+    extract_dts $entry $destdir arch/riscv/boot/dts
 done
