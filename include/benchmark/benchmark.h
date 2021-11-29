@@ -18,11 +18,11 @@
 #include <sel4/benchmark_tracepoints_types.h>
 #include <mode/hardware.h>
 
-#ifdef CONFIG_KERNEL_LOG_BUFFER
+#ifdef CONFIG_ENABLE_KERNEL_LOG_BUFFER
 extern word_t ksLogIndex = 0;
 extern word_t ksLogIndexFinalized = 0;
 extern paddr_t ksUserLogBuffer;
-#endif /* CONFIG_KERNEL_LOG_BUFFER */
+#endif /* CONFIG_ENABLE_KERNEL_LOG_BUFFER */
 
 #if defined(CONFIG_BENCHMARK_TRACK_KERNEL_ENTRIES) || defined(CONFIG_BENCHMARK_TRACK_UTILISATION)
 extern timestamp_t ksEnter;

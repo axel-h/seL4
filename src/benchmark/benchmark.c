@@ -12,7 +12,7 @@
 #include <types.h>
 #include <benchmark/benchmark.h>
 
-#ifdef CONFIG_KERNEL_LOG_BUFFER
+#ifdef CONFIG_ENABLE_KERNEL_LOG_BUFFER
 /* This buffer is used differently depending on the configuration:
  *   - CONFIG_BENCHMARK_TRACK_KERNEL_ENTRIES: benchmark_track_kernel_entry_t
  *   - CONFIG_MAX_NUM_TRACE_POINTS > 0: benchmark_tracepoint_log_entry_t
@@ -20,7 +20,7 @@
 paddr_t ksUserLogBuffer;
 word_t ksLogIndex = 0;
 word_t ksLogIndexFinalized = 0;
-#endif /* CONFIG_KERNEL_LOG_BUFFER */
+#endif /* CONFIG_ENABLE_KERNEL_LOG_BUFFER */
 
 #if defined(CONFIG_BENCHMARK_TRACK_KERNEL_ENTRIES) || defined(CONFIG_BENCHMARK_TRACK_UTILISATION)
 timestamp_t ksEnter;
