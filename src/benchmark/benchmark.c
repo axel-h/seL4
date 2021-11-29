@@ -10,14 +10,12 @@
 #include <benchmark/benchmark.h>
 #include <benchmark/benchmark_utilisation.h>
 
-#ifdef CONFIG_KERNEL_LOG_BUFFER
+#ifdef CONFIG_ENABLE_KERNEL_LOG_BUFFER
 /* The buffer is used differently depending on the configuration:
  *   - CONFIG_BENCHMARK_TRACK_KERNEL_ENTRIES: benchmark_track_kernel_entry_t
  *   - ENABLE_KERNEL_TRACEPOINTS: benchmark_tracepoint_log_entry_t
  */
 seL4_Word ksLogIndex = 0;
-paddr_t ksUserLogBuffer;
-#endif /* CONFIG_KERNEL_LOG_BUFFER */
 
 #if defined(CONFIG_DEBUG_BUILD) || defined(ENABLE_TRACE_KERNEL_ENTRY_EXIT)
 #include <sel4/benchmark_track_types.h>
