@@ -5,11 +5,12 @@
  */
 
 #include <config.h>
+
+#ifdef ENABLE_SMP_SUPPORT
+
 #include <mode/smp/ipi.h>
 #include <smp/lock.h>
 #include <util.h>
-
-#ifdef ENABLE_SMP_SUPPORT
 
 /* the remote call being requested */
 static volatile IpiRemoteCall_t  remoteCall;
@@ -88,4 +89,4 @@ void ipi_send_target(irq_t irq, word_t hart_id)
     sbi_send_ipi(hart_mask);
 }
 
-#endif
+#endif /* ENABLE_SMP_SUPPORT */
