@@ -10,7 +10,7 @@
 #include <machine/fpu.h>
 #include <arch/fastpath/fastpath.h>
 #include <arch/machine/debug.h>
-#include <benchmark/benchmark_track.h>
+#include <benchmark/benchmark.h>
 #include <mode/stack.h>
 #include <arch/object/vcpu.h>
 #include <arch/kernel/traps.h>

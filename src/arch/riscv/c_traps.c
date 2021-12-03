@@ -15,7 +15,7 @@
 #include <arch/machine/hardware.h>
 #include <machine/fpu.h>
 
-#include <benchmark/benchmark_track.h>
+#include <benchmark/benchmark.h>
 #include <benchmark/benchmark_utilisation.h>
 
 /** DONT_TRANSLATE */

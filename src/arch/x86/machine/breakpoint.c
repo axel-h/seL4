@@ -590,13 +590,7 @@ exception_t handleUserLevelDebugException(int int_vector)
 #if defined(CONFIG_DEBUG_BUILD) || defined(CONFIG_BENCHMARK_TRACK_KERNEL_ENTRIES)
     ksKernelEntry.path = Entry_UserLevelFault;
     ksKernelEntry.word = int_vector;
-#else
-    (void)int_vector;
-#endif /* DEBUG */
-
-#ifdef CONFIG_BENCHMARK_TRACK_KERNEL_ENTRIES
-    benchmark_track_start();
-#endif
+#endif /* CONFIG_DEBUG_BUILD || CONFIG_BENCHMARK_TRACK_KERNEL_ENTRIES */
 
     ct = NODE_STATE(ksCurThread);
 

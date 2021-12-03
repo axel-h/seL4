@@ -10,9 +10,7 @@
 #include <object/reply.h>
 #endif
 
-#ifdef CONFIG_BENCHMARK_TRACK_KERNEL_ENTRIES
-#include <benchmark/benchmark_track.h>
-#endif
+#include <benchmark/benchmark.h>
 #include <benchmark/benchmark_utilisation.h>
 
 #ifdef CONFIG_ARCH_ARM
