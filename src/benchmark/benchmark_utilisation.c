@@ -8,9 +8,8 @@
 
 #ifdef CONFIG_BENCHMARK_TRACK_UTILISATION
 
+#include <benchmark/benchmark.h>
 #include <benchmark/benchmark_utilisation.h>
-
-timestamp_t ksEnter;
 
 void benchmark_track_utilisation_dump(void)
 {

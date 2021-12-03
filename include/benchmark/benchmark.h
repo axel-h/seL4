@@ -24,6 +24,10 @@ extern word_t ksLogIndexFinalized = 0;
 extern paddr_t ksUserLogBuffer;
 #endif /* CONFIG_KERNEL_LOG_BUFFER */
 
+#if defined(CONFIG_BENCHMARK_TRACK_KERNEL_ENTRIES) || defined(CONFIG_BENCHMARK_TRACK_UTILISATION)
+extern timestamp_t ksEnter;
+#endif /* CONFIG_BENCHMARK_TRACK_KERNEL_ENTRIES CONFIG_BENCHMARK_TRACK_UTILISATION */
+
 #if CONFIG_MAX_NUM_TRACE_POINTS > 0
 
 extern timestamp_t ksEntries[CONFIG_MAX_NUM_TRACE_POINTS];

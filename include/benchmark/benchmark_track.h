@@ -10,7 +10,7 @@
 
 #if defined(CONFIG_DEBUG_BUILD) || defined(CONFIG_BENCHMARK_TRACK_KERNEL_ENTRIES)
 
-#include <arch/benchmark.h>
+#include <benchmark/benchmark.h>
 #include <sel4/benchmark_track_types.h>
 #include <sel4/arch/constants.h>
 #include <machine/io.h>
@@ -30,10 +30,6 @@ extern kernel_entry_t ksKernelEntry;
  */
 #define MAX_LOG_SIZE (seL4_LogBufferSize / \
              sizeof(benchmark_track_kernel_entry_t))
-
-extern timestamp_t ksEnter;
-extern seL4_Word ksLogIndex;
-extern seL4_Word ksLogIndexFinalized;
 
 /**
  * @brief Fill in logging info for kernel entries

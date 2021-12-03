@@ -8,12 +8,8 @@
 
 #ifdef CONFIG_BENCHMARK_TRACK_KERNEL_ENTRIES
 
+#include <benchmark/benchmark.h>
 #include <benchmark/benchmark_track.h>
-#include <model/statedata.h>
-
-timestamp_t ksEnter;
-seL4_Word ksLogIndex;
-seL4_Word ksLogIndexFinalized;
 
 void benchmark_track_exit(void)
 {
