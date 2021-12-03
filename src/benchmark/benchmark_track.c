@@ -5,10 +5,11 @@
  */
 
 #include <config.h>
-#include <benchmark/benchmark_track.h>
-#include <model/statedata.h>
 
 #ifdef CONFIG_BENCHMARK_TRACK_KERNEL_ENTRIES
+
+#include <benchmark/benchmark_track.h>
+#include <model/statedata.h>
 
 timestamp_t ksEnter;
 seL4_Word ksLogIndex;
@@ -31,4 +32,5 @@ void benchmark_track_exit(void)
         }
     }
 }
+
 #endif /* CONFIG_BENCHMARK_TRACK_KERNEL_ENTRIES */
