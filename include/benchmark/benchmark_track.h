@@ -7,6 +7,9 @@
 #pragma once
 
 #include <config.h>
+
+#if defined(CONFIG_DEBUG_BUILD) || defined(CONFIG_BENCHMARK_TRACK_KERNEL_ENTRIES)
+
 #include <benchmark/benchmark.h>
 #include <sel4/benchmark_track_types.h>
 #include <sel4/arch/constants.h>
@@ -15,9 +18,9 @@
 #include <model/statedata.h>
 #include <mode/machine.h>
 
-#if defined(CONFIG_DEBUG_BUILD) || defined(CONFIG_BENCHMARK_TRACK_KERNEL_ENTRIES)
 #define TRACK_KERNEL_ENTRIES 1
 extern kernel_entry_t ksKernelEntry;
+
 #ifdef CONFIG_BENCHMARK_TRACK_KERNEL_ENTRIES
 
 /**
@@ -34,6 +37,7 @@ static inline void benchmark_track_start(void)
 {
     ksEnter = timestamp();
 }
+
 #endif /* CONFIG_BENCHMARK_TRACK_KERNEL_ENTRIES */
 
 static inline void benchmark_debug_syscall_start(word_t cptr, word_t msgInfo, word_t syscall)
@@ -45,5 +49,5 @@ static inline void benchmark_debug_syscall_start(word_t cptr, word_t msgInfo, wo
     ksKernelEntry.cap_type = cap_get_capType(lu_ret.cap);
     ksKernelEntry.invocation_tag = seL4_MessageInfo_get_label(info);
 }
-#endif
 
+#endif /* CONFIG_DEBUG_BUILD || CONFIG_BENCHMARK_TRACK_KERNEL_ENTRIES */

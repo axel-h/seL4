@@ -5,10 +5,12 @@
  */
 
 #include <config.h>
+
+#ifdef CONFIG_BENCHMARK_TRACK_KERNEL_ENTRIES
+
 #include <benchmark/benchmark.h>
 #include <benchmark/benchmark_track.h>
 
-#ifdef CONFIG_BENCHMARK_TRACK_KERNEL_ENTRIES
 void benchmark_track_exit(void)
 {
     timestamp_t now = timestamp();
@@ -24,4 +26,5 @@ void benchmark_track_exit(void)
         }
     }
 }
+
 #endif /* CONFIG_BENCHMARK_TRACK_KERNEL_ENTRIES */

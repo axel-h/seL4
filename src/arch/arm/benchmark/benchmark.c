@@ -4,14 +4,18 @@
  * SPDX-License-Identifier: GPL-2.0-only
  */
 
+#include <config.h>
+
+#ifdef CONFIG_ENABLE_BENCHMARKS
+
+#include <types.h>
 #include <benchmark/benchmark.h>
-#include <arch/benchmark.h>
+#include <arch/benchmark.h> /* sets CONFIG_ARM_ENABLE_PMU_OVERFLOW_INTERRUPT */
 
 #ifdef CONFIG_ARM_ENABLE_PMU_OVERFLOW_INTERRUPT
 UP_STATE_DEFINE(uint64_t, ccnt_num_overflows);
 #endif /* CONFIG_ARM_ENABLE_PMU_OVERFLOW_INTERRUPT */
 
-#ifdef CONFIG_ENABLE_BENCHMARKS
 void arm_init_ccnt(void)
 {
 
@@ -27,4 +31,5 @@ void arm_init_ccnt(void)
     armv_enableOverflowIRQ();
 #endif /* CONFIG_ARM_ENABLE_PMU_OVERFLOW_INTERRUPT */
 }
-#endif
+
+#endif /* CONFIG_ENABLE_BENCHMARKS */
