@@ -7,6 +7,10 @@
 #pragma once
 
 #include <config.h>
+
+#ifdef CONFIG_ENABLE_BENCHMARKS
+
+#include <types.h>
 #include <arch/benchmark.h>
 #include <machine/io.h>
 #include <sel4/arch/constants.h>
@@ -14,22 +18,10 @@
 #include <sel4/benchmark_tracepoints_types.h>
 #include <mode/hardware.h>
 
-#ifdef CONFIG_ENABLE_BENCHMARKS
-exception_t handle_SysBenchmarkFlushCaches(void);
-exception_t handle_SysBenchmarkResetLog(void);
-exception_t handle_SysBenchmarkFinalizeLog(void);
 #ifdef CONFIG_KERNEL_LOG_BUFFER
-exception_t handle_SysBenchmarkSetLogBuffer(void);
+extern seL4_Word ksLogIndex = 0;
+extern paddr_t ksUserLogBuffer;
 #endif /* CONFIG_KERNEL_LOG_BUFFER */
-#ifdef CONFIG_BENCHMARK_TRACK_UTILISATION
-exception_t handle_SysBenchmarkGetThreadUtilisation(void);
-exception_t handle_SysBenchmarkResetThreadUtilisation(void);
-#ifdef CONFIG_DEBUG_BUILD
-exception_t handle_SysBenchmarkDumpAllThreadsUtilisation(void);
-exception_t handle_SysBenchmarkResetAllThreadsUtilisation(void);
-#endif /* CONFIG_DEBUG_BUILD */
-#endif /* CONFIG_BENCHMARK_TRACK_UTILISATION */
-#endif /* CONFIG_ENABLE_BENCHMARKS */
 
 #if defined(CONFIG_BENCHMARK_TRACK_KERNEL_ENTRIES) || defined(CONFIG_BENCHMARK_TRACK_UTILISATION)
 /* Having one global kernel entry timestamp does not work in SMP configurations,
@@ -39,16 +31,13 @@ exception_t handle_SysBenchmarkResetAllThreadsUtilisation(void);
 extern timestamp_t ksEnter;
 #endif /* CONFIG_BENCHMARK_TRACK_KERNEL_ENTRIES CONFIG_BENCHMARK_TRACK_UTILISATION */
 
-#ifdef CONFIG_KERNEL_LOG_BUFFER
-extern seL4_Word ksLogIndex;
-#endif /* CONFIG_KERNEL_LOG_BUFFER */
-
 #if CONFIG_MAX_NUM_TRACE_POINTS > 0
-#define TRACE_POINT_START(x) trace_point_start(x)
-#define TRACE_POINT_STOP(x)   trace_point_stop(x)
 
 extern timestamp_t ksEntries[CONFIG_MAX_NUM_TRACE_POINTS];
 extern bool_t ksStarted[CONFIG_MAX_NUM_TRACE_POINTS];
+
+#define TRACE_POINT_START(x)    trace_point_start(x)
+#define TRACE_POINT_STOP(x)     trace_point_stop(x)
 
 static inline void trace_point_start(word_t id)
 {
@@ -87,3 +76,19 @@ static inline void trace_point_stop(word_t id)
 
 #endif /* CONFIG_MAX_NUM_TRACE_POINTS > 0 */
 
+exception_t handle_SysBenchmarkFlushCaches(void);
+exception_t handle_SysBenchmarkResetLog(void);
+exception_t handle_SysBenchmarkFinalizeLog(void);
+#ifdef CONFIG_ENABLE_KERNEL_LOG_BUFFER
+exception_t handle_SysBenchmarkSetLogBuffer(void);
+#endif /* CONFIG_ENABLE_KERNEL_LOG_BUFFER */
+#ifdef CONFIG_BENCHMARK_TRACK_UTILISATION
+exception_t handle_SysBenchmarkGetThreadUtilisation(void);
+exception_t handle_SysBenchmarkResetThreadUtilisation(void);
+#ifdef CONFIG_DEBUG_BUILD
+exception_t handle_SysBenchmarkDumpAllThreadsUtilisation(void);
+exception_t handle_SysBenchmarkResetAllThreadsUtilisation(void);
+#endif /* CONFIG_DEBUG_BUILD */
+#endif /* CONFIG_BENCHMARK_TRACK_UTILISATION */
+
+#endif /* CONFIG_ENABLE_BENCHMARKS */

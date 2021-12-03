@@ -7,9 +7,11 @@
 #pragma once
 
 #include <config.h>
-#include <basic_types.h>
 
 #ifdef CONFIG_BENCHMARK_TRACK_UTILISATION
+
+#include <basic_types.h>
+
 typedef struct {
     timestamp_t schedule_start_time;
     uint64_t    utilisation;
@@ -18,5 +20,5 @@ typedef struct {
     uint64_t    number_kernel_entries;
 
 } benchmark_util_t;
-#endif /* CONFIG_BENCHMARK_TRACK_UTILISATION */
 
+#endif /* CONFIG_BENCHMARK_TRACK_UTILISATION */
