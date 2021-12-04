@@ -18,7 +18,7 @@
 
 #include <arch/object/iospace.h>
 #include <plat/machine/intel-vtd.h>
-
+#include <benchmark/benchmark.h>
 
 bool_t Arch_isFrameType(word_t type)
 {

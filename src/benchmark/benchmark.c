@@ -19,6 +19,7 @@
  *   - CONFIG_MAX_NUM_TRACE_POINTS > 0: benchmark_tracepoint_log_entry_t
  */
 seL4_Word ksLogIndex = 0;
+paddr_t ksUserLogBuffer;
 #endif /* CONFIG_KERNEL_LOG_BUFFER */
 
 #if defined(CONFIG_BENCHMARK_TRACK_KERNEL_ENTRIES) || defined(CONFIG_BENCHMARK_TRACK_UTILISATION)
