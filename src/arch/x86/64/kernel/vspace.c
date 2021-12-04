@@ -16,6 +16,7 @@
 #include <mode/kernel/tlb.h>
 #include <arch/kernel/tlb_bitmap.h>
 #include <object/structures.h>
+#include <benchmark/benchmark.h>
 
 /* When using the SKIM window to isolate the kernel from the user we also need to
  * not use global mappings as having global mappings and entries in the TLB is
