@@ -6,6 +6,7 @@
 
 #pragma once
 
+#include <config.h>
 #include <object.h>
 
 static inline bool_t is_cap_null(cap_t cap)
@@ -31,4 +32,3 @@ static inline bool_t validTimeoutHandler(tcb_t *tptr)
 void handleTimeout(tcb_t *tptr);
 #endif
 void handleFault(tcb_t *tptr);
-
