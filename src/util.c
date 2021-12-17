@@ -8,6 +8,17 @@
 #include <stdint.h>
 #include <util.h>
 
+/** DONT_TRANSLATE */
+void NORETURN NO_INLINE VISIBLE halt(void)
+{
+    printf("halting...");
+#ifdef CONFIG_DEBUG_BUILD
+    debug_printKernelEntryReason();
+#endif /* CONFIG_DEBUG_BUILD */
+    Arch_halt(); /* This must not return. */
+    UNREACHABLE();
+}
+
 /*
  * memzero needs a custom type that allows us to use a word
  * that has the aliasing properties of a char.

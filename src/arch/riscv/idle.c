@@ -6,26 +6,10 @@
  */
 
 #include <config.h>
-#include <arch/sbi.h>
 
 void idle_thread(void)
 {
     while (1) {
         asm volatile("wfi");
     }
-}
-
-/** DONT_TRANSLATE */
-void VISIBLE NO_INLINE halt(void)
-{
-#ifdef CONFIG_PRINTING
-    printf("halting...");
-#ifdef CONFIG_DEBUG_BUILD
-    debug_printKernelEntryReason();
-#endif /* CONFIG_DEBUG_BUILD */
-#endif /* CONFIG_PRINTING */
-
-    sbi_shutdown();
-
-    UNREACHABLE();
 }

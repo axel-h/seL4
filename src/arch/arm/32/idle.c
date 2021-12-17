@@ -5,8 +5,8 @@
  */
 
 #include <config.h>
+#include <util.h>
 #include <mode/machine.h>
-#include <api/debug.h>
 
 /*
  * The idle thread currently does not receive a stack pointer and so we rely on
@@ -23,20 +23,4 @@ void FORCE_O2 idle_thread(void)
     while (1) {
         wfi();
     }
-}
-
-/** DONT_TRANSLATE */
-void NORETURN NO_INLINE VISIBLE halt(void)
-{
-    /* halt is actually, idle thread without the interrupts */
-    asm volatile("cpsid iaf");
-
-#ifdef CONFIG_PRINTING
-    printf("halting...");
-#ifdef CONFIG_DEBUG_BUILD
-    debug_printKernelEntryReason();
-#endif
-#endif
-    idle_thread();
-    UNREACHABLE();
 }

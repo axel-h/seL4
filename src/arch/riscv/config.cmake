@@ -85,6 +85,7 @@ add_sources(
     PREFIX src/arch/riscv
     CFILES
         c_traps.c
+        halt.c
         idle.c
         api/faults.c
         api/benchmark.c
