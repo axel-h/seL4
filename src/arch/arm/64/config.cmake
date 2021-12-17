@@ -16,6 +16,7 @@ add_sources(
         machine/fpu.c
         model/statedata.c
         c_traps.c
+        halt.c
         idle.c
         kernel/thread.c
         kernel/vspace.c

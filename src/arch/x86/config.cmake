@@ -359,6 +359,7 @@ add_sources(
     PREFIX src/arch/x86
     CFILES
         c_traps.c
+        halt.c
         idle.c
         api/faults.c
         object/interrupt.c

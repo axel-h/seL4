@@ -128,6 +128,8 @@ void __builtin_unreachable(void);
         halt_spec: "\<Gamma> \<turnstile> {} Call halt_'proc {}"
 */
 void halt(void) NORETURN;
+void Arch_halt(void) NORETURN;
+
 void memzero(void *s, unsigned long n);
 void *memset(void *s, unsigned long c, unsigned long n) VISIBLE;
 void *memcpy(void *ptr_dst, const void *ptr_src, unsigned long n) VISIBLE;
