@@ -154,7 +154,7 @@ add_custom_command(
         echo "CONFIG_WORD_SIZE=${KernelWordSize}" > config
     COMMAND
         "${PYTHON3}" "${SYSCALL_STUB_GEN_PATH}" ${buffer} ${mcs} -a "${KernelSel4Arch}" -c config -o
-        include/interfaces/sel4_client.h ${interface_xmls}
+        include/interfaces/sel4_client.h --lang=c ${interface_xmls}
     DEPENDS
         "${SYSCALL_STUB_GEN_PATH}"
         ${interface_xmls}
