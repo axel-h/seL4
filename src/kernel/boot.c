@@ -928,6 +928,15 @@ BOOT_CODE bool_t init_freemem(word_t n_available, const p_region_t *available,
                               word_t n_reserved, const region_t *reserved,
                               v_region_t it_v_reg, word_t extra_bi_size_bits)
 {
+    printf("kernel window: PA: [%p..%p] VA: [%p..%p]\n",
+           (void *)PPTR_BASE, (void *)PPTR_TOP,
+           (void *)PADDR_BASE, (void *)PADDR_TOP);
+    /* Sanity check: The defines about the kernel window must be consistent. If
+     * this fails the architecture or platform definitions are broken. */
+    assert((word_t)paddr_to_pptr(PADDR_BASE) == PPTR_BASE);
+    assert((word_t)paddr_to_pptr(PADDR_TOP) == PPTR_TOP);
+    assert(pptr_to_paddr((void *)PPTR_BASE) == PADDR_BASE);
+    assert(pptr_to_paddr((void *)PPTR_TOP) == PADDR_TOP);
 
     if (!check_available_memory(n_available, available)) {
         return false;
