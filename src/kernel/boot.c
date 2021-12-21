@@ -805,7 +805,8 @@ BOOT_CODE bool_t create_untypeds(cap_t root_cnode_cap)
     if (!create_untypeds_for_region(root_cnode_cap, false, boot_mem_reuse_reg, first_untyped_slot)) {
         printf("ERROR: creation of untypeds for recycled boot memory"
                " [%"SEL4_PRIx_word"..%"SEL4_PRIx_word"] failed\n",
-               boot_mem_reuse_reg.start, boot_mem_reuse_reg.end);
+               pptr_to_paddr((void *)boot_mem_reuse_reg.start),
+               pptr_to_paddr((void *)boot_mem_reuse_reg.end));
         return false;
     }
 
@@ -816,7 +817,8 @@ BOOT_CODE bool_t create_untypeds(cap_t root_cnode_cap)
         if (!create_untypeds_for_region(root_cnode_cap, false, reg, first_untyped_slot)) {
             printf("ERROR: creation of untypeds for free memory region #%u at"
                    " [%"SEL4_PRIx_word"..%"SEL4_PRIx_word"] failed\n",
-                   (unsigned int)i, reg.start, reg.end);
+                   (unsigned int)i, pptr_to_paddr((void *)reg.start),
+                   pptr_to_paddr((void *)reg.end));
             return false;
         }
     }
@@ -890,12 +892,13 @@ BOOT_CODE static bool_t check_available_memory(word_t n_available,
 BOOT_CODE static bool_t check_reserved_memory(word_t n_reserved,
                                               const region_t *reserved)
 {
-    printf("reserved virt address space regions: %"SEL4_PRIu_word"\n",
+    printf("reserved address space regions: %"SEL4_PRIu_word"\n",
            n_reserved);
     /* Force ordering and exclusivity of reserved regions. */
     for (word_t i = 0; i < n_reserved; i++) {
         const region_t *r = &reserved[i];
-        printf("  [%"SEL4_PRIx_word"..%"SEL4_PRIx_word"]\n", r->start, r->end);
+        printf("  [%"SEL4_PRIx_word"..%"SEL4_PRIx_word"]\n",
+               pptr_to_paddr((void *)r->start), pptr_to_paddr((void *)r->end));
 
         /* Reserved regions must be sane, the size is allowed to be zero. */
         if (r->start > r->end) {
