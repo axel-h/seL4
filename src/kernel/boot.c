@@ -570,43 +570,41 @@ BOOT_CODE void init_core_state(tcb_t *scheduler_action)
 #endif
 }
 
-BOOT_CODE static bool_t provide_untyped_cap(
-    cap_t  root_cnode_cap,
+BOOT_CODE static int provide_untyped_cap(
+    cap_t root_cnode_cap,
     bool_t is_device_memory,
     pptr_t pptr,
     word_t size_bits)
 {
-    bool_t ret;
-    cap_t ut_cap;
-
     /* Sanity check, the whole untyped creation cannot be split up during the
      * boot process. In must happen in one block, otherwise the boot info meta
      * data can't handle this with just a start and end field.
      */
     assert(ndks_boot.bi_frame->untyped.start <= ndks_boot.slot_pos_cur);
     assert(ndks_boot.bi_frame->untyped.end = ndks_boot.slot_pos_cur);
-
     word_t i = ndks_boot.slot_pos_cur - ndks_boot.bi_frame->untyped.start;
-    if (i < CONFIG_MAX_NUM_BOOTINFO_UNTYPED_CAPS) {
-        ndks_boot.bi_frame->untypedList[i] = (seL4_UntypedDesc) {
-            .paddr    = pptr_to_paddr((void *)pptr),
-            .sizeBits = size_bits,
-            .isDevice = is_device_memory,
-            .padding  = {0}
-        };
-        ut_cap = cap_untyped_cap_new(MAX_FREE_INDEX(size_bits),
-                                     is_device_memory, size_bits, pptr);
-        /* This increments ndks_boot.slot_pos_cur on success. */
-        ret = provide_cap(root_cnode_cap, ut_cap);
-        if (ret) {
-            /* Update boot info. */
-            ndks_boot.bi_frame->untyped.end = ndks_boot.slot_pos_cur;
-        }
-    } else {
-        printf("Kernel init: Too many untyped regions for boot info\n");
-        ret = true;
+    if (i >= ARRAY_SIZE(ndks_boot.bi_frame->untypedList)) {
+        /* The array is full. */
+        return -2;
     }
-    return ret;
+
+    ndks_boot.bi_frame->untypedList[i] = (seL4_UntypedDesc) {
+        .paddr    = pptr_to_paddr((void *)pptr),
+        .sizeBits = size_bits,
+        .isDevice = is_device_memory,
+        .padding  = {0}
+    };
+
+    /* This increments ndks_boot.slot_pos_cur if the cap can be provided. */
+    if (!provide_cap(root_cnode_cap,
+                     cap_untyped_cap_new(MAX_FREE_INDEX(size_bits),
+                                         is_device_memory, size_bits, pptr))) {
+        return -1;
+    }
+
+    /* Update boot info. */
+    ndks_boot.bi_frame->untyped.end = ndks_boot.slot_pos_cur;
+    return 0;
 }
 
 BOOT_CODE static bool_t create_untypeds_for_region(
@@ -636,7 +634,25 @@ BOOT_CODE static bool_t create_untypeds_for_region(
          * be used anyway.
          */
         if (size_bits >= seL4_MinUntypedBits) {
-            if (!provide_untyped_cap(root_cnode_cap, is_device_memory, reg.start, size_bits)) {
+            int ret = provide_untyped_cap(root_cnode_cap, is_device_memory,
+                                          reg.start, size_bits);
+            if (0 != ret) {
+                if (-2 == ret) {
+                    /* The array ndks_boot.bi_frame->untypedList[] is full, its
+                     * size is set via CONFIG_MAX_NUM_BOOTINFO_UNTYPED_CAPS.
+                     */
+                    printf("WARNING: CONFIG_MAX_NUM_BOOTINFO_UNTYPED_CAPS (%d)"
+                           " exceeded, can't create cap descriptors for %s"
+                           " region at %"SEL4_PRIx_word"/2^%d and beyond\n",
+                           (int)CONFIG_MAX_NUM_BOOTINFO_UNTYPED_CAPS,
+                           is_device_memory ? "device" : "free",
+                           reg.start, size_bits);
+                    return true;
+                }
+                printf("ERROR: could not provide cap for %s region at"
+                       " %"SEL4_PRIx_word"/2^%u\n",
+                       is_device_memory ? "device" : "free", reg.start,
+                       size_bits);
                 return false;
             }
         }
