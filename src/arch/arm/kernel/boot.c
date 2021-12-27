@@ -348,8 +348,6 @@ static BOOT_CODE bool_t try_init_kernel(
     vptr_t extra_bi_frame_vptr;
     vptr_t bi_frame_vptr;
     vptr_t ipcbuf_vptr;
-    create_frames_of_region_ret_t create_frames_ret;
-    create_frames_of_region_ret_t extra_bi_ret;
 
     /* convert from physical addresses to userland vptrs */
     v_region_t ui_v_reg = {
@@ -450,7 +448,8 @@ static BOOT_CODE bool_t try_init_kernel(
     init_smc(root_cnode_cap);
 #endif
 
-    populate_bi_frame(0, CONFIG_MAX_NUM_NODES, ipcbuf_vptr, extra_bi_size);
+    seL4_BootInfo *bi = populate_bi_frame(0, CONFIG_MAX_NUM_NODES, ipcbuf_vptr,
+                                          extra_bi_size);
 
     /* put DTB in the bootinfo block, if present. */
     seL4_BootInfoHeader header;
@@ -473,19 +472,19 @@ static BOOT_CODE bool_t try_init_kernel(
     }
 
     if (config_set(CONFIG_TK1_SMMU)) {
-        ndks_boot.bi_frame->ioSpaceCaps = create_iospace_caps(root_cnode_cap);
-        if (ndks_boot.bi_frame->ioSpaceCaps.start == 0 &&
-            ndks_boot.bi_frame->ioSpaceCaps.end == 0) {
+        bi->ioSpaceCaps = create_iospace_caps(root_cnode_cap);
+        if (bi->ioSpaceCaps.start == 0 &&
+            bi->ioSpaceCaps.end == 0) {
             printf("ERROR: SMMU I/O space creation failed\n");
             return false;
         }
     } else {
-        ndks_boot.bi_frame->ioSpaceCaps = S_REG_EMPTY;
+        bi->ioSpaceCaps = S_REG_EMPTY;
     }
 
     /* Construct an initial address space with enough virtual addresses
      * to cover the user image + ipc buffer and bootinfo frames */
-    it_pd_cap = create_it_address_space(root_cnode_cap, it_v_reg);
+    it_pd_cap = create_it_address_space(root_cnode_cap, bi, it_v_reg);
     if (cap_get_capType(it_pd_cap) == cap_null_cap) {
         printf("ERROR: address space creation for initial thread failed\n");
         return false;
@@ -504,19 +503,14 @@ static BOOT_CODE bool_t try_init_kernel(
             .start = rootserver.extra_bi,
             .end = rootserver.extra_bi + extra_bi_size
         };
-        extra_bi_ret =
-            create_frames_of_region(
+        if (!create_frames_of_region(
                 root_cnode_cap,
-                it_pd_cap,
-                extra_bi_region,
-                true,
-                pptr_to_paddr((void *)extra_bi_region.start) - extra_bi_frame_vptr
-            );
-        if (!extra_bi_ret.success) {
+                &bi->extraBIPages,
+                it_pd_cap, extra_bi_region, true,
+                pptr_to_paddr((void *)rootserver.extra_bi) - extra_bi_frame_vptr)) {
             printf("ERROR: mapping extra boot info to initial thread failed\n");
             return false;
         }
-        ndks_boot.bi_frame->extraBIPages = extra_bi_ret.region;
     }
 
 #ifdef CONFIG_KERNEL_MCS
@@ -531,19 +525,12 @@ static BOOT_CODE bool_t try_init_kernel(
     }
 
     /* create all userland image frames */
-    create_frames_ret =
-        create_frames_of_region(
-            root_cnode_cap,
-            it_pd_cap,
-            ui_reg,
-            true,
-            pv_offset
-        );
-    if (!create_frames_ret.success) {
+    if (!create_frames_of_region(root_cnode_cap,
+                                 &bi->userImageFrames,
+                                 it_pd_cap, ui_reg, true, pv_offset)) {
         printf("ERROR: could not create all userland image frames\n");
         return false;
     }
-    ndks_boot.bi_frame->userImageFrames = create_frames_ret.region;
 
     /* create/initialise the initial thread's ASID pool */
     it_ap_cap = create_it_asid_pool(root_cnode_cap);
@@ -590,7 +577,7 @@ static BOOT_CODE bool_t try_init_kernel(
     }
 
     /* no shared-frame caps (ARM has no multikernel support) */
-    ndks_boot.bi_frame->sharedFrames = S_REG_EMPTY;
+    bi->sharedFrames = S_REG_EMPTY;
 
     /* finalise the bootinfo frame */
     bi_finalise();

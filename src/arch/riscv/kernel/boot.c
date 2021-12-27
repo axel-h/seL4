@@ -211,8 +211,6 @@ static BOOT_CODE bool_t try_init_kernel(
     vptr_t extra_bi_frame_vptr;
     vptr_t bi_frame_vptr;
     vptr_t ipcbuf_vptr;
-    create_frames_of_region_ret_t create_frames_ret;
-    create_frames_of_region_ret_t extra_bi_ret;
 
     /* convert from physical addresses to userland vptrs */
     v_region_t ui_v_reg = {
@@ -309,7 +307,8 @@ static BOOT_CODE bool_t try_init_kernel(
     init_irqs(root_cnode_cap);
 
     /* create the bootinfo frame */
-    populate_bi_frame(0, CONFIG_MAX_NUM_NODES, ipcbuf_vptr, extra_bi_size);
+    seL4_BootInfo *bi = populate_bi_frame(0, CONFIG_MAX_NUM_NODES, ipcbuf_vptr,
+                                          extra_bi_size);
 
     /* put DTB in the bootinfo block, if present. */
     seL4_BootInfoHeader header;
@@ -333,7 +332,7 @@ static BOOT_CODE bool_t try_init_kernel(
 
     /* Construct an initial address space with enough virtual addresses
      * to cover the user image + ipc buffer and bootinfo frames */
-    it_pd_cap = create_it_address_space(root_cnode_cap, it_v_reg);
+    it_pd_cap = create_it_address_space(root_cnode_cap, bi, it_v_reg);
     if (cap_get_capType(it_pd_cap) == cap_null_cap) {
         printf("ERROR: address space creation for initial thread failed\n");
         return false;
@@ -352,23 +351,20 @@ static BOOT_CODE bool_t try_init_kernel(
             .start = rootserver.extra_bi,
             .end = rootserver.extra_bi + extra_bi_size
         };
-        extra_bi_ret =
-            create_frames_of_region(
+        if (!create_frames_of_region(
                 root_cnode_cap,
+                &bi->extraBIPages,
                 it_pd_cap,
                 extra_bi_region,
                 true,
-                pptr_to_paddr((void *)extra_bi_region.start) - extra_bi_frame_vptr
-            );
-        if (!extra_bi_ret.success) {
+                pptr_to_paddr((void *)extra_bi_region.start) - extra_bi_frame_vptr)) {
             printf("ERROR: mapping extra boot info to initial thread failed\n");
             return false;
         }
-        ndks_boot.bi_frame->extraBIPages = extra_bi_ret.region;
     }
 
 #ifdef CONFIG_KERNEL_MCS
-    init_sched_control(root_cnode_cap, CONFIG_MAX_NUM_NODES);
+    init_sched_control(root_cnode_cap, bi, CONFIG_MAX_NUM_NODES);
 #endif
 
     /* create the initial thread's IPC buffer */
@@ -379,19 +375,16 @@ static BOOT_CODE bool_t try_init_kernel(
     }
 
     /* create all userland image frames */
-    create_frames_ret =
-        create_frames_of_region(
+    if (!create_frames_of_region(
             root_cnode_cap,
+            &bi->userImageFrames,
             it_pd_cap,
             ui_reg,
             true,
-            pv_offset
-        );
-    if (!create_frames_ret.success) {
+            pv_offset)) {
         printf("ERROR: could not create all userland image frames\n");
         return false;
     }
-    ndks_boot.bi_frame->userImageFrames = create_frames_ret.region;
 
     /* create the initial thread's ASID pool */
     it_ap_cap = create_it_asid_pool(root_cnode_cap);
@@ -432,7 +425,7 @@ static BOOT_CODE bool_t try_init_kernel(
     }
 
     /* no shared-frame caps (RISC-V has no multikernel support) */
-    ndks_boot.bi_frame->sharedFrames = S_REG_EMPTY;
+    bi->sharedFrames = S_REG_EMPTY;
 
     /* finalise the bootinfo frame */
     bi_finalise();

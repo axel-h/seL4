@@ -440,12 +440,11 @@ BOOT_CODE word_t arch_get_n_paging(v_region_t it_v_reg)
         get_n_paging(it_v_reg, GET_ULVL_PGSIZE_BITS(ULVL_FRM_ARM_PT_LVL(2)));
 }
 
-BOOT_CODE cap_t create_it_address_space(cap_t root_cnode_cap, v_region_t it_v_reg)
+BOOT_CODE cap_t create_it_address_space(cap_t root_cnode_cap, seL4_BootInfo *bi,
+                                        v_region_t it_v_reg)
 {
     cap_t      vspace_cap;
     vptr_t     vptr;
-    seL4_SlotPos slot_pos_before;
-    seL4_SlotPos slot_pos_after;
 
     /* create the PGD */
     vspace_cap = cap_vspace_cap_new(
@@ -456,7 +455,6 @@ BOOT_CODE cap_t create_it_address_space(cap_t root_cnode_cap, v_region_t it_v_re
                      , 0                /* capVSMappedCB   */
 #endif
                  );
-    slot_pos_before = ndks_boot.slot_pos_cur;
     write_slot(SLOT_PTR(pptr_of_cap(root_cnode_cap), seL4_CapInitThreadVSpace), vspace_cap);
 
 #ifndef AARCH64_VSPACE_S2_START_L1
@@ -464,7 +462,9 @@ BOOT_CODE cap_t create_it_address_space(cap_t root_cnode_cap, v_region_t it_v_re
     for (vptr = ROUND_DOWN(it_v_reg.start, GET_ULVL_PGSIZE_BITS(ULVL_FRM_ARM_PT_LVL(0)));
          vptr < it_v_reg.end;
          vptr += GET_ULVL_PGSIZE(ULVL_FRM_ARM_PT_LVL(0))) {
-        if (!provide_cap(root_cnode_cap, create_it_pud_cap(vspace_cap, it_alloc_paging(), vptr, IT_ASID))) {
+        if (!provide_cap(root_cnode_cap,
+                         create_it_pud_cap(vspace_cap, it_alloc_paging(), vptr, IT_ASID),
+                         &bi->userImagePaging)) {
             return cap_null_cap_new();
         }
     }
@@ -473,7 +473,9 @@ BOOT_CODE cap_t create_it_address_space(cap_t root_cnode_cap, v_region_t it_v_re
     for (vptr = ROUND_DOWN(it_v_reg.start, GET_ULVL_PGSIZE_BITS(ULVL_FRM_ARM_PT_LVL(1)));
          vptr < it_v_reg.end;
          vptr += GET_ULVL_PGSIZE(ULVL_FRM_ARM_PT_LVL(1))) {
-        if (!provide_cap(root_cnode_cap, create_it_pd_cap(vspace_cap, it_alloc_paging(), vptr, IT_ASID))) {
+        if (!provide_cap(root_cnode_cap,
+                         create_it_pd_cap(vspace_cap, it_alloc_paging(), vptr, IT_ASID),
+                         &bi->userImagePaging)) {
             return cap_null_cap_new();
         }
     }
@@ -482,15 +484,13 @@ BOOT_CODE cap_t create_it_address_space(cap_t root_cnode_cap, v_region_t it_v_re
     for (vptr = ROUND_DOWN(it_v_reg.start, GET_ULVL_PGSIZE_BITS(ULVL_FRM_ARM_PT_LVL(2)));
          vptr < it_v_reg.end;
          vptr += GET_ULVL_PGSIZE(ULVL_FRM_ARM_PT_LVL(2))) {
-        if (!provide_cap(root_cnode_cap, create_it_pt_cap(vspace_cap, it_alloc_paging(), vptr, IT_ASID))) {
+        if (!provide_cap(root_cnode_cap,
+                         create_it_pt_cap(vspace_cap, it_alloc_paging(), vptr, IT_ASID),
+                         &bi->userImagePaging)) {
             return cap_null_cap_new();
         }
     }
 
-    slot_pos_after = ndks_boot.slot_pos_cur;
-    ndks_boot.bi_frame->userImagePaging = (seL4_SlotRegion) {
-        slot_pos_before, slot_pos_after
-    };
     return vspace_cap;
 }
 

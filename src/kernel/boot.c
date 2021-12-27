@@ -344,8 +344,9 @@ BOOT_CODE word_t calculate_extra_bi_size_bits(word_t extra_size)
     return msb;
 }
 
-BOOT_CODE void populate_bi_frame(node_id_t node_id, word_t num_nodes,
-                                 vptr_t ipcbuf_vptr, word_t extra_bi_size)
+BOOT_CODE seL4_BootInfo *populate_bi_frame(node_id_t node_id, word_t num_nodes,
+                                           vptr_t ipcbuf_vptr,
+                                           word_t extra_bi_size)
 {
     /* clear boot info memory */
     clearMemory((void *)rootserver.boot_info, seL4_BootInfoFrameBits);
@@ -363,26 +364,47 @@ BOOT_CODE void populate_bi_frame(node_id_t node_id, word_t num_nodes,
     bi->initThreadCNodeSizeBits = CONFIG_ROOT_CNODE_SIZE_BITS;
     bi->initThreadDomain = ksDomSchedule[ksDomScheduleIdx].domain;
     bi->extraLen = extra_bi_size;
+    bi->empty.start = seL4_NumInitialCaps;
+    bi->empty.end = BIT(CONFIG_ROOT_CNODE_SIZE_BITS);
 
-    ndks_boot.bi_frame = bi;
-    ndks_boot.slot_pos_cur = seL4_NumInitialCaps;
+    return bi;
 }
 
-BOOT_CODE bool_t provide_cap(cap_t root_cnode_cap, cap_t cap)
+BOOT_CODE bool_t provide_cap(cap_t root_cnode_cap, cap_t cap,
+                             seL4_SlotRegion *slot_region)
 {
-    if (ndks_boot.slot_pos_cur >= BIT(CONFIG_ROOT_CNODE_SIZE_BITS)) {
-        printf("ERROR: can't add another cap, all %"SEL4_PRIu_word
-               " (=2^CONFIG_ROOT_CNODE_SIZE_BITS) slots used\n",
-               BIT(CONFIG_ROOT_CNODE_SIZE_BITS));
+    assert(slot_region);
+
+    seL4_BootInfo *bi = BI_PTR(rootserver.boot_info);
+    if (bi->empty.start >= bi->empty.end) {
+        printf("ERROR: can't add another cap, consider increasing"
+               " CONFIG_ROOT_CNODE_SIZE_BITS (%u)\n",
+               (unsigned int)CONFIG_ROOT_CNODE_SIZE_BITS);
         return false;
     }
-    write_slot(SLOT_PTR(pptr_of_cap(root_cnode_cap), ndks_boot.slot_pos_cur), cap);
-    ndks_boot.slot_pos_cur++;
+
+    if (0 == slot_region->end) {
+        /* Initialize the slot region. */
+        slot_region->start = bi->empty.start;
+    } else {
+        /* Sanity check that slot region is properly initialized. */
+        assert(slot_region->start < slot_region->end);
+        assert(slot_region->start < bi->empty.start);
+        assert(slot_region->end == bi->empty.start);
+    }
+
+    /* Use the next empty slot. */
+    write_slot(SLOT_PTR(pptr_of_cap(root_cnode_cap), bi->empty.start), cap);
+    bi->empty.start++;
+    /* Update the slot region. */
+    slot_region->end = bi->empty.start;
+
     return true;
 }
 
-BOOT_CODE create_frames_of_region_ret_t create_frames_of_region(
+BOOT_CODE bool_t create_frames_of_region(
     cap_t    root_cnode_cap,
+    seL4_SlotRegion *slot_region,
     cap_t    pd_cap,
     region_t reg,
     bool_t   do_map,
@@ -391,10 +413,6 @@ BOOT_CODE create_frames_of_region_ret_t create_frames_of_region(
 {
     pptr_t     f;
     cap_t      frame_cap;
-    seL4_SlotPos slot_pos_before;
-    seL4_SlotPos slot_pos_after;
-
-    slot_pos_before = ndks_boot.slot_pos_cur;
 
     for (f = reg.start; f < reg.end; f += BIT(PAGE_BITS)) {
         if (do_map) {
@@ -402,23 +420,12 @@ BOOT_CODE create_frames_of_region_ret_t create_frames_of_region(
         } else {
             frame_cap = create_unmapped_it_frame_cap(f, false);
         }
-        if (!provide_cap(root_cnode_cap, frame_cap)) {
-            return (create_frames_of_region_ret_t) {
-                .region  = S_REG_EMPTY,
-                .success = false
-            };
+        if (!provide_cap(root_cnode_cap, frame_cap, slot_region)) {
+            return false;
         }
     }
 
-    slot_pos_after = ndks_boot.slot_pos_cur;
-
-    return (create_frames_of_region_ret_t) {
-        .region = (seL4_SlotRegion) {
-            .start = slot_pos_before,
-            .end   = slot_pos_after
-        },
-        .success = true
-    };
+    return true;
 }
 
 BOOT_CODE cap_t create_it_asid_pool(cap_t root_cnode_cap)
@@ -445,21 +452,17 @@ BOOT_CODE static void configure_sched_context(tcb_t *tcb, sched_context_t *sc_pp
 
 BOOT_CODE bool_t init_sched_control(cap_t root_cnode_cap, word_t num_nodes)
 {
-    seL4_SlotPos slot_pos_before = ndks_boot.slot_pos_cur;
+    seL4_BootInfo *bi = BI_PTR(rootserver.boot_info);
 
     /* create a sched control cap for each core */
     for (unsigned int i = 0; i < num_nodes; i++) {
-        if (!provide_cap(root_cnode_cap, cap_sched_control_cap_new(i))) {
+
+        if (!provide_cap(root_cnode_cap, cap_sched_control_cap_new(i),
+                         &bi->schedcontrol)) {
             printf("can't init sched_control for node %u, provide_cap() failed\n", i);
             return false;
         }
     }
-
-    /* update boot info with slot region for sched control caps */
-    ndks_boot.bi_frame->schedcontrol = (seL4_SlotRegion) {
-        .start = slot_pos_before,
-        .end = ndks_boot.slot_pos_cur
-    };
 
     return true;
 }
@@ -682,21 +685,25 @@ BOOT_CODE static bool_t provide_untyped_cap(
         return -1;
     }
 
+    seL4_BootInfo *bi = BI_PTR(rootserver.boot_info);
+    word_t i = 0;
     /* Sanity check, that the whole untyped creation for a specific slot region
      * is not split up. Since there is a start and end filed only, no gaps are
      * possible, this would require using multiple slot region then.
      */
     assert(slot_region);
-    assert(slot_region->start <= ndks_boot.slot_pos_cur);
-    assert(slot_region->end = ndks_boot.slot_pos_cur);
+    if (slot_region->start > 0) {
+        assert(slot_region->start <= bi->empty.start);
+        assert(slot_region->end = bi->empty.start);
+        i = bi->empty.start - slot_region->start;
+    }
 
-    word_t i = ndks_boot.slot_pos_cur - slot_region->start;
-    if (i >= ARRAY_SIZE(ndks_boot.bi_frame->untypedList)) {
+    if (i >= ARRAY_SIZE(bi->untypedList)) {
         /* The array is full. */
         return -2;
     }
 
-    ndks_boot.bi_frame->untypedList[i] = (seL4_UntypedDesc) {
+    bi->untypedList[i] = (seL4_UntypedDesc) {
         .paddr    = pptr_to_paddr((void *)pptr),
         .sizeBits = size_bits,
         .isDevice = is_device_memory,
@@ -705,9 +712,7 @@ BOOT_CODE static bool_t provide_untyped_cap(
 
     cap_t ut_cap = cap_untyped_cap_new(MAX_FREE_INDEX(size_bits),
                                        is_device_memory, size_bits, pptr);
-    /* This increments ndks_boot.slot_pos_cur if the cap can be provided. If it
-     * fails CONFIG_ROOT_CNODE_SIZE_BITS is exceeded */
-    if (!provide_cap(root_cnode_cap, ut_cap)) {
+    if (!provide_cap(root_cnode_cap, ut_cap, slot_region)) {
         return -3;
     }
 
@@ -906,8 +911,11 @@ BOOT_CODE bool_t create_untypeds(cap_t root_cnode_cap)
      * during the following untyped creation to ensure the number does not
      * exceed CONFIG_MAX_NUM_BOOTINFO_UNTYPED_CAPS.
      */
-    seL4_SlotRegion *slot_region = &ndks_boot.bi_frame->untyped;
-    slot_region->start = ndks_boot.slot_pos_cur;
+    seL4_BootInfo *bi = BI_PTR(rootserver.boot_info);
+    seL4_SlotRegion *slot_region = &(bi->untyped);
+
+    assert(0 == bi_slot_region->start);
+    assert(0 == bi_slot_region->end);
 
     /* Create the device untypeds. */
     if (!create_device_untypeds(root_cnode_cap, slot_region)) {
@@ -947,10 +955,9 @@ BOOT_CODE bool_t create_untypeds(cap_t root_cnode_cap)
 
 BOOT_CODE void bi_finalise(void)
 {
-    ndks_boot.bi_frame->empty = (seL4_SlotRegion) {
-        .start = ndks_boot.slot_pos_cur,
-        .end   = BIT(CONFIG_ROOT_CNODE_SIZE_BITS)
-    };
+    seL4_BootInfo *bi = BI_PTR(rootserver.boot_info);
+    assert(bi->empty.start <= BIT(CONFIG_ROOT_CNODE_SIZE_BITS));
+    assert(bi->empty.end == BIT(CONFIG_ROOT_CNODE_SIZE_BITS));
 }
 
 BOOT_CODE static inline pptr_t ceiling_kernel_window(pptr_t p)
