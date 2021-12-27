@@ -419,7 +419,7 @@ static BOOT_CODE bool_t try_init_kernel(
     init_core_state(initial);
 
     /* convert the remaining free memory into UT objects and provide the caps */
-    if (!create_untypeds(root_cnode_cap)) {
+    if (!create_untypeds(root_cnode_cap, bi)) {
         printf("ERROR: could not create untypteds for kernel image boot memory\n");
         return false;
     }
@@ -428,7 +428,7 @@ static BOOT_CODE bool_t try_init_kernel(
     bi->sharedFrames = S_REG_EMPTY;
 
     /* finalise the bootinfo frame */
-    bi_finalise();
+    bi_finalise(bi);
 
     ksNumCPUs = 1;
 

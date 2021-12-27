@@ -514,7 +514,7 @@ static BOOT_CODE bool_t try_init_kernel(
     }
 
 #ifdef CONFIG_KERNEL_MCS
-    init_sched_control(root_cnode_cap, CONFIG_MAX_NUM_NODES);
+    init_sched_control(root_cnode_cap, bi, CONFIG_MAX_NUM_NODES);
 #endif
 
     /* create the initial thread's IPC buffer */
@@ -571,7 +571,7 @@ static BOOT_CODE bool_t try_init_kernel(
     init_core_state(initial);
 
     /* create all of the untypeds. Both devices and kernel window memory */
-    if (!create_untypeds(root_cnode_cap)) {
+    if (!create_untypeds(root_cnode_cap, bi)) {
         printf("ERROR: could not create untypteds for kernel image boot memory\n");
         return false;
     }
@@ -580,7 +580,7 @@ static BOOT_CODE bool_t try_init_kernel(
     bi->sharedFrames = S_REG_EMPTY;
 
     /* finalise the bootinfo frame */
-    bi_finalise();
+    bi_finalise(bi);
 
     /* Flushing the L1 cache and invalidating the TLB is good enough here to
      * make sure everything written by the kernel is visible to userland. There

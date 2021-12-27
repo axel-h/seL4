@@ -233,7 +233,7 @@ BOOT_CODE bool_t init_sys_state(
 
 #ifdef CONFIG_KERNEL_MCS
     /* set up sched control for each core */
-    init_sched_control(root_cnode_cap, CONFIG_MAX_NUM_NODES);
+    init_sched_control(root_cnode_cap, bi, CONFIG_MAX_NUM_NODES);
 #endif
 
     /* Construct an initial address space with enough virtual addresses
@@ -316,12 +316,12 @@ BOOT_CODE bool_t init_sys_state(
 #endif
 
     /* create all of the untypeds. Both devices and kernel window memory */
-    if (!create_untypeds(root_cnode_cap)) {
+    if (!create_untypeds(root_cnode_cap, bi)) {
         return false;
     }
 
     /* finalise the bootinfo frame */
-    bi_finalise();
+    bi_finalise(bi);
 
     return true;
 }
