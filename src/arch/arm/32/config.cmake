@@ -17,7 +17,6 @@ add_sources(
         model/statedata.c
         c_traps.c
         halt.c
-        idle.c
         kernel/thread.c
         kernel/vspace.c
     ASMFILES head.S traps.S hyp_traps.S
