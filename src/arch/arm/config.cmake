@@ -240,6 +240,8 @@ add_sources(
         object/vcpu.c
         object/smmu.c
         smp/ipi.c
+    ASMFILES
+        idle.S
 )
 
 add_bf_source_old("KernelArchARM" "structures.bf" "include/arch/arm" "arch/object")

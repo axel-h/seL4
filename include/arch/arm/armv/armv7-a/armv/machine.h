@@ -8,8 +8,7 @@
 
 #include <util.h>
 
-/* See idle_thread for an explanation as to why FORCE_INLINE is required here. */
-static inline void FORCE_INLINE wfi(void)
+static inline void wfi(void)
 {
     asm volatile("wfi" ::: "memory");
 }
