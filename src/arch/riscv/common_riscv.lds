@@ -44,10 +44,8 @@ SECTIONS
 
     .text . : AT(ADDR(.text) - KERNEL_OFFSET)
     {
-        . = ALIGN(4K);
-
-
-        /* Standard kernel */
+        /* runtime kernel */
+        *(.vectors)
         *(.text)
     }
 
