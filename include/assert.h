@@ -8,6 +8,7 @@
 
 #include <config.h>
 #include <util.h>
+#include <sel4/macros.h> /* for SEL4_COMPILE_ASSERT() */
 
 #ifdef CONFIG_DEBUG_BUILD
 
@@ -43,8 +44,7 @@ void _assert_fail(
 #endif /* DEBUG */
 
 /* Create an assert that will trigger a compile error if it fails. */
-#define compile_assert(name, expr) \
-        typedef int __assert_failed_##name[(expr) ? 1 : -1] UNUSED;
+#define compile_assert(name, expr) SEL4_COMPILE_ASSERT(name, expr)
 
 /* Sometimes compile asserts contain expressions that the C parser cannot
  * handle. For such expressions unverified_compile_assert should be used. */
