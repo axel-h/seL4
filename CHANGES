@@ -85,6 +85,10 @@ Upcoming release: BREAKING
   [RFC-9](https://sel4.atlassian.net/browse/RFC-9).
 * Added CONFIG_PHYS_ADDR_SPACE_BITS (KernelPhysAddressSpaceBits), from this CONFIG_PHYS_ADDR_TOP (KernelPhysAddrTop)
   gets derived in the generic CMake files. Removeed PADDR_USER_DEVICE_TOP (KernelPaddrUserTop).
+* Changed kernel boot parameters to become architecture agnostic with using word_t instead of uint32. Stop using
+  sword_t due to C rule violations, use word_t instead and explicitly allow overflows and underflows in the
+  unsigned integer calculations. These changes could break the boot process on 64-bit platforms, as the upper 32 bit
+  must be set correctly now also. The elfloader has been updated, custom bootloaders might need to be updated also.
 
 ## Upgrade Notes
 
