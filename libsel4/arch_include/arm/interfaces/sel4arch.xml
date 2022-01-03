@@ -706,7 +706,7 @@
         </method>
 
        <method id="ARMIRQIssueIRQHandlerTriggerCore" name="GetTriggerCore" manual_name="GetTriggerCore"
-           manual_label="irq_controlgettriggercore" condition="CONFIG_MAX_NUM_NODES > 1">
+           manual_label="irq_controlgettriggercore" condition="defined(CONFIG_SMP_SUPPORT)">
             <brief>
                 Create an IRQ handler capability and specify the trigger method (edge or level) and the target core.
             </brief>
