@@ -8,6 +8,7 @@
 
 #include <config.h>
 #include <util.h>
+#include <sel4/macros.h>
 
 #ifdef CONFIG_DEBUG_BUILD
 
@@ -38,7 +39,7 @@ void _assert_fail(
 
 #define fail(s) halt()
 
-#define assert(expr)
+#define assert(expr) SEL4_EMPTY_EXPRESSION()
 
 #endif /* DEBUG */
 
