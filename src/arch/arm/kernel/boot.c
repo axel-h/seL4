@@ -329,7 +329,6 @@ static BOOT_CODE bool_t try_init_kernel(
     };
     region_t ui_reg = paddr_to_pptr_reg(ui_p_reg);
     word_t extra_bi_size = 0;
-    pptr_t extra_bi_offset = 0;
     vptr_t extra_bi_frame_vptr;
     vptr_t bi_frame_vptr;
     vptr_t ipcbuf_vptr;
@@ -432,25 +431,32 @@ static BOOT_CODE bool_t try_init_kernel(
     init_smmu(root_cnode_cap);
 #endif
     populate_bi_frame(0, CONFIG_MAX_NUM_NODES, ipcbuf_vptr, extra_bi_size);
-
+    pptr_t extra_bi = rootserver.extra_bi;
+    pptr_t extra_bi_end = extra_bi + extra_bi_size;
     /* put DTB in the bootinfo block, if present. */
-    seL4_BootInfoHeader header;
     if (dtb_size > 0) {
-        header.id = SEL4_BOOTINFO_HEADER_FDT;
-        header.len = sizeof(header) + dtb_size;
-        *(seL4_BootInfoHeader *)(rootserver.extra_bi + extra_bi_offset) = header;
-        extra_bi_offset += sizeof(header);
-        memcpy((void *)(rootserver.extra_bi + extra_bi_offset),
-               paddr_to_pptr(dtb_phys_addr),
-               dtb_size);
-        extra_bi_offset += dtb_size;
+        seL4_BootInfoHeader header = {
+            .id = SEL4_BOOTINFO_HEADER_FDT,
+            .len = sizeof(header) + dtb_size
+        };
+        assert(extra_bi_end > extra_bi);
+        assert(header.len > extra_bi_end - extra_bi);
+        *(seL4_BootInfoHeader *)extra_bi = header;
+        extra_bi += sizeof(header);
+        memcpy((void *)extra_bi, paddr_to_pptr(dtb_phys_addr), dtb_size);
+        extra_bi += dtb_size;
     }
 
-    if (extra_bi_size > extra_bi_offset) {
-        /* provide a chunk for any leftover padding in the extended boot info */
-        header.id = SEL4_BOOTINFO_HEADER_PADDING;
-        header.len = (extra_bi_size - extra_bi_offset);
-        *(seL4_BootInfoHeader *)(rootserver.extra_bi + extra_bi_offset) = header;
+    /* provide a chunk for any leftover padding in the extended boot info */
+    if (extra_bi_end > extra_bi) {
+        seL4_BootInfoHeader header = {
+            .id = SEL4_BOOTINFO_HEADER_PADDING,
+            .len = extra_bi_end - extra_bi
+        };
+        /* Write the header only if there is enough space. */
+        if (header.len >= sizeof(header)) {
+            *(seL4_BootInfoHeader *)extra_bi = header;
+        }
     }
 
     if (config_set(CONFIG_TK1_SMMU)) {
