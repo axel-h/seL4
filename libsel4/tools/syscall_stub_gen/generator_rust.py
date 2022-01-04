@@ -217,22 +217,16 @@ class Generator_Rust(Generator):
         return comment
 
     def _gen_conditional_compilation(self, condition) -> str:
-        # HACK: ugly hacks to handle simple CPP expressions (very fragile)
-        if condition == "(!defined CONFIG_KERNEL_MCS) && CONFIG_MAX_NUM_NODES > 1":
-            # NB: CONFIG_MAX_NUM_NODES > 1 =>'s CONFIG_SMP_SUPPORT
-            condition = 'all(not(feature = "CONFIG_KERNEL_MCS"), feature = "CONFIG_SMP_SUPPORT")'
-        elif condition == "CONFIG_MAX_NUM_NODES > 1":
-            condition = 'feature = "CONFIG_SMP_SUPPORT"'
-        elif condition:
-            condition = condition.replace('defined', '')
-            condition = condition.replace('(', '')
-            condition = condition.replace(')', '')
-            if 'CONFIG_' in condition:
-                condition = 'feature = "' + condition + '"'
-            if '!' in condition:
-                condition = 'not(%s)' % condition.replace('!', '')
-        if condition:
-            self.contents.append("#[cfg(%s)]" % condition)
+        if condition != '':
+            # HACK: ugly hacks to handle simple CPP expressions (very fragile)
+            NAME_GROUP = r'([a-zA-Z_][a-zA-Z0-9_]*)'
+            DEFINE_GROUP = r'defined\(' + NAME_GROUP + '\)'
+            import re
+            condition = re.sub(r'\!' + DEFINE_GROUP, r'not(feature = "\1")', condition)
+            condition = re.sub(DEFINE_GROUP, r'feature = "\1"', condition)
+            if ' && ' in condition:
+                 condition = 'all(' + condition.replace(' && ', ', ') + ')'
+            self.contents.append('#[cfg(' + condition + ')]')
         # No need for "#endif" in rust, so return empty
         return ''
 
