@@ -70,7 +70,7 @@ BOOT_CODE static void init_irqs(cap_t root_cnode_cap)
 BOOT_CODE static bool_t arch_init_freemem(p_region_t ui_p_reg,
                                           v_region_t it_v_reg,
                                           mem_p_regs_t *mem_p_regs,
-                                          word_t extra_bi_size_bits)
+                                          word_t num_bi_pages)
 {
     // Extend the reserved region down to include the base of the kernel image.
     // KERNEL_ELF_PADDR_BASE is the lowest physical load address used
@@ -78,7 +78,7 @@ BOOT_CODE static bool_t arch_init_freemem(p_region_t ui_p_reg,
     ui_p_reg.start = KERNEL_ELF_PADDR_BASE;
     reserved[0] = paddr_to_pptr_reg(ui_p_reg);
     return init_freemem(mem_p_regs->count, mem_p_regs->list, MAX_RESERVED,
-                        reserved, it_v_reg, extra_bi_size_bits);
+                        reserved, it_v_reg, num_bi_pages);
 }
 
 /* This function initialises a node's kernel state. It does NOT initialise the CPU. */
@@ -99,31 +99,18 @@ BOOT_CODE bool_t init_sys_state(
 )
 {
     cap_t         root_cnode_cap;
-    vptr_t        extra_bi_frame_vptr;
-    vptr_t        bi_frame_vptr;
-    vptr_t        ipcbuf_vptr;
     cap_t         it_vspace_cap;
     cap_t         it_ap_cap;
     cap_t         ipcbuf_cap;
-    word_t        extra_bi_size = sizeof(seL4_BootInfoHeader);
     uint32_t      tsc_freq;
     create_frames_of_region_ret_t create_frames_ret;
-    create_frames_of_region_ret_t extra_bi_ret;
 
     /* convert from physical addresses to kernel pptrs */
     region_t ui_reg             = paddr_to_pptr_reg(ui_info.p_reg);
     region_t boot_mem_reuse_reg = paddr_to_pptr_reg(boot_mem_reuse_p_reg);
 
-    /* convert from physical addresses to userland vptrs */
-    v_region_t ui_v_reg;
-    v_region_t it_v_reg;
-    ui_v_reg.start = ui_info.p_reg.start - ui_info.pv_offset;
-    ui_v_reg.end   = ui_info.p_reg.end   - ui_info.pv_offset;
-
-    ipcbuf_vptr = ui_v_reg.end;
-    bi_frame_vptr = ipcbuf_vptr + BIT(PAGE_BITS);
-    extra_bi_frame_vptr = bi_frame_vptr + BIT(BI_FRAME_SIZE_BITS);
-
+    /* Calculate space for extra boot info. */
+    word_t extra_bi_size = sizeof(seL4_BootInfoHeader);
     if (vbe->vbeMode != -1) {
         extra_bi_size += sizeof(seL4_X86_BootInfo_VBE);
     }
@@ -139,11 +126,23 @@ BOOT_CODE bool_t init_sys_state(
 
     // room for tsc frequency
     extra_bi_size += sizeof(seL4_BootInfoHeader) + 4;
-    word_t extra_bi_size_bits = calculate_extra_bi_size_bits(extra_bi_size);
 
-    /* The region of the initial thread is the user image + ipcbuf and boot info */
-    it_v_reg.start = ui_v_reg.start;
-    it_v_reg.end = ROUND_UP(extra_bi_frame_vptr + BIT(extra_bi_size_bits), PAGE_BITS);
+    /* Prepare initial thread. Convert user image location from from physical
+     * addresses to userland vptrs. The region of the initial thread is the
+     * user image, ipcbuf and boot info.
+     */
+    v_region_t ui_v_reg = {
+        .start = ui_info.p_reg.start - ui_info.pv_offset;
+        .end   = ui_info.p_reg.end   - ui_info.pv_offset;
+    }
+    vptr_t ipcbuf_vptr = ui_v_reg.end;
+    vptr_t bi_frame_vptr = ipcbuf_vptr + BIT(PAGE_BITS);
+    word_t num_bi_pages = SEL4_BI_FRAME_PAGES +
+                          (ROUND_UP(extra_bi_size, PAGE_BITS) / BIT(PAGE_BITS));
+    v_region_t it_v_reg = {
+        .start = ui_v_reg.start;
+        .end    = ROUND_UP(bi_frame_vptr + num_bi_pages * BIT(PAGE_BITS), PAGE_BITS);
+    }
 #ifdef CONFIG_IOMMU
     /* calculate the number of io pts before initialising memory */
     if (!vtd_init_num_iopts(num_drhu)) {
@@ -151,7 +150,7 @@ BOOT_CODE bool_t init_sys_state(
     }
 #endif /* CONFIG_IOMMU */
 
-    if (!arch_init_freemem(ui_info.p_reg, it_v_reg, mem_p_regs, extra_bi_size_bits)) {
+    if (!arch_init_freemem(ui_info.p_reg, it_v_reg, mem_p_regs, num_bi_pages)) {
         printf("ERROR: free memory management initialization failed\n");
         return false;
     }
@@ -174,12 +173,9 @@ BOOT_CODE bool_t init_sys_state(
     tsc_freq = tsc_init();
 
     /* populate the bootinfo frame */
-    populate_bi_frame(0, ksNumCPUs, ipcbuf_vptr, extra_bi_size);
-    pptr_t extra_bi = rootserver.extra_bi;
-    region_t extra_bi_region = {
-        .start = extra_bi,
-        .end = extra_bi + BIT(extra_bi_size_bits)
-    };
+    populate_bi_frame(0, ksNumCPUs, ipcbuf_vptr, num_bi_pages, extra_bi_size);
+    pptr_t extra_bi = rootserver.boot_info + SEL4_BI_FRAME_SIZE;
+    pptr_t extra_bi_end = extra_bi + ROUND_UP(extra_bi_size, PAGE_BITS);
     /* populate vbe info block */
     if (vbe->vbeMode != -1) {
         vbe->header.id = SEL4_BOOTINFO_HEADER_X86_VBE;
@@ -255,25 +251,11 @@ BOOT_CODE bool_t init_sys_state(
     }
 
     /* Create and map bootinfo frame cap */
-    create_bi_frame_cap(
-        root_cnode_cap,
-        it_vspace_cap,
-        bi_frame_vptr
-    );
-
-    /* create and map extra bootinfo region */
-    extra_bi_ret =
-        create_frames_of_region(
-            root_cnode_cap,
-            it_vspace_cap,
-            extra_bi_region,
-            true,
-            pptr_to_paddr((void *)(extra_bi_region.start - extra_bi_frame_vptr))
-        );
-    if (!extra_bi_ret.success) {
+    if (!create_bi_frame_caps(root_cnode_cap, it_vspace_cap, bi_frame_vptr,
+                              num_bi_pages)) {
+        printf("ERROR: could not create boot info frame caps\n");
         return false;
     }
-    ndks_boot.bi_frame->extraBIPages = extra_bi_ret.region;
 
     /* create the initial thread's IPC buffer */
     ipcbuf_cap = create_ipcbuf_frame_cap(root_cnode_cap, it_vspace_cap, ipcbuf_vptr);

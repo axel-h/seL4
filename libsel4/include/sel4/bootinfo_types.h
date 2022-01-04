@@ -7,6 +7,8 @@
 #pragma once
 
 #include <autoconf.h>
+#include <sel4/macros.h>
+#include <sel4/sel4_arch/constants.h>
 
 /* caps with fixed slot positions in the root CNode */
 enum {
@@ -74,9 +76,19 @@ typedef struct seL4_BootInfo {
      * to make this struct easier to represent in other languages */
 } seL4_BootInfo;
 
-/* If extraLen > 0 then 4K after the start of bootinfo is a region of extraLen additional
- * bootinfo structures. Bootinfo structures are arch/platform specific and may or may not
- * exist in any given execution. */
+/* Since the boot info frame size is usually exactly one page and the page size
+ * is 4 KiByte on x86, ARM and RISC-V, some userland code seems to have a hard
+ * coded assumption that the boot info frame size is 4 KiByte. New code should
+ * avoid this and use SEL4_BI_FRAME_SIZE as offset where the extra boot info
+ * data starts.
+ */
+#define SEL4_BI_FRAME_PAGES  1
+#define SEL4_BI_FRAME_SIZE   (SEL4_BI_FRAME_PAGES * LIBSEL4_BIT(seL4_PageBits))
+
+SEL4_COMPILE_ASSERT(
+    invalid_SEL4_BI_FRAME_SIZE,
+    sizeof(seL4_BootInfo) <= SEL4_BI_FRAME_SIZE)
+
 typedef struct seL4_BootInfoHeader {
     /* identifier of the following chunk. IDs are arch/platform specific */
     seL4_Word id;

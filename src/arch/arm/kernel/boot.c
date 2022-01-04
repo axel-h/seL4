@@ -39,7 +39,7 @@ BOOT_BSS static region_t reserved[NUM_RESERVED_REGIONS];
 BOOT_CODE static bool_t arch_init_freemem(p_region_t ui_p_reg,
                                           p_region_t dtb_p_reg,
                                           v_region_t it_v_reg,
-                                          word_t extra_bi_size_bits)
+                                          word_t num_bi_pages)
 {
     /* reserve the kernel image region */
     reserved[0].start = KERNEL_ELF_BASE;
@@ -109,8 +109,7 @@ BOOT_CODE static bool_t arch_init_freemem(p_region_t ui_p_reg,
 
     /* avail_p_regs comes from the auto-generated code */
     return init_freemem(ARRAY_SIZE(avail_p_regs), avail_p_regs,
-                        index, reserved,
-                        it_v_reg, extra_bi_size_bits);
+                        index, reserved, it_v_reg, num_bi_pages);
 }
 
 
@@ -329,21 +328,7 @@ static BOOT_CODE bool_t try_init_kernel(
     };
     region_t ui_reg = paddr_to_pptr_reg(ui_p_reg);
     word_t extra_bi_size = 0;
-    vptr_t extra_bi_frame_vptr;
-    vptr_t bi_frame_vptr;
-    vptr_t ipcbuf_vptr;
     create_frames_of_region_ret_t create_frames_ret;
-    create_frames_of_region_ret_t extra_bi_ret;
-
-    /* convert from physical addresses to userland vptrs */
-    v_region_t ui_v_reg = {
-        .start = ui_p_reg_start - pv_offset,
-        .end   = ui_p_reg_end   - pv_offset
-    };
-
-    ipcbuf_vptr = ui_v_reg.end;
-    bi_frame_vptr = ipcbuf_vptr + BIT(PAGE_BITS);
-    extra_bi_frame_vptr = bi_frame_vptr + BIT(BI_FRAME_SIZE_BITS);
 
     /* setup virtual memory for the kernel */
     map_kernel_window();
@@ -391,11 +376,20 @@ static BOOT_CODE bool_t try_init_kernel(
         };
     }
 
-    /* The region of the initial thread is the user image + ipcbuf and boot info */
-    word_t extra_bi_size_bits = calculate_extra_bi_size_bits(extra_bi_size);
+    /* Convert from physical addresses to userland vptrs. The region of the
+     * initial thread is the user image + ipcbuf + boot info + extra.
+     */
+    v_region_t ui_v_reg = {
+        .start = ui_p_reg_start - pv_offset,
+        .end   = ui_p_reg_end   - pv_offset
+    };
+    vptr_t ipcbuf_vptr = ui_v_reg.end;
+    vptr_t bi_frame_vptr = ipcbuf_vptr + BIT(PAGE_BITS);
+    word_t num_bi_pages = SEL4_BI_FRAME_PAGES +
+                          (ROUND_UP(extra_bi_size, PAGE_BITS) / BIT(PAGE_BITS));
     v_region_t it_v_reg = {
         .start = ui_v_reg.start,
-        .end   = extra_bi_frame_vptr + BIT(extra_bi_size_bits)
+        .end   = bi_frame_vptr + num_bi_pages * BIT(PAGE_BITS)
     };
     if (it_v_reg.end >= USER_TOP) {
         /* Variable arguments for printf() require well defined integer types to
@@ -408,7 +402,7 @@ static BOOT_CODE bool_t try_init_kernel(
         return false;
     }
 
-    if (!arch_init_freemem(ui_p_reg, dtb_p_reg, it_v_reg, extra_bi_size_bits)) {
+    if (!arch_init_freemem(ui_p_reg, dtb_p_reg, it_v_reg, num_bi_pages)) {
         printf("ERROR: free memory management initialization failed\n");
         return false;
     }
@@ -430,8 +424,9 @@ static BOOT_CODE bool_t try_init_kernel(
     /* initialise the SMMU and provide the SMMU control caps*/
     init_smmu(root_cnode_cap);
 #endif
-    populate_bi_frame(0, CONFIG_MAX_NUM_NODES, ipcbuf_vptr, extra_bi_size);
-    pptr_t extra_bi = rootserver.extra_bi;
+    populate_bi_frame(0, CONFIG_MAX_NUM_NODES, ipcbuf_vptr, num_bi_pages,
+                      extra_bi_size);
+    pptr_t extra_bi = rootserver.boot_info + SEL4_BI_FRAME_SIZE;
     pptr_t extra_bi_end = extra_bi + extra_bi_size;
     /* put DTB in the bootinfo block, if present. */
     if (dtb_size > 0) {
@@ -479,31 +474,10 @@ static BOOT_CODE bool_t try_init_kernel(
     }
 
     /* Create and map bootinfo frame cap */
-    create_bi_frame_cap(
-        root_cnode_cap,
-        it_pd_cap,
-        bi_frame_vptr
-    );
-
-    /* create and map extra bootinfo region */
-    if (extra_bi_size > 0) {
-        region_t extra_bi_region = {
-            .start = rootserver.extra_bi,
-            .end = rootserver.extra_bi + extra_bi_size
-        };
-        extra_bi_ret =
-            create_frames_of_region(
-                root_cnode_cap,
-                it_pd_cap,
-                extra_bi_region,
-                true,
-                pptr_to_paddr((void *)extra_bi_region.start) - extra_bi_frame_vptr
-            );
-        if (!extra_bi_ret.success) {
-            printf("ERROR: mapping extra boot info to initial thread failed\n");
-            return false;
-        }
-        ndks_boot.bi_frame->extraBIPages = extra_bi_ret.region;
+    if (!create_bi_frame_caps(root_cnode_cap, it_pd_cap, bi_frame_vptr,
+                              num_bi_pages)) {
+        printf("ERROR: could not create boot info frame caps\n");
+        return false;
     }
 
 #ifdef CONFIG_KERNEL_MCS
