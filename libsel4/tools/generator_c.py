@@ -21,6 +21,21 @@ class Generator_C(Generator):
         64: "seL4_Uint64"
     }
 
+    @staticmethod
+    def generate_param_list(input_params, output_params):
+        # Generate parameters
+        params = []
+        for param in input_params:
+            if not param.type.pass_by_reference():
+                params.append(param.type.render_parameter_name(param.name))
+            else:
+                params.append(param.type.asPointerType().render_parameter_name(param.name))
+        for param in output_params:
+            if param.type.pass_by_reference():
+                params.append(param.type.asPointerType().render_parameter_name(param.name))
+
+        return ", ".join(params)
+
     class Type(object):
         """
         This class represents a C type (such as an 'int', structure or
@@ -32,7 +47,7 @@ class Generator_C(Generator):
             Define a new type, named 'name' that is 'size_bits' bits
             long.
             """
-
+            self.generator = Generator_C
             self.name = name
             self.size_bits = size_bits
             self.wordsize = wordsize
@@ -60,12 +75,12 @@ class Generator_C(Generator):
             """
             return "%s %s" % (self.name, name)
 
-        def pointer(self):
+        def asPointerType(self):
             """
             Return a new Type class representing a pointer to this
             object.
             """
-            return Generator_C.PointerType(self, self.wordsize)
+            return self.generator.PointerType(self, self.wordsize)
 
         def c_expression(self, var_name, word_num=0):
             """
@@ -80,9 +95,9 @@ class Generator_C(Generator):
             assert word_num == 0 or word_num == 1
 
             if word_num == 0:
-                return "({0}) {1}".format(Generator_C.TYPES[self.size_bits], var_name)
+                return "({0}) {1}".format(self.generator.TYPES[self.size_bits], var_name)
             elif word_num == 1:
-                return "({0}) ({1} >> {2})".format(Generator_C.TYPES[self.size_bits], var_name,
+                return "({0}) ({1} >> {2})".format(self.generator.TYPES[self.size_bits], var_name,
                                                    word_size)
 
     class PointerType(Type):
@@ -91,7 +106,7 @@ class Generator_C(Generator):
         """
 
         def __init__(self, base_type, wordsize):
-            Generator_C.Type.__init__(self, base_type.name, wordsize, wordsize)
+            super().__init__(base_type.name, wordsize, wordsize)
             self.base_type = base_type
 
         def render_parameter_name(self, name):
@@ -101,7 +116,7 @@ class Generator_C(Generator):
             assert word_num == 0
             return "*%s" % var_name
 
-        def pointer(self):
+        def asPointerType(self):
             raise NotImplementedError()
 
     class CapType(Type):
@@ -110,7 +125,7 @@ class Generator_C(Generator):
         """
 
         def __init__(self, name, wordsize):
-            Generator_C.Type.__init__(self, name, wordsize, wordsize)
+            super().__init__(name, wordsize, wordsize)
 
     class StructType(Type):
         """
@@ -118,7 +133,7 @@ class Generator_C(Generator):
         """
 
         def __init__(self, name, size_bits, wordsize):
-            Generator_C.Type.__init__(self, name, size_bits, wordsize)
+            super().__init__(name, size_bits, wordsize)
 
         def c_expression(self, var_name, word_num, member_name):
             assert word_num < self.size_bits / self.wordsize
@@ -133,168 +148,63 @@ class Generator_C(Generator):
         """
 
         def __init__(self, name, size_bits, wordsize):
-            Generator_C.Type.__init__(self, name, size_bits, wordsize)
+            super().__init__(name, size_bits, wordsize)
 
         def c_expression(self, var_name, word_num=0):
 
             return "%s.words[%d]" % (var_name, word_num)
 
-    def init_data_types(self):
-        # TODO refactor, this could be implemented in Generator instead
-        wordsize = self.wordsize
-        BitFieldType = Generator_C.BitFieldType
-        CapType = Generator_C.CapType
-        Type = Generator_C.Type
-        return [
-            # Simple Types
-            Type("int", 32, wordsize),
-            Type("long", wordsize, wordsize),
+    def _gen_call(self, service_cap, num_mrs):
+        if self.arch.use_only_ipc_buffer:
+            result = "\toutput_tag = seL4_Call(%s, tag);" % service_cap
+        else:
+            result = ("\toutput_tag = seL4_CallWithMRs(%s, tag,"
+                      % (service_cap) + "\n\t\t%s);" % ', '.join(("&mr%d" % i) for i in range(num_mrs)))
+        self.contents.append(result)
 
-            Type("seL4_Uint8", 8, wordsize),
-            Type("seL4_Uint16", 16, wordsize),
-            Type("seL4_Uint32", 32, wordsize),
-            Type("seL4_Uint64", 64, wordsize),
-            Type("seL4_Time", 64, wordsize),
-            Type("seL4_Word", wordsize, wordsize),
-            Type("seL4_Bool", 1, wordsize, native_size_bits=8),
+    def _gen_comment(self, lines, *, doc=False, indent=0, inline=False):
+        begin = "/*"
+        if doc:
+            begin = "/**"
+        tabs = ''
+        tabs = ''.join(['\t' + tabs for _ in range(indent)])
+        begin = tabs + begin
+        if inline:
+            comment = [(begin + ' ' + line + ' ' + '*/') for line in lines]
+            comment = '\n'.join(comment)
+        else:
+            begin = begin + '\n'
+            comment = [begin] + [tabs + " * " + line + "\n" for line in lines] + [tabs + " */"]
+            comment = ''.join(comment)
+        self.contents.append(comment)
 
-            # seL4 Structures
-            BitFieldType("seL4_CapRights_t", wordsize, wordsize),
+    def _gen_conditional_compilation(self, condition) -> str:
+        if condition != '':
+            self.contents.append("#if %s" % condition)
+            return "#endif /* %s */" % condition
+        return ''
 
-            # Object types
-            CapType("seL4_CPtr", wordsize),
-            CapType("seL4_CNode", wordsize),
-            CapType("seL4_IRQHandler", wordsize),
-            CapType("seL4_IRQControl", wordsize),
-            CapType("seL4_TCB", wordsize),
-            CapType("seL4_Untyped", wordsize),
-            CapType("seL4_DomainSet", wordsize),
-            CapType("seL4_SchedContext", wordsize),
-            CapType("seL4_SchedControl", wordsize),
-        ]
+    def _gen_declare_variables(self, returning_struct: bool, return_type, method_id, cap_expressions, input_expressions, num_mrs):
+        result = []
+        result.append("\t%s result;" % return_type)
+        result.append("\tseL4_MessageInfo_t tag = seL4_MessageInfo_new(%s, 0, %d, %d);" %
+                      (method_id, len(cap_expressions), len(input_expressions)))
+        result.append("\tseL4_MessageInfo_t output_tag;")
+        for i in range(num_mrs):
+            result.append("\tseL4_Word mr%d;" % i)
+        result = '\n'.join(result)
+        self.contents.append(result)
 
-    def init_arch_types(self):
-        wordsize = self.wordsize
-        CapType = Generator_C.CapType
-        StructType = Generator_C.StructType
-        Type = Generator_C.Type
-        arm_smmu = [
-            CapType("seL4_ARM_SIDControl", wordsize),
-            CapType("seL4_ARM_SID", wordsize),
-            CapType("seL4_ARM_CBControl", wordsize),
-            CapType("seL4_ARM_CB", wordsize),
-        ]
-        arch_types = {
-            "aarch32": [
-                Type("seL4_ARM_VMAttributes", wordsize, wordsize),
-                CapType("seL4_ARM_Page", wordsize),
-                CapType("seL4_ARM_PageTable", wordsize),
-                CapType("seL4_ARM_PageDirectory", wordsize),
-                CapType("seL4_ARM_ASIDControl", wordsize),
-                CapType("seL4_ARM_ASIDPool", wordsize),
-                CapType("seL4_ARM_VCPU", wordsize),
-                CapType("seL4_ARM_IOSpace", wordsize),
-                CapType("seL4_ARM_IOPageTable", wordsize),
-                StructType("seL4_UserContext", wordsize * 19, wordsize),
-            ] + arm_smmu,
-
-            "aarch64": [
-                Type("seL4_ARM_VMAttributes", wordsize, wordsize),
-                CapType("seL4_ARM_Page", wordsize),
-                CapType("seL4_ARM_PageTable", wordsize),
-                CapType("seL4_ARM_PageDirectory", wordsize),
-                CapType("seL4_ARM_PageUpperDirectory", wordsize),
-                CapType("seL4_ARM_PageGlobalDirectory", wordsize),
-                CapType("seL4_ARM_VSpace", wordsize),
-                CapType("seL4_ARM_ASIDControl", wordsize),
-                CapType("seL4_ARM_ASIDPool", wordsize),
-                CapType("seL4_ARM_VCPU", wordsize),
-                CapType("seL4_ARM_IOSpace", wordsize),
-                CapType("seL4_ARM_IOPageTable", wordsize),
-                StructType("seL4_UserContext", wordsize * 36, wordsize),
-            ] + arm_smmu,
-
-            "ia32": [
-                Type("seL4_X86_VMAttributes", wordsize, wordsize),
-                CapType("seL4_X86_IOPort", wordsize),
-                CapType("seL4_X86_IOPortControl", wordsize),
-                CapType("seL4_X86_ASIDControl", wordsize),
-                CapType("seL4_X86_ASIDPool", wordsize),
-                CapType("seL4_X86_IOSpace", wordsize),
-                CapType("seL4_X86_Page", wordsize),
-                CapType("seL4_X86_PageDirectory", wordsize),
-                CapType("seL4_X86_PageTable", wordsize),
-                CapType("seL4_X86_IOPageTable", wordsize),
-                CapType("seL4_X86_VCPU", wordsize),
-                CapType("seL4_X86_EPTPML4", wordsize),
-                CapType("seL4_X86_EPTPDPT", wordsize),
-                CapType("seL4_X86_EPTPD", wordsize),
-                CapType("seL4_X86_EPTPT", wordsize),
-                StructType("seL4_VCPUContext", wordsize * 7, wordsize),
-                StructType("seL4_UserContext", wordsize * 12, wordsize),
-            ],
-
-            "x86_64": [
-                Type("seL4_X86_VMAttributes", wordsize, wordsize),
-                CapType("seL4_X86_IOPort", wordsize),
-                CapType("seL4_X86_IOPortControl", wordsize),
-                CapType("seL4_X86_ASIDControl", wordsize),
-                CapType("seL4_X86_ASIDPool", wordsize),
-                CapType("seL4_X86_IOSpace", wordsize),
-                CapType("seL4_X86_Page", wordsize),
-                CapType("seL4_X64_PML4", wordsize),
-                CapType("seL4_X86_PDPT", wordsize),
-                CapType("seL4_X86_PageDirectory", wordsize),
-                CapType("seL4_X86_PageTable", wordsize),
-                CapType("seL4_X86_IOPageTable", wordsize),
-                CapType("seL4_X86_VCPU", wordsize),
-                CapType("seL4_X86_EPTPML4", wordsize),
-                CapType("seL4_X86_EPTPDPT", wordsize),
-                CapType("seL4_X86_EPTPD", wordsize),
-                CapType("seL4_X86_EPTPT", wordsize),
-                StructType("seL4_VCPUContext", wordsize * 7, wordsize),
-                StructType("seL4_UserContext", wordsize * 20, wordsize),
-            ],
-            "riscv32": [
-                Type("seL4_RISCV_VMAttributes", wordsize, wordsize),
-                CapType("seL4_RISCV_Page", wordsize),
-                CapType("seL4_RISCV_PageTable", wordsize),
-                CapType("seL4_RISCV_ASIDControl", wordsize),
-                CapType("seL4_RISCV_ASIDPool", wordsize),
-                StructType("seL4_UserContext", wordsize * 32, wordsize),
-            ],
-            "riscv64": [
-                Type("seL4_RISCV_VMAttributes", wordsize, wordsize),
-                CapType("seL4_RISCV_Page", wordsize),
-                CapType("seL4_RISCV_PageTable", wordsize),
-                CapType("seL4_RISCV_ASIDControl", wordsize),
-                CapType("seL4_RISCV_ASIDPool", wordsize),
-                StructType("seL4_UserContext", wordsize * 32, wordsize),
-            ]
-        }
-        # legacy alias
-        arch_types["arm_hyp"] = arch_types["aarch32"]
-        return arch_types
-
-    @staticmethod
-    def generate_param_list(input_params, output_params):
-        # Generate parameters
-        params = []
-        for param in input_params:
-            if not param.type.pass_by_reference():
-                params.append(param.type.render_parameter_name(param.name))
-            else:
-                params.append(param.type.pointer().render_parameter_name(param.name))
-        for param in output_params:
-            if param.type.pass_by_reference():
-                params.append(param.type.pointer().render_parameter_name(param.name))
-
-        return ", ".join(params)
+    def _gen_file_footer(self):
+        return
 
     def _gen_file_header(self):
         self.contents.append("#pragma once")
         self.contents.append("")
 
+        # TODO use this when we get rid of WORD_CONST_SUFFIX_BITS
+        # and use a macro from basic_types.h instead
+        # includes = ['autoconf.h', 'sel4/types.h', 'sel4/macros.h', 'basic_types.h']
         includes = ['autoconf.h', 'sel4/types.h', 'sel4/macros.h']
         self.contents.append('\n'.join(
             ['#include <%s>' % include for include in includes]))
@@ -310,40 +220,44 @@ class Generator_C(Generator):
 #define assert_size_correct(type, expected_bytes) \\
         SEL4_COMPILE_ASSERT(type##_size_incorrect, sizeof(type) == expected_bytes)
 """)
-        for x in self.data_types + self.arch_types[self.arch]:
+        for x in self.data_types + self.arch_types:
             self.contents.append("assert_size_correct(%s, %d);" % (x.name, x.native_size_bits / 8))
         self.contents.append("")
 
-    def _gen_file_footer(self):
-        return
+    def _gen_func_header(self, interface_name, method_name, input_params, output_params, return_type):
+        #
+        # Print function header.
+        #
+        #   static inline int
+        #   seL4_Untyped_Retype(...)
+        #   {
+        #
+        result = []
+        result.append("LIBSEL4_INLINE %s" % return_type)
+        result.append("%s_%s(%s)" % (interface_name, method_name,
+                                     type(self).generate_param_list(input_params, output_params)))
+        result.append("{")
+        result = '\n'.join(result)
+        self.contents.append(result)
 
-    def _gen_conditional_compilation(self, condition) -> str:
-        if condition != '':
-            self.contents.append("#if %s" % condition)
-            return "#endif /* %s */" % condition
-        return ''
+    def _gen_init_reg_params(self, i, expression):
+        result = "\tmr%d = %s;" % (i, expression)
+        self.contents.append(result)
 
-    def _gen_comment(self, lines, *, doc=False, indent=0, inline=False) -> str:
-        begin = "/*"
-        if doc:
-            begin = "/**"
-        tabs = ''
-        tabs = ''.join(['\t' + tabs for _ in range(indent)])
-        begin = tabs + begin
-        if inline:
-            comment = [(begin + ' ' + line + ' ' + '*/') for line in lines]
-            comment = '\n'.join(comment)
-        else:
-            begin = begin + '\n'
-            comment = [begin] + [tabs + " * " + line + "\n" for line in lines] + [tabs + " */"]
-            comment = ''.join(comment)
-        self.contents.append(comment)
-        return comment
+    def _gen_init_buf_params(self, i, expression):
+        result = "\tseL4_SetMR(%d, %s);" % (i, expression)
+        self.contents.append(result)
 
-    def _gen_result_struct(self, interface_name, method_name, output_params) -> str:
+    def _gen_result(self, returning_struct: bool, return_type):
+        label = "result.error" if returning_struct else "result"
+        cast = "" if returning_struct else " (%s)" % return_type
+        result = "\t%s =%s seL4_MessageInfo_get_label(output_tag);" % (label, cast)
+        self.contents.append(result)
+
+    def _gen_result_struct(self, interface_name, method_name, output_params):
         # Do we actually need a structure?
         if not is_result_struct_required(output_params):
-            return ''
+            return
 
         # Generate the structure:
         #
@@ -365,79 +279,16 @@ class Generator_C(Generator):
         result.append("")
         result = "\n".join(result)
         self.contents.append(result)
-        return result
 
-    def _gen_func_header(self, interface_name, method_name, input_params, output_params, return_type) -> str:
-        #
-        # Print function header.
-        #
-        #   static inline int
-        #   seL4_Untyped_Retype(...)
-        #   {
-        #
-        result = []
-        result.append("LIBSEL4_INLINE %s" % return_type)
-        result.append("%s_%s(%s)" % (interface_name, method_name,
-                                     type(self).generate_param_list(input_params, output_params)))
-        result.append("{")
-        result = '\n'.join(result)
-        self.contents.append(result)
-        return result
-
-    def get_func_return_type(self, returning_struct, interface_name, method_name):
-        if returning_struct:
-            return "%s_%s_t" % (interface_name, method_name)
-        return "seL4_Error"
-
-    def _gen_declare_variables(self, returning_struct: bool, return_type, method_id, cap_expressions, input_expressions, num_mrs) -> str:
-        result = []
-        result.append("\t%s result;" % return_type)
-        result.append("\tseL4_MessageInfo_t tag = seL4_MessageInfo_new(%s, 0, %d, %d);" %
-                      (method_id, len(cap_expressions), len(input_expressions)))
-        result.append("\tseL4_MessageInfo_t output_tag;")
-        for i in range(num_mrs):
-            result.append("\tseL4_Word mr%d;" % i)
-        result = '\n'.join(result)
-        self.contents.append(result)
-        return result
-
-    def _gen_setup_input_capability(self, i, expression) -> str:
-        result = "\tseL4_SetCap(%d, %s);" % (i, expression)
-        self.contents.append(result)
-        return result
-
-    def _gen_init_reg_params(self, i, expression) -> str:
-        result = "\tmr%d = %s;" % (i, expression)
-        self.contents.append(result)
-        return result
-
-    def _gen_init_buf_params(self, i, expression) -> str:
-        result = "\tseL4_SetMR(%d, %s);" % (i, expression)
-        self.contents.append(result)
-        return result
-
-    def _gen_call(self, service_cap, num_mrs) -> str:
-        if self.use_only_ipc_buffer:
-            result = "\toutput_tag = seL4_Call(%s, tag);" % service_cap
-        else:
-            result = ("\toutput_tag = seL4_CallWithMRs(%s, tag,"
-                      % (service_cap) + "\n\t\t%s);" % ', '.join(("&mr%d" % i) for i in range(num_mrs)))
-        self.contents.append(result)
-        return result
-
-    def _gen_result(self, returning_struct: bool, return_type) -> str:
-        label = "result.error" if returning_struct else "result"
-        cast = "" if returning_struct else " (%s)" % return_type
-        result = "\t%s =%s seL4_MessageInfo_get_label(output_tag);" % (label, cast)
-        self.contents.append(result)
-        return result
-
-    def _gen_return_end_function(self, returning_struct) -> str:
+    def _gen_return_end_function(self, returning_struct):
         result = "\treturn result;\n}"
         self.contents.append(result)
-        return result
 
-    def _gen_unmarshal_regs_into_ipc(self, num_mrs, returning_struct) -> str:
+    def _gen_setup_input_capability(self, i, expression):
+        result = "\tseL4_SetCap(%d, %s);" % (i, expression)
+        self.contents.append(result)
+
+    def _gen_unmarshal_regs_into_ipc(self, num_mrs, returning_struct):
         label = "result.error" if returning_struct else "result"
         result = []
         result.append("\tif (%s != seL4_NoError) {" % label)
@@ -453,9 +304,8 @@ class Generator_C(Generator):
         result.append("\t}")  # close if () {}
         result = '\n'.join(result)
         self.contents.append(result)
-        return result
 
-    def _gen_unmarshal_result(self, num_mrs, output_params, structs) -> str:
+    def _gen_unmarshal_result(self, num_mrs, output_params, structs):
         result = []
         source_words = {}
         for i in range(MAX_MESSAGE_LENGTH):
@@ -473,20 +323,84 @@ class Generator_C(Generator):
             else:
                 if param.type.double_word:
                     result.append("\tresult.%s = ((%s)%s + ((%s)%s << 32));" %
-                                  (param.name, Generator_C.TYPES[64], words[0] % source_words,
-                                   Generator_C.TYPES[64], words[1] % source_words))
+                                  (param.name, self.TYPES[64], words[0] % source_words,
+                                   self.TYPES[64], words[1] % source_words))
                 else:
                     for word in words:
                         result.append("\tresult.%s = %s;" % (param.name, word % source_words))
-        # XXX return is generated in _gen_return_end_function
-        # result.append("\treturn result;")
-        # result.append("}")
         result = "\n".join(result)
         self.contents.append(result)
-        return result
+
+    def generate_marshal_expressions(self, params, num_mrs, structs):
+        wordsize = self.arch.wordsize
+        WORD_CONST_SUFFIX_BITS = {
+            32: "ul",
+            64: "ull",
+        }[wordsize]
+
+        def generate_param_code(param, first_bit, num_bits, word_array, wordsize):
+            """
+            Generate code to marshal the given parameter into the correct
+            location in the message.
+
+            'word_array' is an array of the final contents of the message.
+            word_array[k] contains what should be placed in the k'th message
+            register, and is an array of expressions that will (eventually)
+            be bitwise-or'ed into it.
+            """
+
+            target_word = first_bit // wordsize
+            target_offset = first_bit % wordsize
+
+            # double word type
+            if param.type.double_word:
+                word_array[target_word].append(
+                    param.type.double_word_expression(param.name, 0, wordsize))
+                word_array[target_word +
+                           1].append(param.type.double_word_expression(param.name, 1, wordsize))
+                return
+
+            # Single full word?
+            if num_bits == wordsize:
+                assert target_offset == 0
+                expr = param.type.c_expression(param.name)
+                word_array[target_word].append(expr)
+                return
+
+            # Part of a word?
+            if num_bits < wordsize:
+                expr = param.type.c_expression(param.name)
+                expr = "(%s & %#x%s)" % (expr, (1 << num_bits) - 1,
+                                         WORD_CONST_SUFFIX_BITS)
+
+                # TODO use this macro instead of WORD_CONST_SUFFIX_BITS
+                # this can't work yet due to definition of this macro being placed in the kernel
+                # expr = "(%s & SEL4_WORD_CONST(%#x))" % (expr, (1 << num_bits) -1)
+                if target_offset:
+                    expr = "(%s << %d)" % (expr, target_offset)
+                word_array[target_word].append(expr)
+                return
+
+            # Multiword array
+            assert target_offset == 0
+            num_words = num_bits // wordsize
+            for i in range(num_words):
+                expr = param.type.c_expression(param.name, i, struct_members(param.type, structs))
+                word_array[target_word + i].append(expr)
+
+        # Get their marshalling positions
+        positions = get_parameter_positions(params, wordsize)
+
+        # Generate marshal code.
+        words = [[] for _ in range(num_mrs, MAX_MESSAGE_LENGTH)]
+        for (param, first_bit, num_bits) in positions:
+            generate_param_code(param, first_bit, num_bits, words, wordsize)
+
+        # Return list of expressions.
+        return [" | ".join(x) for x in words if len(x) > 0]
 
     def generate_unmarshal_expressions(self, params):
-        wordsize = self.wordsize
+        wordsize = self.arch.wordsize
 
         def unmarshal_single_param(first_bit, num_bits, wordsize):
             """
@@ -521,64 +435,19 @@ class Generator_C(Generator):
             results.append((param, unmarshal_single_param(first_bit, num_bits, wordsize)))
         return results
 
-    def generate_marshal_expressions(self, params, num_mrs, structs):
-        wordsize = self.wordsize
-        WORD_CONST_SUFFIX_BITS = {
-            32: "ul",
-            64: "ull",
-        }
+    def get_func_return_type(self, returning_struct, interface_name, method_name):
+        if returning_struct:
+            return "%s_%s_t" % (interface_name, method_name)
+        return "seL4_Error"
 
-        def generate_param_code(param, first_bit, num_bits, word_array, wordsize):
-            """
-            Generate code to marshal the given parameter into the correct
-            location in the message.
+    def init_arch_types(self):
+        return super().init_arch_types(
+            self.CapType,
+            self.StructType,
+            self.Type)
 
-            'word_array' is an array of the final contents of the message.
-            word_array[k] contains what should be placed in the k'th message
-            register, and is an array of expressions that will (eventually)
-            be bitwise-or'ed into it.
-            """
-
-            target_word = first_bit // wordsize
-            target_offset = first_bit % wordsize
-
-            # double word type
-            if param.type.double_word:
-                word_array[target_word].append(param.type.double_word_expression(param.name, 0, wordsize))
-                word_array[target_word + 1].append(param.type.double_word_expression(param.name, 1, wordsize))
-                return
-
-            # Single full word?
-            if num_bits == wordsize:
-                assert target_offset == 0
-                expr = param.type.c_expression(param.name)
-                word_array[target_word].append(expr)
-                return
-
-            # Part of a word?
-            if num_bits < wordsize:
-                expr = param.type.c_expression(param.name)
-                expr = "(%s & %#x%s)" % (expr, (1 << num_bits) - 1,
-                                         WORD_CONST_SUFFIX_BITS[wordsize])
-                if target_offset:
-                    expr = "(%s << %d)" % (expr, target_offset)
-                word_array[target_word].append(expr)
-                return
-
-            # Multiword array
-            assert target_offset == 0
-            num_words = num_bits // wordsize
-            for i in range(num_words):
-                expr = param.type.c_expression(param.name, i, struct_members(param.type, structs))
-                word_array[target_word + i].append(expr)
-
-        # Get their marshalling positions
-        positions = get_parameter_positions(params, wordsize)
-
-        # Generate marshal code.
-        words = [[] for _ in range(num_mrs, MAX_MESSAGE_LENGTH)]
-        for (param, first_bit, num_bits) in positions:
-            generate_param_code(param, first_bit, num_bits, words, wordsize)
-
-        # Return list of expressions.
-        return [" | ".join(x) for x in words if len(x) > 0]
+    def init_data_types(self):
+        return super().init_data_types(
+            self.BitFieldType,
+            self.CapType,
+            self.Type)

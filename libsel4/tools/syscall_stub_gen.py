@@ -39,9 +39,58 @@
 
 from argparse import ArgumentParser
 import sys
-from generator import WORD_SIZE_BITS_ARCH
 from generator_c import Generator_C
 from generator_rust import Generator_Rust
+
+
+class Architecture:
+    # Number of bits in a standard word
+    WORD_SIZE_BITS_ARCH = {
+        "aarch32": 32,
+        "ia32": 32,
+        "aarch64": 64,
+        "ia64": 64,
+        "x86_64": 64,
+        "arm_hyp": 32,
+        "riscv32": 32,
+        "riscv64": 64,
+    }
+
+    MESSAGE_REGISTERS_FOR_ARCH = {
+        "aarch32": 4,
+        "aarch64": 4,
+        "ia32": 2,
+        "ia32-mcs": 1,
+        "x86_64": 4,
+        "arm_hyp": 4,
+        "riscv32": 4,
+        "riscv64": 4,
+    }
+
+    @classmethod
+    def list_architectures(cls):
+        return list(cls.WORD_SIZE_BITS_ARCH.keys())
+
+    def __init__(self, name, wordsize, use_only_ipc_buffer: bool, mcs: bool):
+        self.name = name
+        self.wordsize = wordsize
+        self.use_only_ipc_buffer = use_only_ipc_buffer
+        self.mcs = mcs
+
+        try:
+            self.word_size_bits = self.WORD_SIZE_BITS_ARCH[name]
+        except KeyError as err:
+            raise ValueError(f"Wrong architecture was selected ('{name}'). "
+                             f"Pick one of {self.list_architectures()}") from err
+
+        if use_only_ipc_buffer:
+            self.message_registers = 0
+        else:
+            if mcs and "%s-mcs" % name in self.MESSAGE_REGISTERS_FOR_ARCH:
+                self.message_registers = self.MESSAGE_REGISTERS_FOR_ARCH["%s-mcs" % name]
+            else:
+                self.message_registers = self.MESSAGE_REGISTERS_FOR_ARCH[name]
+
 
 class GeneratorProvider:
     class GeneratorNotFoundException(Exception):
@@ -73,9 +122,11 @@ def process_args():
                             epilog=epilog_str)
     parser.add_argument("-o", "--output", dest="output", default="/dev/stdout",
                         help="Output file to write stub to. (default: %(default)s).")
-    parser.add_argument("-b", "--buffer", dest="buffer", action="store_true", default=False,
+    parser.add_argument("-b", "--buffer", dest="use_only_ipc_buffer",
+                        action="store_true", default=False,
                         help="Use IPC buffer exclusively, i.e. do not pass syscall arguments by registers. (default: %(default)s)")
-    parser.add_argument("-a", "--arch", dest="arch", required=True, choices=WORD_SIZE_BITS_ARCH,
+    parser.add_argument("-a", "--arch", dest="arch", required=True,
+                        choices=Architecture.list_architectures(),
                         help="Architecture to generate stubs for.")
     parser.add_argument("--mcs", dest="mcs", action="store_true",
                         help="Generate MCS api.")
@@ -122,8 +173,8 @@ def main():
         print("Invalid word size.")
         sys.exit(2)
 
-    gen = GeneratorProvider.get_generator(args.lang)()
-    gen.configure(args.arch, wordsize, args.files, args.buffer, args.mcs)
+    arch = Architecture(args.arch, wordsize, args.use_only_ipc_buffer, args.mcs)
+    gen = GeneratorProvider.get_generator(args.lang)(arch, args.files)
     gen.generate(args.output)
 
 

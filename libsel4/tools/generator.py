@@ -13,29 +13,6 @@ import xml.dom.minidom
 # Maximum number of words that will be in a message.
 MAX_MESSAGE_LENGTH = 64
 
-# Number of bits in a standard word
-WORD_SIZE_BITS_ARCH = {
-    "aarch32": 32,
-    "ia32": 32,
-    "aarch64": 64,
-    "ia64": 64,
-    "x86_64": 64,
-    "arm_hyp": 32,
-    "riscv32": 32,
-    "riscv64": 64,
-}
-
-MESSAGE_REGISTERS_FOR_ARCH = {
-    "aarch32": 4,
-    "aarch64": 4,
-    "ia32": 2,
-    "ia32-mcs": 1,
-    "x86_64": 4,
-    "arm_hyp": 4,
-    "riscv32": 4,
-    "riscv64": 4,
-}
-
 
 class Parameter(object):
     def __init__(self, name, type):
@@ -280,34 +257,279 @@ def parse_xml_file(input_file, valid_types):
 
 
 class Generator:
-    def __init__(self):
+    '''
+    All the _gen_* functions are used to generate some piece of code.
+    The generated code is appended to self.contents which is a list of lines
+    '''
+
+    def _gen_call(self, service_cap, num_mrs):
+        '''
+        Generate call using a service capability
+        '''
+        raise NotImplementedError()
+
+    def _gen_comment(self, lines, *, doc=False, indent=0, inline=False):
+        """
+        Generate a multiline comment string with the content of 'lines'
+        'lines' is an iterable of strings.
+        Each string will be placed in a new line in the comment
+        'doc' allows changing the format to documentation comment
+        """
+        raise NotImplementedError()
+
+    def _gen_conditional_compilation(self, condition) -> str:
+        '''
+        Generate preprocessor directives to compile code conditionally
+        For languages which have 'begin <func> end' syntax,
+        this function generates the `begin` and returns the `end`
+        For C, it generates #ifdef, and returns #endif.
+
+        TODO currently 'condition' is specific to the C language.
+        '''
+        raise NotImplementedError()
+
+    def _gen_declare_variables(self, returning_struct: bool, return_type, method_id, cap_expressions, input_expressions):
+        '''
+        Generate code with variable declaration for return and temporary values
+        '''
+        raise NotImplementedError()
+
+    def _gen_file_footer(self):
+        '''
+        Generates things such as #endif for global guards
+        '''
+        raise NotImplementedError()
+
+    def _gen_file_header(self):
+        '''
+        Generates the initial part of a source file, which may contain things such as
+            includes, imports, comments to inform that the code was generated.
+        '''
+        raise NotImplementedError()
+
+    def _gen_func_header(self, interface_name, method_name, input_params, output_params, return_type):
+        '''
+        Generates things such as return type, function name, list of arguments, opening brace
+        '''
+        raise NotImplementedError()
+
+    def _gen_init_buf_params(self, i, expression):
+        '''
+        Generate call to seL4_SetMR(i, expression);
+        '''
+        raise NotImplementedError()
+
+    def _gen_init_reg_params(self, i, expression):
+        '''
+        Generate assignment of the value of expression to ith reg
+        '''
+        raise NotImplementedError()
+
+    def _gen_result(self, returning_struct: bool, return_type):
+        '''
+        Generate assignment to 'result' variable
+        '''
+        raise NotImplementedError()
+
+    def _gen_result_struct(self, interface_name, method_name, output_params):
+        """
+        Generate a structure definition to be returned by the system call stubs to
+        the user.
+
+        We have a few constraints:
+
+            * We always need an 'error' output parameter, even though it won't
+              appear in the list 'output_params' given to us.
+
+            * Output parameters may be marked as 'pass_by_reference', indicating
+              that we only ever see pointers to the item.
+
+        If no structure is needed (i.e., we just return an error code), we return
+        a falsy string ('').
+        """
+        raise NotImplementedError()
+
+    def _gen_return_end_function(self, returning_struct):
+        '''
+        Generates return statement and closes the body of a function
+        '''
+        raise NotImplementedError()
+
+    def _gen_setup_input_capability(self, i, expression):
+        '''
+        Generate call to 'seL4_SetCap(i, expression);'
+        '''
+        raise NotImplementedError()
+
+    def _gen_unmarshal_regs_into_ipc(self, num_mrs, returning_struct):
+        raise NotImplementedError()
+
+    def _gen_unmarshal_result(self, num_mrs, output_params):
+        raise NotImplementedError()
+
+    def init_data_types(self, BitFieldType, CapType, Type):
+        wordsize = self.arch.wordsize
+        return [
+            # Simple Types
+            Type("int", 32, wordsize),
+            Type("long", wordsize, wordsize),
+
+            Type("seL4_Uint8", 8, wordsize),
+            Type("seL4_Uint16", 16, wordsize),
+            Type("seL4_Uint32", 32, wordsize),
+            Type("seL4_Uint64", 64, wordsize),
+            Type("seL4_Time", 64, wordsize),
+            Type("seL4_Word", wordsize, wordsize),
+            Type("seL4_Bool", 1, wordsize, native_size_bits=8),
+
+            # seL4 Structures
+            BitFieldType("seL4_CapRights_t", wordsize, wordsize),
+
+            # Object types
+            CapType("seL4_CPtr", wordsize),
+            CapType("seL4_CNode", wordsize),
+            CapType("seL4_IRQHandler", wordsize),
+            CapType("seL4_IRQControl", wordsize),
+            CapType("seL4_TCB", wordsize),
+            CapType("seL4_Untyped", wordsize),
+            CapType("seL4_DomainSet", wordsize),
+            CapType("seL4_SchedContext", wordsize),
+            CapType("seL4_SchedControl", wordsize),
+        ]
+
+    def init_arch_types(self, CapType, StructType, Type):
+        wordsize = self.arch.wordsize
+        arm_smmu = [
+            CapType("seL4_ARM_SIDControl", wordsize),
+            CapType("seL4_ARM_SID", wordsize),
+            CapType("seL4_ARM_CBControl", wordsize),
+            CapType("seL4_ARM_CB", wordsize),
+        ]
+        arch_types = {
+            "aarch32": [
+                Type("seL4_ARM_VMAttributes", wordsize, wordsize),
+                CapType("seL4_ARM_Page", wordsize),
+                CapType("seL4_ARM_PageTable", wordsize),
+                CapType("seL4_ARM_PageDirectory", wordsize),
+                CapType("seL4_ARM_ASIDControl", wordsize),
+                CapType("seL4_ARM_ASIDPool", wordsize),
+                CapType("seL4_ARM_VCPU", wordsize),
+                CapType("seL4_ARM_IOSpace", wordsize),
+                CapType("seL4_ARM_IOPageTable", wordsize),
+                StructType("seL4_UserContext", wordsize * 19, wordsize),
+            ] + arm_smmu,
+
+            "aarch64": [
+                Type("seL4_ARM_VMAttributes", wordsize, wordsize),
+                CapType("seL4_ARM_Page", wordsize),
+                CapType("seL4_ARM_PageTable", wordsize),
+                CapType("seL4_ARM_PageDirectory", wordsize),
+                CapType("seL4_ARM_PageUpperDirectory", wordsize),
+                CapType("seL4_ARM_PageGlobalDirectory", wordsize),
+                CapType("seL4_ARM_VSpace", wordsize),
+                CapType("seL4_ARM_ASIDControl", wordsize),
+                CapType("seL4_ARM_ASIDPool", wordsize),
+                CapType("seL4_ARM_VCPU", wordsize),
+                CapType("seL4_ARM_IOSpace", wordsize),
+                CapType("seL4_ARM_IOPageTable", wordsize),
+                StructType("seL4_UserContext", wordsize * 36, wordsize),
+            ] + arm_smmu,
+
+            "ia32": [
+                Type("seL4_X86_VMAttributes", wordsize, wordsize),
+                CapType("seL4_X86_IOPort", wordsize),
+                CapType("seL4_X86_IOPortControl", wordsize),
+                CapType("seL4_X86_ASIDControl", wordsize),
+                CapType("seL4_X86_ASIDPool", wordsize),
+                CapType("seL4_X86_IOSpace", wordsize),
+                CapType("seL4_X86_Page", wordsize),
+                CapType("seL4_X86_PageDirectory", wordsize),
+                CapType("seL4_X86_PageTable", wordsize),
+                CapType("seL4_X86_IOPageTable", wordsize),
+                CapType("seL4_X86_VCPU", wordsize),
+                CapType("seL4_X86_EPTPML4", wordsize),
+                CapType("seL4_X86_EPTPDPT", wordsize),
+                CapType("seL4_X86_EPTPD", wordsize),
+                CapType("seL4_X86_EPTPT", wordsize),
+                StructType("seL4_VCPUContext", wordsize * 7, wordsize),
+                StructType("seL4_UserContext", wordsize * 12, wordsize),
+            ],
+
+            "x86_64": [
+                Type("seL4_X86_VMAttributes", wordsize, wordsize),
+                CapType("seL4_X86_IOPort", wordsize),
+                CapType("seL4_X86_IOPortControl", wordsize),
+                CapType("seL4_X86_ASIDControl", wordsize),
+                CapType("seL4_X86_ASIDPool", wordsize),
+                CapType("seL4_X86_IOSpace", wordsize),
+                CapType("seL4_X86_Page", wordsize),
+                CapType("seL4_X64_PML4", wordsize),
+                CapType("seL4_X86_PDPT", wordsize),
+                CapType("seL4_X86_PageDirectory", wordsize),
+                CapType("seL4_X86_PageTable", wordsize),
+                CapType("seL4_X86_IOPageTable", wordsize),
+                CapType("seL4_X86_VCPU", wordsize),
+                CapType("seL4_X86_EPTPML4", wordsize),
+                CapType("seL4_X86_EPTPDPT", wordsize),
+                CapType("seL4_X86_EPTPD", wordsize),
+                CapType("seL4_X86_EPTPT", wordsize),
+                StructType("seL4_VCPUContext", wordsize * 7, wordsize),
+                StructType("seL4_UserContext", wordsize * 20, wordsize),
+            ],
+            "riscv32": [
+                Type("seL4_RISCV_VMAttributes", wordsize, wordsize),
+                CapType("seL4_RISCV_Page", wordsize),
+                CapType("seL4_RISCV_PageTable", wordsize),
+                CapType("seL4_RISCV_ASIDControl", wordsize),
+                CapType("seL4_RISCV_ASIDPool", wordsize),
+                StructType("seL4_UserContext", wordsize * 32, wordsize),
+            ],
+            "riscv64": [
+                Type("seL4_RISCV_VMAttributes", wordsize, wordsize),
+                CapType("seL4_RISCV_Page", wordsize),
+                CapType("seL4_RISCV_PageTable", wordsize),
+                CapType("seL4_RISCV_ASIDControl", wordsize),
+                CapType("seL4_RISCV_ASIDPool", wordsize),
+                StructType("seL4_UserContext", wordsize * 32, wordsize),
+            ]
+        }
+        # legacy alias
+        arch_types["arm_hyp"] = arch_types["aarch32"]
+        return arch_types[self.arch.name]
+
+    def __init__(self, arch, xml_files):
         self.contents = []
-
-    def init_data_types(self):
-        raise NotImplementedError()
-
-    def init_arch_types(self):
-        raise NotImplementedError()
-
-    def construction(self, expr, param):
-        raise NotImplementedError()
-
-    @staticmethod
-    def generate_param_list(input_params, output_params):
-        raise NotImplementedError()
-
-    def configure(self, arch, wordsize, xml_files, buffer, mcs):
-        # Ensure architecture looks sane.
-        if arch not in WORD_SIZE_BITS_ARCH.keys():
-            raise Exception("Invalid architecture.")
-
         self.arch = arch
-        self.wordsize = wordsize
         self.files = xml_files
-        self.use_only_ipc_buffer = buffer
-        self.mcs = mcs
         self.arch_types = self.init_arch_types()
         self.data_types = self.init_data_types()
+
+    def generate_marshal_expressions(self, params, num_mrs, structs):
+        """
+        Generate marshalling expressions for the given set of inputs.
+
+        We return a list of expressions; one expression per word required
+        to marshal all the inputs.
+        """
+        raise NotImplementedError()
+
+    def generate_unmarshal_expressions(self, params):
+        """
+        Generate unmarshalling expressions for the given set of outputs.
+
+        We return a list of list of expressions; one list per variable, containing
+        expressions for the words in it that must be unmarshalled. The expressions
+        will have tokens of the form:
+            "%(w0)s"
+        in them, indicating a read from a word in the message.
+        """
+        raise NotImplementedError()
+
+    def get_func_return_type(self, returning_struct: bool, interface_name, method_name):
+        """
+        Returns the name of return type of a function
+        """
+        raise NotImplementedError()
 
     def generate(self, output_file):
         """
@@ -322,7 +544,7 @@ class Generator:
         methods = []
         structs = []
         for infile in self.files:
-            method, struct, _ = parse_xml_file(infile, data_types + arch_types[self.arch])
+            method, struct, _ = parse_xml_file(infile, data_types + arch_types)
             methods += method
             structs += struct
 
@@ -367,134 +589,14 @@ class Generator:
         output.write("\n".join(self.contents))
         output.close()
 
-    def _gen_file_header(self):
-        # TODO document
-        # generate includes, imports etc
-        raise NotImplementedError()
-
-    def _gen_file_footer(self):
-        # TODO document
-        # generate #endifs
-        raise NotImplementedError()
-
-    def _gen_conditional_compilation(self, condition) -> str:
-        # TODO document
-        # generate preprocessor macros
-        # TODO currently 'condition' is C-specific
-        # TODO conditional compilation may have both begin and end
-        # currently this is supposed to generate the beginning (#if)
-        # and return the end (#endif)
-        raise NotImplementedError()
-
-    def _gen_comment(self, lines, *, doc=False, indent=0, inline=False):
-        """
-        Generate a multiline comment string with the content of 'lines'
-        'lines' is an iterable of strings.
-        Each string will be placed in a new line in the comment
-        'doc' allows changing the format to documentation comment
-        """
-        raise NotImplementedError()
-
-    def _gen_result_struct(self, interface_name, method_name, output_params):
-        """
-        Generate a structure definition to be returned by the system call stubs to
-        the user.
-
-        We have a few constraints:
-
-            * We always need an 'error' output parameter, even though it won't
-              appear in the list 'output_params' given to us.
-
-            * Output parameters may be marked as 'pass_by_reference', indicating
-              that we only ever see pointers to the item.
-
-        If no structure is needed (i.e., we just return an error code), we return
-        a falsy string ('').
-        """
-        raise NotImplementedError()
-
-    def _gen_func_header(self, interface_name, method_name, input_params, output_params, return_type):
-        # TODO document
-        raise NotImplementedError()
-
-    def generate_marshal_expressions(self, params, num_mrs, structs):
-        """
-        Generate marshalling expressions for the given set of inputs.
-
-        We return a list of expressions; one expression per word required
-        to marshal all the inputs.
-        """
-        raise NotImplementedError()
-
-    def generate_unmarshal_expressions(self, params):
-        """
-        Generate unmarshalling expressions for the given set of outputs.
-
-        We return a list of list of expressions; one list per variable, containing
-        expressions for the words in it that must be unmarshalled. The expressions
-        will have tokens of the form:
-            "%(w0)s"
-        in them, indicating a read from a word in the message.
-        """
-        raise NotImplementedError()
-
-    def _gen_declare_variables(self, returning_struct: bool, return_type, method_id, cap_expressions, input_expressions):
-        # TODO document
-        raise NotImplementedError()
-
-    def _gen_setup_input_capability(self, i, expression):
-        # TODO document
-        raise NotImplementedError()
-
-    def _gen_init_reg_params(self, i, expression):
-        # TODO document
-        raise NotImplementedError()
-
-    def _gen_init_buf_params(self, i, expression):
-        # TODO document
-        raise NotImplementedError()
-
-    def _gen_call(self, service_cap, num_mrs):
-        # TODO document
-        raise NotImplementedError()
-
-    def _gen_result(self, returning_struct: bool, return_type):
-        # TODO document
-        raise NotImplementedError()
-
-    def _gen_unmarshal_regs_into_ipc(self, num_mrs, returning_struct):
-        # TODO document
-        raise NotImplementedError()
-
-    def _gen_unmarshal_result(self, num_mrs, output_params):
-        # TODO document
-        raise NotImplementedError()
-
-    def _gen_return_end_function(self, returning_struct):
-        # TODO document
-        # generates return statement and closes the body of a function
-        raise NotImplementedError()
-
-    def get_func_return_type(self, returning_struct: bool, interface_name, method_name):
-        """returns str with return type of a function
-        """
-        # TODO document
-        raise NotImplementedError()
-
     def generate_stub(self, interface_name, method_name, method_id, input_params, output_params, structs, comment_lines):
-        if self.use_only_ipc_buffer:
-            num_mrs = 0
-        else:
-            if self.mcs and "%s-mcs" % self.arch in MESSAGE_REGISTERS_FOR_ARCH:
-                num_mrs = MESSAGE_REGISTERS_FOR_ARCH["%s-mcs" % self.arch]
-            else:
-                num_mrs = MESSAGE_REGISTERS_FOR_ARCH[self.arch]
+        num_mrs = self.arch.message_registers
 
         # Split out cap parameters and standard parameters
         standard_params = []
         cap_params = []
         for x in input_params:
-            # retrieves a static class from the specific Generator implementation
+            # TODO check this sneaky case, it retrieves a static class from the specific Generator implementation
             # type(self).CapType should be CGenerator.CapType or RustGenerator.CapType
             # depending on which generator was created
             if isinstance(x.type, type(self).CapType):
@@ -503,7 +605,6 @@ class Generator:
                 standard_params.append(x)
 
         # Determine if we are returning a structure, or just the error code.
-        # TODO in this case we don't want to _gen code. We just need boolean information if it's a struct or not
         returning_struct: bool = is_result_struct_required(output_params)
 
         return_type = self.get_func_return_type(returning_struct, interface_name, method_name)
@@ -533,7 +634,7 @@ class Generator:
         #
         # TODO do we need these? unused
         input_param_words = len(input_expressions)
-        output_param_words = sum([p.type.size_bits for p in output_params]) // self.wordsize
+        output_param_words = sum([p.type.size_bits for p in output_params]) // self.arch.wordsize
 
         #
         # Setup variables we will need.
@@ -579,7 +680,7 @@ class Generator:
         #
         # Generate the call.
         #
-        if self.use_only_ipc_buffer:
+        if self.arch.use_only_ipc_buffer:
             self._gen_comment(["Perform the call."], indent=1, inline=True)
         else:
             self._gen_comment(["Perform the call, passing in-register arguments directly."],
@@ -592,7 +693,7 @@ class Generator:
         self._gen_result(returning_struct, return_type)
         self.contents.append("")
 
-        if not self.use_only_ipc_buffer:
+        if not self.arch.use_only_ipc_buffer:
             self._gen_comment(
                 ["Unmarshal registers into IPC buffer on error."],
                 indent=1, inline=True)
