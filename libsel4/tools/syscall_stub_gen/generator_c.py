@@ -189,10 +189,48 @@ class Generator_C(Generator):
         self.contents.append(comment)
 
     def _gen_conditional_compilation(self, condition) -> str:
-        if condition != '':
-            self.contents.append("#if %s" % condition)
-            return "#endif /* %s */" % condition
-        return ''
+        if condition == '':
+            return ''
+
+        print('####---#### conditon parser in: ' + condition)
+        pp_str = '' # building a C preprocessor condition string here
+        import re
+        token_regex = re.compile('|'.join([
+            '(?P<{}>{})'.format(token_type, token_regex)
+            for token_type, token_regex in [
+                ('NOT',        '|'.join([r'\!', r'(?i)not'])),
+                ('AND',        '|'.join([r'\&\&', r'(?i)and'])),
+                ('OR',         '|'.join([r'\|\|', r'(?i)or'])),
+                ('LPAREN',     r'\('),
+                ('RPAREN',     r'\)'),
+                ('SYMBOL',     r'[a-zA-Z_][a-zA-Z0-9_]*'),
+                ('WHITESPACE', r'\s+'),
+                ('ERROR',      r'.'),
+            ]
+        ]))
+
+        for match in token_regex.finditer(condition):
+            if match.lastgroup == 'WHITESPACE':
+                continue
+            token_type = match.lastgroup
+            token_data = match.group(0)
+            # could also remember use match.span(0)
+            if token_type == 'NOT':
+                pp_str += ' !'
+            elif token_type == 'AND':
+                pp_str += ' && '
+            elif token_type == 'OR':
+                pp_str += ' || '
+            elif token_type in ('LPAREN','RPAREN'):
+                pp_str += token_data
+            elif token_type == 'SYMBOL':
+                pp_str += 'defined({})'.format(token_data)
+            else:
+                raise NotImplementedError()
+        print('####------- out: ' + pp_str)
+
+        self.contents.append("#if {}".format(pp_str))
+        return "#endif /* {} */".format(pp_str)
 
     def _gen_declare_variables(self, returning_struct: bool, return_type, method_id, cap_expressions, input_expressions, num_mrs):
         result = []

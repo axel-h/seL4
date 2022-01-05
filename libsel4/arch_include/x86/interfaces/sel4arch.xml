@@ -85,7 +85,7 @@
                 </description>
             </error>
         </method>
-        <method id="X86PageDirectoryGetStatusBits" name="GetStatusBits" manual_name="Get Status Bits" condition="defined(CONFIG_ARCH_IA32)">
+        <method id="X86PageDirectoryGetStatusBits" name="GetStatusBits" manual_name="Get Status Bits" condition="CONFIG_ARCH_IA32">
             <brief>
                 Retrieve the accessed and dirty bits of a page mapped into an address space.
             </brief>
@@ -196,7 +196,7 @@
 
     <interface name="seL4_X86_IOPageTable" manual_name="I/O Page Table"
         cap_description="Capability to the I/O page table being operated on.">
-        <method id="X86IOPageTableMap" name="Map" condition='defined(CONFIG_IOMMU)'>
+        <method id="X86IOPageTableMap" name="Map" condition='CONFIG_IOMMU'>
             <brief>
                 Map an IO page table into an IOSpace.
             </brief>
@@ -230,7 +230,7 @@
                 </description>
             </error>
         </method>
-        <method id="X86IOPageTableUnmap" name="Unmap" condition='defined(CONFIG_IOMMU)'>
+        <method id="X86IOPageTableUnmap" name="Unmap" condition='CONFIG_IOMMU'>
             <brief>
                 Unmap an IO page table from an IOSpace.
             </brief>
@@ -331,7 +331,7 @@
                 </description>
             </error>
         </method>
-        <method id="X86PageMapIO" name="MapIO" manual_name="Map I/O" manual_label='page_map_io' condition='defined(CONFIG_IOMMU)'>
+        <method id="X86PageMapIO" name="MapIO" manual_name="Map I/O" manual_label='page_map_io' condition='CONFIG_IOMMU'>
             <brief>
                 Map a page into an IOSpace.
             </brief>
@@ -403,7 +403,7 @@
                 </description>
             </error>
         </method>
-        <method id="X86PageMapEPT" name="MapEPT" condition="defined(CONFIG_VTX)" manual_name="Map EPT">
+        <method id="X86PageMapEPT" name="MapEPT" condition="CONFIG_VTX" manual_name="Map EPT">
             <description>
                 TODO
             </description>
@@ -832,7 +832,7 @@
         </method>
     </interface>
     <interface name="seL4_TCB" manual_name="TCB">
-        <method id="TCBSetEPTRoot" name="SetEPTRoot" condition="defined(CONFIG_VTX)" manual_name="Set EPT Root" manual_label="set_eptroot">
+        <method id="TCBSetEPTRoot" name="SetEPTRoot" condition="CONFIG_VTX" manual_name="Set EPT Root" manual_label="set_eptroot">
             <brief>
                 Set the EPT root of a thread
             </brief>
@@ -855,7 +855,7 @@
         </method>
     </interface>
     <interface name="seL4_X86_VCPU" manual_name="VCPU" cap_description='VCPU object to operate on'>
-        <method id="X86VCPUSetTCB" name="SetTCB" condition="defined(CONFIG_VTX)" manual_name="Set TCB">
+        <method id="X86VCPUSetTCB" name="SetTCB" condition="CONFIG_VTX" manual_name="Set TCB">
             <brief>
                 Bind TCB to VCPU
             </brief>
@@ -875,7 +875,7 @@
                 </description>
             </error>
         </method>
-        <method id="X86VCPUReadVMCS" name="ReadVMCS" condition="defined(CONFIG_VTX)" manual_name="Read VMCS" manual_label="vcpu_readvmcs">
+        <method id="X86VCPUReadVMCS" name="ReadVMCS" condition="CONFIG_VTX" manual_name="Read VMCS" manual_label="vcpu_readvmcs">
             <brief>
                 Read VMCS field from the hardware
             </brief>
@@ -906,7 +906,7 @@
                 </description>
             </error>
         </method>
-        <method id="X86VCPUWriteVMCS" name="WriteVMCS" condition="defined(CONFIG_VTX)" manual_name="Write VMCS" manual_label="vcpu_writevmcs">
+        <method id="X86VCPUWriteVMCS" name="WriteVMCS" condition="CONFIG_VTX" manual_name="Write VMCS" manual_label="vcpu_writevmcs">
             <brief>
                 Write VMCS field to the hardware
             </brief>
@@ -944,7 +944,7 @@
                 </description>
             </error>
         </method>
-        <method id="X86VCPUEnableIOPort" name="EnableIOPort" condition="defined(CONFIG_VTX)"
+        <method id="X86VCPUEnableIOPort" name="EnableIOPort" condition="CONFIG_VTX"
             manual_name="Enable IO Port" manual_label="vcpu_enableioport">
             <brief>
                 Enable I/O port range in guest execution
@@ -979,7 +979,7 @@
                 </description>
             </error>
         </method>
-        <method id="X86VCPUDisableIOPort" name="DisableIOPort" condition="defined(CONFIG_VTX)"
+        <method id="X86VCPUDisableIOPort" name="DisableIOPort" condition="CONFIG_VTX"
             manual_name="Disable IO Port">
             <brief>
                 Disable I/O port range in privileged execution
@@ -1003,7 +1003,7 @@
                 </description>
             </error>
         </method>
-        <method id="X86VCPUWriteRegisters" name="WriteRegisters" condition="defined(CONFIG_VTX)"
+        <method id="X86VCPUWriteRegisters" name="WriteRegisters" condition="CONFIG_VTX"
             manual_name="Write Registers">
             <brief>
                 Set guest mode registers to the fields of a given <texttt text="seL4_VCPUContext"/>
@@ -1027,7 +1027,7 @@
     </interface>
     <interface name="seL4_X86_EPTPDPT" manual_name="Extended Page Table Page Directory Page Table"
         cap_description="Capability to the EPT PDPT being operated on.">
-        <method id="X86EPTPDPTMap" name="Map" condition="defined(CONFIG_VTX)">
+        <method id="X86EPTPDPTMap" name="Map" condition="CONFIG_VTX">
             <brief>
                 Map an EPT page directory page table.
             </brief>
@@ -1066,7 +1066,7 @@
                 </description>
             </error>
         </method>
-        <method id="X86EPTPDPTUnmap" name="Unmap" condition="defined(CONFIG_VTX)">
+        <method id="X86EPTPDPTUnmap" name="Unmap" condition="CONFIG_VTX">
             <brief>
                 Unmap an EPT page directory page table.
             </brief>
@@ -1092,7 +1092,7 @@
     </interface>
     <interface name="seL4_X86_EPTPD" manual_name="Extended Page Table Page Directory"
         cap_description="Capability to the EPT PD being operated on.">
-        <method id="X86EPTPDMap" name="Map" condition="defined(CONFIG_VTX)">
+        <method id="X86EPTPDMap" name="Map" condition="CONFIG_VTX">
             <brief>
                 Map an EPT page directory.
             </brief>
@@ -1132,7 +1132,7 @@
                 </description>
             </error>
         </method>
-        <method id="X86EPTPDUnmap" name="Unmap" condition="defined(CONFIG_VTX)">
+        <method id="X86EPTPDUnmap" name="Unmap" condition="CONFIG_VTX">
             <brief>
                 Unmap an EPT page directory.
             </brief>
@@ -1158,7 +1158,7 @@
     </interface>
     <interface name="seL4_X86_EPTPT" manual_name="Extended Page Table Page Table"
             cap_description="Capability to the EPT PT being operated on.">
-        <method id="X86EPTPTMap" name="Map" condition="defined(CONFIG_VTX)">
+        <method id="X86EPTPTMap" name="Map" condition="CONFIG_VTX">
             <brief>
                 Map an EPT page table.
             </brief>
@@ -1198,7 +1198,7 @@
                 </description>
             </error>
         </method>
-        <method id="X86EPTPTUnmap" name="Unmap" condition="defined(CONFIG_VTX)">
+        <method id="X86EPTPTUnmap" name="Unmap" condition="CONFIG_VTX">
             <brief>
                 Unmap an EPT page table.
             </brief>
