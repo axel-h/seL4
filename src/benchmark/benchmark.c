@@ -112,9 +112,18 @@ void benchmark_debug_syscall_start(word_t cptr, word_t msgInfo, word_t syscall)
 
 void trace_point_start(word_t id)
 {
-    assert(id < CONFIG_MAX_NUM_TRACE_POINTS);
-    ksEntries[id] = timestamp();
-    ksStarted[id] = true;
+    if (unlikely((id >= ARRAY_SIZE(ksEntries)) || (id >= ARRAY_SIZE(ksStarted)))) {
+        /* The assert exists in debug builds only, in release no trace point
+         * start will be recorded if an invalid ID is provided. This seems a
+         * better approach than corrupting memory. Make this a fatal error that
+         * halts the system even for release builds seem too radical, as this is
+         * just a trace problem and not necessarily a system problem.
+         */
+        assert(0);
+    } else {
+        ksEntries[id] = timestamp();
+        ksStarted[id] = true;
+    }
 }
 
 void trace_point_stop(word_t id)
