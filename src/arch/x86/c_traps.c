@@ -13,9 +13,7 @@
 #include <arch/object/vcpu.h>
 #include <api/syscall.h>
 #include <sel4/arch/vmenter.h>
-
-#include <benchmark/benchmark_track.h>
-#include <benchmark/benchmark_utilisation.h>
+#include <benchmark/benchmark.h>
 
 void VISIBLE c_nested_interrupt(int irq)
 {

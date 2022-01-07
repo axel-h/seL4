@@ -10,11 +10,8 @@
 #include <arch/machine/registerset.h>
 #include <api/syscall.h>
 #include <machine/fpu.h>
-
-#include <sel4/benchmark_track_types.h>
-#include <benchmark/benchmark_track.h>
-#include <benchmark/benchmark_utilisation.h>
 #include <arch/machine.h>
+#include <benchmark/benchmark.h>
 
 void VISIBLE NORETURN c_handle_undefined_instruction(void)
 {

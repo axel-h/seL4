@@ -16,10 +16,10 @@
 #include <arch/kernel/boot.h>
 #include <arch/kernel/traps.h>
 #include <arch/kernel/vspace.h>
-#include <arch/benchmark.h>
 #include <linker.h>
 #include <plat/machine/hardware.h>
 #include <machine.h>
+#include <benchmark/benchmark.h>
 
 #ifdef ENABLE_SMP_SUPPORT
 /* SMP boot synchronization works based on a global variable with the initial

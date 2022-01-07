@@ -14,7 +14,6 @@
 #include <arch/kernel/boot_sys.h>
 #include <arch/api/invocation.h>
 #include <benchmark/benchmark.h>
-#include <benchmark/benchmark_track.h>
 #include <arch/kernel/tlb_bitmap.h>
 #include <mode/kernel/tlb.h>
 

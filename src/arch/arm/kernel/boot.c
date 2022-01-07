@@ -14,7 +14,6 @@
 #include <arch/machine.h>
 #include <arch/kernel/boot.h>
 #include <arch/kernel/vspace.h>
-#include <arch/benchmark.h>
 #include <arch/user_access.h>
 #include <arch/object/iospace.h>
 #include <linker.h>
