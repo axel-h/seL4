@@ -11,9 +11,7 @@
 #include <api/syscall.h>
 #include <linker.h>
 #include <machine/fpu.h>
-
-#include <benchmark/benchmark_track.h>
-#include <benchmark/benchmark_utilisation.h>
+#include <benchmark/benchmark.h>
 
 /** DONT_TRANSLATE */
 void VISIBLE NORETURN restore_user_context(void)

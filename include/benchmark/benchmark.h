@@ -19,6 +19,7 @@
 
 #ifdef CONFIG_BENCHMARK_TRACK_UTILISATION
 #include <sel4/benchmark_utilisation_types.h>
+#include <benchmark/benchmark_utilisation.h>
 #endif
 
 #ifdef CONFIG_TRACE_KERNEL_ENTRIES

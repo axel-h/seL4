@@ -6,11 +6,10 @@
 
 #include <config.h>
 #include <fastpath/fastpath.h>
-
-#ifdef CONFIG_BENCHMARK_TRACK_KERNEL_ENTRIES
-#include <benchmark/benchmark_track.h>
+#ifdef CONFIG_KERNEL_MCS
+#include <object/reply.h>
 #endif
-#include <benchmark/benchmark_utilisation.h>
+#include <benchmark/benchmark.h>
 
 #ifdef CONFIG_ARCH_ARM
 static inline

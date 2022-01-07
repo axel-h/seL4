@@ -12,7 +12,7 @@
 #include <arch/machine/debug.h>
 #include <api/types.h>
 #include <api/syscall.h>
-#include <benchmark/benchmark_track.h>
+#include <benchmark/benchmark.h>
 #include <mode/stack.h>
 #include <arch/kernel/tlb_bitmap.h>
 
