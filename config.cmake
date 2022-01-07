@@ -451,6 +451,14 @@ else()
 endif()
 
 config_string(
+    KernelLogBufferSize KERNEL_LOG_BUFFER_SIZE
+    "Kernel Log Buffer Size."
+    DEFAULT 20
+    DEPENDS "KernelLogBuffer" DEFAULT_DISABLED 0
+    UNQUOTE
+)
+
+config_string(
     KernelMaxNumTracePoints MAX_NUM_TRACE_POINTS
     "Use TRACE_POINT_START(k) and TRACE_POINT_STOP(k) macros for recording data, \
     where k is an integer between 0 and this value - 1. The maximum number of \

@@ -31,6 +31,9 @@ extern seL4_Word ksLogIndex = 0;
 extern paddr_t ksUserLogBuffer;
 #endif /* CONFIG_KERNEL_LOG_BUFFER */
 
+#define MAX_LOG_SIZE (CONFIG_KERNEL_LOG_BUFFER_SIZE / \
+                        sizeof(benchmark_tracepoint_log_entry_t))
+
 #ifdef TRACK_KERNEL_ENTRY_DETAILS
 #include <sel4/benchmark_track_types.h>
 extern kernel_entry_t ksKernelEntry;
