@@ -61,6 +61,9 @@ UP_STATE_DEFINE(sched_context_t *, ksIdleSC);
 #ifdef CONFIG_DEBUG_BUILD
 UP_STATE_DEFINE(tcb_t *, ksDebugTCBs);
 #endif /* CONFIG_DEBUG_BUILD */
+#ifdef CONFIG_TRACE_KERNEL_ENTRIES
+UP_STATE_DEFINE(timestamp_t, trace_kernel_entry);
+#endif /* CONFIG_TRACE_KERNEL_ENTRIES */
 #ifdef CONFIG_BENCHMARK_TRACK_UTILISATION
 UP_STATE_DEFINE(bool_t, benchmark_log_utilisation_enabled);
 UP_STATE_DEFINE(timestamp_t, benchmark_start_time);

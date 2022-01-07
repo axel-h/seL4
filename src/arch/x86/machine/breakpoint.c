@@ -588,8 +588,8 @@ exception_t handleUserLevelDebugException(int int_vector)
     testAndResetSingleStepException_t single_step_info;
 
 #if defined(CONFIG_DEBUG_BUILD) || defined(CONFIG_BENCHMARK_TRACK_KERNEL_ENTRIES)
-    ksKernelEntry.path = Entry_UserLevelFault;
-    ksKernelEntry.word = int_vector;
+    /* update entry reason */
+    trace_kernel_set_entry_reason(Entry_UserLevelFault, int_vector);
 #endif /* DEBUG */
 
     ct = NODE_STATE(ksCurThread);

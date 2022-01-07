@@ -10,24 +10,30 @@
 #include <util.h>
 #include <types.h>
 #include <machine/io.h>
-#include <sel4/arch/constants.h>
 #include <arch/machine/hardware.h>
 #include <mode/hardware.h>
+#include <model/statedata.h>
+#include <kernel/cspace.h>
+#include <sel4/arch/constants.h>
 #include <arch/benchmark.h>
+
+#ifdef CONFIG_BENCHMARK_TRACK_UTILISATION
+#include <sel4/benchmark_utilisation_types.h>
+#endif
+
+#ifdef CONFIG_TRACE_KERNEL_ENTRIES
+#include <sel4/benchmark_track_types.h>
+#endif
 
 #ifdef CONFIG_KERNEL_LOG_BUFFER
 extern seL4_Word ksLogIndex = 0;
 extern paddr_t ksUserLogBuffer;
 #endif /* CONFIG_KERNEL_LOG_BUFFER */
 
-#if defined(CONFIG_DEBUG_BUILD) || defined(ENABLE_TRACE_KERNEL_ENTRY_EXIT)
+#ifdef TRACK_KERNEL_ENTRY_DETAILS
 #include <sel4/benchmark_track_types.h>
 extern kernel_entry_t ksKernelEntry;
-#endif /* CONFIG_DEBUG_BUILD || ENABLE_TRACE_KERNEL_ENTRY_EXIT */
-
-#ifdef CONFIG_BENCHMARK_TRACK_UTILISATION
-extern timestamp_t ksEnter;
-#endif /* CONFIG_BENCHMARK_TRACK_UTILISATION */
+#endif /* TRACK_KERNEL_ENTRY_DETAILS */
 
 #ifdef ENABLE_KERNEL_TRACEPOINTS
 #include <sel4/benchmark_tracepoints_types.h>
@@ -40,6 +46,7 @@ void trace_point_stop(word_t id);
 #define TRACE_POINT_STOP(...)   do {} while(0)
 #endif /* [not] ENABLE_KERNEL_TRACEPOINTS */
 
+
 #ifdef ENABLE_TRACE_KERNEL_ENTRY_EXIT
 #include <sel4/benchmark_track_types.h>
 #include <kernel/cspace.h>
@@ -47,10 +54,21 @@ void trace_point_stop(word_t id);
 #include <mode/machine.h>
 
 extern kernel_entry_t ksKernelEntry;
-void trace_kernel_entry(void);
+#ifdef TRACK_KERNEL_ENTRY_DETAILS
+static void trace_kernel_set_entry_reason(word_t path, word_t word)
+{
+    ksKernelEntry = (kernel_entry_t) {
+        .path = path,
+        /* 29 bits are remaining, usage specific to path */
+        .core = CURRENT_CPU_INDEX(), /* 3 bits */
+        .word = word, /* 26 bits */
+    };
+}
+#endif /* TRACK_KERNEL_ENTRY_DETAILS */
+void trace_kernel_entry(word_t path, word_t word);
+void trace_kernel_entry_syscall(word_t id, word_t cptr, word_t msgInfo,
+                                word_t isFastpath);
 void trace_kernel_exit(void);
-void trace_syscall_start(word_t cptr, word_t msgInfo, word_t syscall,
-                         word_t isFastpath);
 #endif /* ENABLE_TRACE_KERNEL_ENTRY_EXIT */
 
 #ifdef CONFIG_ENABLE_BENCHMARKS
