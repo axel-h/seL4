@@ -28,15 +28,38 @@ kernel_entry_t ksKernelEntry;
 
 timestamp_t ksEnter;
 
-void trace_kernel_entry(void)
+static void trace_kernel_entry_timestamp()
 {
     ksEnter = timestamp();
+}
 
+void trace_kernel_entry(word_t path, word_t word)
+{
+    trace_kernel_entry_timestamp();
+#ifdef TRACK_KERNEL_ENTRY_DETAILS
+    trace_kernel_set_entry_reason(path, word);
+#endif /* TRACK_KERNEL_ENTRY_DETAILS */
+}
+
+void trace_kernel_entry_syscall(word_t id, word_t cptr, word_t msgInfo,
+                                word_t isFastpath)
+{
+    trace_kernel_entry_timestamp();
+#ifdef TRACK_KERNEL_ENTRY_DETAILS
+    seL4_MessageInfo_t info = messageInfoFromWord_raw(msgInfo);
+    lookupCap_ret_t lu_ret = lookupCap(NODE_STATE(ksCurThread), cptr);
+    /* ret.cap is cap_null_cap_new() for lu_ret.status != EXCEPTION_NONE,
+     * thus calling cap_get_capType() unconditionally is safe.
+     */
     ksKernelEntry = (kernel_entry_t) {
-        .path = 0,
-        /* 29 bits are remaining, usage specific to path */
-        .core = CURRENT_CPU_INDEX(), /* 3 bits */
-        .word = 0, /* 26 bits */
+        .path           = Entry_Syscall,
+        /* 29 bits are remaining, usage specific to path. For syscalls we
+         * can't store the core
+         */
+        .syscall_no     = -id, /* 4 bits */
+        .cap_type       = cap_get_capType(lu_ret.cap), /* 5 bits */
+        .is_fastpath    = (0 != isFastpath), /* 1 bit */
+        .invocation_tag = seL4_MessageInfo_get_label(info), /* 19 bit */
     };
 }
 
@@ -190,11 +213,12 @@ exception_t handle_SysBenchmarkResetLog(void)
 #endif /* CONFIG_KERNEL_LOG_BUFFER */
 
 #ifdef CONFIG_BENCHMARK_TRACK_UTILISATION
+    timestamp_t timestampEntry = NODE_STATE(trace_kernel_entry);
     NODE_STATE(benchmark_log_utilisation_enabled) = true;
     benchmark_track_reset_utilisation(NODE_STATE(ksIdleThread));
-    NODE_STATE(ksCurThread)->benchmark.schedule_start_time = ksEnter;
+    NODE_STATE(ksCurThread)->benchmark.schedule_start_time = timestampEntry;
     NODE_STATE(ksCurThread)->benchmark.number_schedules++;
-    NODE_STATE(benchmark_start_time) = ksEnter;
+    NODE_STATE(benchmark_start_time) = timestampEntry;
     NODE_STATE(benchmark_kernel_time) = 0;
     NODE_STATE(benchmark_kernel_number_entries) = 0;
     NODE_STATE(benchmark_kernel_number_schedules) = 1;
@@ -299,4 +323,5 @@ exception_t handle_SysBenchmarkResetAllThreadsUtilisation(void)
 
 #endif /* CONFIG_DEBUG_BUILD */
 #endif /* CONFIG_BENCHMARK_TRACK_UTILISATION */
+
 #endif /* CONFIG_ENABLE_BENCHMARKS */

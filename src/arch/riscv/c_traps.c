@@ -103,6 +103,10 @@ void VISIBLE NORETURN c_handle_interrupt(void)
 
     c_entry_hook();
 
+#ifdef ENABLE_TRACE_KERNEL_ENTRY_EXIT
+    trace_kernel_entry(Entry_Interrupt, getActiveIRQ());
+#endif
+
     handleInterruptEntry();
 
     restore_user_context();
@@ -114,6 +118,11 @@ void VISIBLE NORETURN c_handle_exception(void)
     NODE_LOCK_SYS;
 
     c_entry_hook();
+
+#ifdef ENABLE_TRACE_KERNEL_ENTRY_EXIT
+    trace_kernel_entry(Entry_VMFault,
+                       getRegister(NODE_STATE(ksCurThread), NextIP));
+#endif
 
     word_t scause = read_scause();
     switch (scause) {
@@ -175,7 +184,7 @@ void VISIBLE c_handle_fastpath_reply_recv(word_t cptr, word_t msgInfo)
 
     c_entry_hook();
 #ifdef ENABLE_TRACE_KERNEL_ENTRY_EXIT
-    trace_syscall_start(cptr, msgInfo, SysReplyRecv, 1);
+    trace_kernel_entry_syscall(SysReplyRecv, cptr, msgInfo, 1);
 #endif
 #ifdef CONFIG_KERNEL_MCS
     fastpath_reply_recv(cptr, msgInfo, reply);
@@ -192,7 +201,7 @@ void VISIBLE c_handle_fastpath_call(word_t cptr, word_t msgInfo)
 
     c_entry_hook();
 #ifdef ENABLE_TRACE_KERNEL_ENTRY_EXIT
-    trace_syscall_start(cptr, msgInfo, SysCall, 1);
+    trace_kernel_entry_syscall(SysCall, cptr, msgInfo, 1);
 #endif
 
     fastpath_call(cptr, msgInfo);
@@ -207,7 +216,7 @@ void VISIBLE NORETURN c_handle_syscall(word_t cptr, word_t msgInfo, syscall_t sy
 
     c_entry_hook();
 #ifdef ENABLE_TRACE_KERNEL_ENTRY_EXIT
-    trace_syscall_start(cptr, msgInfo, syscall, 0);
+    trace_kernel_entry_syscall(syscall, cptr, msgInfo, 0);
 #endif
     slowpath(syscall);
 

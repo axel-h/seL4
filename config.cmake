@@ -437,6 +437,12 @@ else()
     config_set(KernelEnableBenchmarks ENABLE_BENCHMARKS OFF)
 endif()
 
+if(KernelBenchmarksTrackKernelEntries OR KernelBenchmarksTrackUtilisation OR KernelDebugBuild)
+    config_set(KernelTrackKernelEntries TRACE_KERNEL_ENTRIES ON)
+else()
+    config_set(KernelTrackKernelEntries TRACE_KERNEL_ENTRIES OFF)
+endif()
+
 # Reflect the existence of kernel Log buffer
 if(KernelBenchmarksTrackKernelEntries OR KernelBenchmarksTracepoints)
     config_set(KernelLogBuffer KERNEL_LOG_BUFFER ON)

@@ -16,9 +16,6 @@
 static inline void c_entry_hook(void)
 {
     arch_c_entry_hook();
-#ifdef ENABLE_TRACE_KERNEL_ENTRY_EXIT
-    trace_kernel_entry();
-#endif
 }
 
 /* This C function should be the last thing called from C before exiting
@@ -28,6 +25,10 @@ static inline void c_entry_hook(void)
 static inline void c_exit_hook(void)
 {
 #ifdef ENABLE_TRACE_KERNEL_ENTRY_EXIT
+    /* This is the common exit path of all kernel operations. The function
+     * trace_kernel_entry(...) is supposed to be called on the various entry
+     * functions.
+     */
     trace_kernel_exit();
 #endif
     arch_c_exit_hook();
