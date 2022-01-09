@@ -2781,7 +2781,7 @@ void kernelDataAbort(word_t pc)
 }
 #endif /* CONFIG_ARM_HYPERVISOR_SUPPORT */
 
-#endif
+#endif /* CONFIG_DEBUG_BUILD */
 
 #ifdef CONFIG_PRINTING
 typedef struct readWordFromVSpace_ret {
