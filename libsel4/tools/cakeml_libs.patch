@@ -1,0 +1,40 @@
+diff --git a/libsel4_cakeml/gen_cakeml_invocations.py b/libsel4_cakeml/gen_cakeml_invocations.py
+index 6929928..241c9f5 100644
+--- a/libsel4_cakeml/gen_cakeml_invocations.py
++++ b/libsel4_cakeml/gen_cakeml_invocations.py
+@@ -234,7 +234,7 @@ def generate_cakeml(inv_label_mapping, template_env, arch, wordsize, interface_n
+ 
+     template = template_env.get_template("invocation.sml")
+ 
+-    num_mrs = 0 if use_only_ipc_buffer else syscall_stub_gen.MESSAGE_REGISTERS_FOR_ARCH[arch]
++    num_mrs = syscall_stub_gen.Architecture(arch, wordsize, use_only_ipc_buffer, True).message_registers
+ 
+     # Split out cap parameters and standard parameters
+     all_params = [TemplateParam(fn_name, param.name, param.type, 0, param.type.size_bits // 8)
+@@ -340,7 +340,7 @@ def generate_stub_file(arch, wordsize, input_files, output_file, invocation_sour
+     """
+ 
+     # Ensure architecture looks sane.
+-    if arch not in syscall_stub_gen.WORD_SIZE_BITS_ARCH.keys():
++    if arch not in syscall_stub_gen.Architecture.list_architectures():
+         raise Exception("Invalid architecture.")
+ 
+     data_types = syscall_stub_gen.init_data_types(wordsize)
+@@ -373,7 +373,7 @@ def generate_stub_file(arch, wordsize, input_files, output_file, invocation_sour
+         # We don't have CPP directives in CakeML, so apply MCS filter now
+         if (condition == 'defined(CONFIG_KERNEL_MCS)') == mcs:
+             cakeml_code.append(generate_cakeml(inv_label_mapping, template_env, arch, wordsize, interface_name, method_name,
+-                                           method_id, inputs, outputs, structs, use_only_ipc_buffer, comment))
++                                           method_id, inputs, outputs, structs, use_only_ipc_buffer, '/** ' + '\n'.join(comment) + ' */'))
+ 
+     # Check we've seen all the CakeML functions we need
+     for (fn_name, seen) in CAKEML_SEEN.items():
+@@ -402,7 +402,7 @@ def process_args():
+                         help="Pre-processed c file to extract invocation labels from.")
+     parser.add_argument("-b", "--buffer", dest="buffer", action="store_true", default=False,
+                         help="Use IPC buffer exclusively, i.e. do not pass syscall arguments by registers. (default: %(default)s)")
+-    parser.add_argument("-a", "--arch", dest="arch", required=True, choices=syscall_stub_gen.WORD_SIZE_BITS_ARCH,
++    parser.add_argument("-a", "--arch", dest="arch", required=True, choices=syscall_stub_gen.Architecture.list_architectures(),
+                         help="Architecture to generate stubs for.")
+     parser.add_argument("--mcs", dest="mcs", action="store_true",
+                         help="Generate MCS api.")

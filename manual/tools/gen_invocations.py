@@ -84,7 +84,7 @@ def gen_invocations(input_files, output_file):
             for (interface_name, method_name, method_id, inputs, outputs, _, comment) in methods:
                 prototype = "/**\n * @addtogroup %s %s\n * @{\n */\n\n" % (group_id, group_name)
                 prototype += generate_prototype(interface_name,
-                                                method_name, method_id, inputs, outputs, comment)
+                                                method_name, method_id, inputs, outputs, '/** ' + '\n'.join(comment) + ' */')
                 prototype += "/** @} */\n"
                 prototypes.append(prototype)
 

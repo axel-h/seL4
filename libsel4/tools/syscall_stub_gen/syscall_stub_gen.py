@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 #
 # Copyright 2020, Data61, CSIRO (ABN 41 687 119 230)
+# Copyright (c) 2022 Sam Leffler
+# Copyright (c) 2022 Antmicro
 #
 # SPDX-License-Identifier: BSD-2-Clause
 #
@@ -39,8 +41,8 @@
 
 from argparse import ArgumentParser
 import sys
-from generator_c import Generator_C
-from generator_rust import Generator_Rust
+from .generator_c import Generator_C
+from .generator_rust import Generator_Rust
 
 
 class Architecture:

@@ -1,5 +1,6 @@
 #
 # Copyright 2020, Data61, CSIRO (ABN 41 687 119 230)
+# Copyright (c) 2022 Antmicro
 #
 # SPDX-License-Identifier: BSD-2-Clause
 #
@@ -256,6 +257,136 @@ def parse_xml_file(input_file, valid_types):
     return (methods, structs, api)
 
 
+def init_data_types(wordsize, BitFieldType, CapType, Type):
+    return [
+        # Simple Types
+        Type("int", 32, wordsize),
+        Type("long", wordsize, wordsize),
+
+        Type("seL4_Uint8", 8, wordsize),
+        Type("seL4_Uint16", 16, wordsize),
+        Type("seL4_Uint32", 32, wordsize),
+        Type("seL4_Uint64", 64, wordsize),
+        Type("seL4_Time", 64, wordsize),
+        Type("seL4_Word", wordsize, wordsize),
+        Type("seL4_Bool", 1, wordsize, native_size_bits=8),
+
+        # seL4 Structures
+        BitFieldType("seL4_CapRights_t", wordsize, wordsize),
+
+        # Object types
+        CapType("seL4_CPtr", wordsize),
+        CapType("seL4_CNode", wordsize),
+        CapType("seL4_IRQHandler", wordsize),
+        CapType("seL4_IRQControl", wordsize),
+        CapType("seL4_TCB", wordsize),
+        CapType("seL4_Untyped", wordsize),
+        CapType("seL4_DomainSet", wordsize),
+        CapType("seL4_SchedContext", wordsize),
+        CapType("seL4_SchedControl", wordsize),
+    ]
+
+
+def init_arch_types(wordsize, CapType, StructType, Type):
+    arm_smmu = [
+        CapType("seL4_ARM_SIDControl", wordsize),
+        CapType("seL4_ARM_SID", wordsize),
+        CapType("seL4_ARM_CBControl", wordsize),
+        CapType("seL4_ARM_CB", wordsize),
+    ]
+    arch_types = {
+        "aarch32": [
+            Type("seL4_ARM_VMAttributes", wordsize, wordsize),
+            CapType("seL4_ARM_Page", wordsize),
+            CapType("seL4_ARM_PageTable", wordsize),
+            CapType("seL4_ARM_PageDirectory", wordsize),
+            CapType("seL4_ARM_ASIDControl", wordsize),
+            CapType("seL4_ARM_ASIDPool", wordsize),
+            CapType("seL4_ARM_VCPU", wordsize),
+            CapType("seL4_ARM_IOSpace", wordsize),
+            CapType("seL4_ARM_IOPageTable", wordsize),
+            StructType("seL4_UserContext", wordsize * 19, wordsize),
+        ] + arm_smmu,
+
+        "aarch64": [
+            Type("seL4_ARM_VMAttributes", wordsize, wordsize),
+            CapType("seL4_ARM_Page", wordsize),
+            CapType("seL4_ARM_PageTable", wordsize),
+            CapType("seL4_ARM_PageDirectory", wordsize),
+            CapType("seL4_ARM_PageUpperDirectory", wordsize),
+            CapType("seL4_ARM_PageGlobalDirectory", wordsize),
+            CapType("seL4_ARM_VSpace", wordsize),
+            CapType("seL4_ARM_ASIDControl", wordsize),
+            CapType("seL4_ARM_ASIDPool", wordsize),
+            CapType("seL4_ARM_VCPU", wordsize),
+            CapType("seL4_ARM_IOSpace", wordsize),
+            CapType("seL4_ARM_IOPageTable", wordsize),
+            StructType("seL4_UserContext", wordsize * 36, wordsize),
+        ] + arm_smmu,
+
+        "ia32": [
+            Type("seL4_X86_VMAttributes", wordsize, wordsize),
+            CapType("seL4_X86_IOPort", wordsize),
+            CapType("seL4_X86_IOPortControl", wordsize),
+            CapType("seL4_X86_ASIDControl", wordsize),
+            CapType("seL4_X86_ASIDPool", wordsize),
+            CapType("seL4_X86_IOSpace", wordsize),
+            CapType("seL4_X86_Page", wordsize),
+            CapType("seL4_X86_PageDirectory", wordsize),
+            CapType("seL4_X86_PageTable", wordsize),
+            CapType("seL4_X86_IOPageTable", wordsize),
+            CapType("seL4_X86_VCPU", wordsize),
+            CapType("seL4_X86_EPTPML4", wordsize),
+            CapType("seL4_X86_EPTPDPT", wordsize),
+            CapType("seL4_X86_EPTPD", wordsize),
+            CapType("seL4_X86_EPTPT", wordsize),
+            StructType("seL4_VCPUContext", wordsize * 7, wordsize),
+            StructType("seL4_UserContext", wordsize * 12, wordsize),
+        ],
+
+        "x86_64": [
+            Type("seL4_X86_VMAttributes", wordsize, wordsize),
+            CapType("seL4_X86_IOPort", wordsize),
+            CapType("seL4_X86_IOPortControl", wordsize),
+            CapType("seL4_X86_ASIDControl", wordsize),
+            CapType("seL4_X86_ASIDPool", wordsize),
+            CapType("seL4_X86_IOSpace", wordsize),
+            CapType("seL4_X86_Page", wordsize),
+            CapType("seL4_X64_PML4", wordsize),
+            CapType("seL4_X86_PDPT", wordsize),
+            CapType("seL4_X86_PageDirectory", wordsize),
+            CapType("seL4_X86_PageTable", wordsize),
+            CapType("seL4_X86_IOPageTable", wordsize),
+            CapType("seL4_X86_VCPU", wordsize),
+            CapType("seL4_X86_EPTPML4", wordsize),
+            CapType("seL4_X86_EPTPDPT", wordsize),
+            CapType("seL4_X86_EPTPD", wordsize),
+            CapType("seL4_X86_EPTPT", wordsize),
+            StructType("seL4_VCPUContext", wordsize * 7, wordsize),
+            StructType("seL4_UserContext", wordsize * 20, wordsize),
+        ],
+        "riscv32": [
+            Type("seL4_RISCV_VMAttributes", wordsize, wordsize),
+            CapType("seL4_RISCV_Page", wordsize),
+            CapType("seL4_RISCV_PageTable", wordsize),
+            CapType("seL4_RISCV_ASIDControl", wordsize),
+            CapType("seL4_RISCV_ASIDPool", wordsize),
+            StructType("seL4_UserContext", wordsize * 32, wordsize),
+        ],
+        "riscv64": [
+            Type("seL4_RISCV_VMAttributes", wordsize, wordsize),
+            CapType("seL4_RISCV_Page", wordsize),
+            CapType("seL4_RISCV_PageTable", wordsize),
+            CapType("seL4_RISCV_ASIDControl", wordsize),
+            CapType("seL4_RISCV_ASIDPool", wordsize),
+            StructType("seL4_UserContext", wordsize * 32, wordsize),
+        ]
+    }
+    # legacy alias
+    arch_types["arm_hyp"] = arch_types["aarch32"]
+    return arch_types
+
+
 class Generator:
     '''
     All the _gen_* functions are used to generate some piece of code.
@@ -367,136 +498,6 @@ class Generator:
     def _gen_unmarshal_result(self, num_mrs, output_params):
         raise NotImplementedError()
 
-    def init_data_types(self, BitFieldType, CapType, Type):
-        wordsize = self.arch.wordsize
-        return [
-            # Simple Types
-            Type("int", 32, wordsize),
-            Type("long", wordsize, wordsize),
-
-            Type("seL4_Uint8", 8, wordsize),
-            Type("seL4_Uint16", 16, wordsize),
-            Type("seL4_Uint32", 32, wordsize),
-            Type("seL4_Uint64", 64, wordsize),
-            Type("seL4_Time", 64, wordsize),
-            Type("seL4_Word", wordsize, wordsize),
-            Type("seL4_Bool", 1, wordsize, native_size_bits=8),
-
-            # seL4 Structures
-            BitFieldType("seL4_CapRights_t", wordsize, wordsize),
-
-            # Object types
-            CapType("seL4_CPtr", wordsize),
-            CapType("seL4_CNode", wordsize),
-            CapType("seL4_IRQHandler", wordsize),
-            CapType("seL4_IRQControl", wordsize),
-            CapType("seL4_TCB", wordsize),
-            CapType("seL4_Untyped", wordsize),
-            CapType("seL4_DomainSet", wordsize),
-            CapType("seL4_SchedContext", wordsize),
-            CapType("seL4_SchedControl", wordsize),
-        ]
-
-    def init_arch_types(self, CapType, StructType, Type):
-        wordsize = self.arch.wordsize
-        arm_smmu = [
-            CapType("seL4_ARM_SIDControl", wordsize),
-            CapType("seL4_ARM_SID", wordsize),
-            CapType("seL4_ARM_CBControl", wordsize),
-            CapType("seL4_ARM_CB", wordsize),
-        ]
-        arch_types = {
-            "aarch32": [
-                Type("seL4_ARM_VMAttributes", wordsize, wordsize),
-                CapType("seL4_ARM_Page", wordsize),
-                CapType("seL4_ARM_PageTable", wordsize),
-                CapType("seL4_ARM_PageDirectory", wordsize),
-                CapType("seL4_ARM_ASIDControl", wordsize),
-                CapType("seL4_ARM_ASIDPool", wordsize),
-                CapType("seL4_ARM_VCPU", wordsize),
-                CapType("seL4_ARM_IOSpace", wordsize),
-                CapType("seL4_ARM_IOPageTable", wordsize),
-                StructType("seL4_UserContext", wordsize * 19, wordsize),
-            ] + arm_smmu,
-
-            "aarch64": [
-                Type("seL4_ARM_VMAttributes", wordsize, wordsize),
-                CapType("seL4_ARM_Page", wordsize),
-                CapType("seL4_ARM_PageTable", wordsize),
-                CapType("seL4_ARM_PageDirectory", wordsize),
-                CapType("seL4_ARM_PageUpperDirectory", wordsize),
-                CapType("seL4_ARM_PageGlobalDirectory", wordsize),
-                CapType("seL4_ARM_VSpace", wordsize),
-                CapType("seL4_ARM_ASIDControl", wordsize),
-                CapType("seL4_ARM_ASIDPool", wordsize),
-                CapType("seL4_ARM_VCPU", wordsize),
-                CapType("seL4_ARM_IOSpace", wordsize),
-                CapType("seL4_ARM_IOPageTable", wordsize),
-                StructType("seL4_UserContext", wordsize * 36, wordsize),
-            ] + arm_smmu,
-
-            "ia32": [
-                Type("seL4_X86_VMAttributes", wordsize, wordsize),
-                CapType("seL4_X86_IOPort", wordsize),
-                CapType("seL4_X86_IOPortControl", wordsize),
-                CapType("seL4_X86_ASIDControl", wordsize),
-                CapType("seL4_X86_ASIDPool", wordsize),
-                CapType("seL4_X86_IOSpace", wordsize),
-                CapType("seL4_X86_Page", wordsize),
-                CapType("seL4_X86_PageDirectory", wordsize),
-                CapType("seL4_X86_PageTable", wordsize),
-                CapType("seL4_X86_IOPageTable", wordsize),
-                CapType("seL4_X86_VCPU", wordsize),
-                CapType("seL4_X86_EPTPML4", wordsize),
-                CapType("seL4_X86_EPTPDPT", wordsize),
-                CapType("seL4_X86_EPTPD", wordsize),
-                CapType("seL4_X86_EPTPT", wordsize),
-                StructType("seL4_VCPUContext", wordsize * 7, wordsize),
-                StructType("seL4_UserContext", wordsize * 12, wordsize),
-            ],
-
-            "x86_64": [
-                Type("seL4_X86_VMAttributes", wordsize, wordsize),
-                CapType("seL4_X86_IOPort", wordsize),
-                CapType("seL4_X86_IOPortControl", wordsize),
-                CapType("seL4_X86_ASIDControl", wordsize),
-                CapType("seL4_X86_ASIDPool", wordsize),
-                CapType("seL4_X86_IOSpace", wordsize),
-                CapType("seL4_X86_Page", wordsize),
-                CapType("seL4_X64_PML4", wordsize),
-                CapType("seL4_X86_PDPT", wordsize),
-                CapType("seL4_X86_PageDirectory", wordsize),
-                CapType("seL4_X86_PageTable", wordsize),
-                CapType("seL4_X86_IOPageTable", wordsize),
-                CapType("seL4_X86_VCPU", wordsize),
-                CapType("seL4_X86_EPTPML4", wordsize),
-                CapType("seL4_X86_EPTPDPT", wordsize),
-                CapType("seL4_X86_EPTPD", wordsize),
-                CapType("seL4_X86_EPTPT", wordsize),
-                StructType("seL4_VCPUContext", wordsize * 7, wordsize),
-                StructType("seL4_UserContext", wordsize * 20, wordsize),
-            ],
-            "riscv32": [
-                Type("seL4_RISCV_VMAttributes", wordsize, wordsize),
-                CapType("seL4_RISCV_Page", wordsize),
-                CapType("seL4_RISCV_PageTable", wordsize),
-                CapType("seL4_RISCV_ASIDControl", wordsize),
-                CapType("seL4_RISCV_ASIDPool", wordsize),
-                StructType("seL4_UserContext", wordsize * 32, wordsize),
-            ],
-            "riscv64": [
-                Type("seL4_RISCV_VMAttributes", wordsize, wordsize),
-                CapType("seL4_RISCV_Page", wordsize),
-                CapType("seL4_RISCV_PageTable", wordsize),
-                CapType("seL4_RISCV_ASIDControl", wordsize),
-                CapType("seL4_RISCV_ASIDPool", wordsize),
-                StructType("seL4_UserContext", wordsize * 32, wordsize),
-            ]
-        }
-        # legacy alias
-        arch_types["arm_hyp"] = arch_types["aarch32"]
-        return arch_types[self.arch.name]
-
     def __init__(self, arch, xml_files):
         self.contents = []
         self.arch = arch
@@ -596,10 +597,8 @@ class Generator:
         standard_params = []
         cap_params = []
         for x in input_params:
-            # TODO check this sneaky case, it retrieves a static class from the specific Generator implementation
-            # type(self).CapType should be CGenerator.CapType or RustGenerator.CapType
-            # depending on which generator was created
-            if isinstance(x.type, type(self).CapType):
+            # TODO this requires CapType and it's not very convenient here, consider moving it to specific generator
+            if isinstance(x.type, self.CapType):
                 cap_params.append(x)
             else:
                 standard_params.append(x)

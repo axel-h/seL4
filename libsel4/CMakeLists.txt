@@ -47,7 +47,7 @@ if(LibSel4StubsUseIPCBufferOnly)
     set(buffer "--buffer")
 endif()
 
-RequireFile(SYSCALL_STUB_GEN_PATH syscall_stub_gen.py PATHS tools)
+RequireFile(SYSCALL_STUB_GEN_PATH syscall_stub_gen PATHS tools)
 
 add_config_library(sel4 "${configure_string}")
 
@@ -153,7 +153,7 @@ add_custom_command(
     COMMAND
         echo "CONFIG_WORD_SIZE=${KernelWordSize}" > config
     COMMAND
-        "${PYTHON3}" "${SYSCALL_STUB_GEN_PATH}" ${buffer} ${mcs} -a "${KernelSel4Arch}" -c config -o
+        PYTHONPATH=${SYSCALL_STUB_GEN_PATH}/..  "${PYTHON3}" -m "syscall_stub_gen" ${buffer} ${mcs} -a "${KernelSel4Arch}" -c config -o
         include/interfaces/sel4_client.h --lang=c ${interface_xmls}
     DEPENDS
         "${SYSCALL_STUB_GEN_PATH}"
