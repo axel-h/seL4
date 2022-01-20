@@ -4,7 +4,7 @@
 # SPDX-License-Identifier: GPL-2.0-only
 #
 
-cmake_minimum_required(VERSION 3.8.2)
+cmake_minimum_required(VERSION 3.13)
 include(CheckCCompilerFlag)
 
 include(${CMAKE_CURRENT_LIST_DIR}/configs/seL4Config.cmake)
@@ -207,9 +207,9 @@ add_compile_options(
 
 # Linker parameters. There are two kinds actually:
 #   - flags processed by GCC when invoking it as linker wrapper
-#   - flags passed by GCC to the actual linker invocation ("-Wl,<flag>").
-string(
-    APPEND CMAKE_EXE_LINKER_FLAGS
+#   - flags passed by GCC to the actual linker, CMake translates "LINKER:<flag>"
+#       to the toolchain specific syntax, e.g. "-Wl,<flag>" for GCC.
+add_link_options(
     # KernelCommonFlags adds "-nostdlib", it's the GCC linker step counterpart
     # for "-ffreestanding" and makes GCC not use the standard system startup
     # files or libraries. This also excludes GCC's helper library libgcc. Any
@@ -217,22 +217,22 @@ string(
     # shown that this parameter doesn't prevent GCC from adding paths from a
     # "-L <path>" argument to the linker invocation for the standard libs, and
     # there seems no option that prevents this apart from providing an entirely
-    # different specs file via -specs=<file>. Note that "-Wl,-nostdlib" is not
-    # used here, because it is not needed. It makes the linker use library
+    # different specs file via -specs=<file>. Note that "LINKER:-nostdlib" is
+    # not used here, because it is not needed. It makes the linker use library
     # directories specified on the command line only and ignore any SEARCH_DIR
     # set in a linker script. We provide our own linker scripts, and these
     # don't set SEARCH_DIR.
-    " -static" # Implies "-no-pie" (and overrides "-pie"). The ld 2.37 docs say
-               # "-no-pie" is a linker option, but passing "-Wl,-no-pie" fails.
-    " -Wl,--build-id=none" # Ensure reproducible builds
-    " -Wl,-n" # Disable page alignment of sections
+    -static # Implies "-no-pie" (and overrides "-pie"). The ld 2.37 docs say
+            # "-no-pie" is a linker option, but passing "LINKER:-no-pie" fails.
+    LINKER:--build-id=none # Ensure reproducible builds
+    LINKER:-n # Disable page alignment of sections
 )
 
 # Setup kernel specific flags used for both the compilation and linking step
 macro(KernelCommonFlags)
     foreach(common_flag IN ITEMS ${ARGV})
         add_compile_options(${common_flag})
-        string(APPEND CMAKE_EXE_LINKER_FLAGS " ${common_flag} ")
+        add_link_options(${common_flag})
     endforeach()
 endmacro(KernelCommonFlags)
 
@@ -695,7 +695,7 @@ target_include_directories(kernel.elf PRIVATE ${config_dir})
 target_include_directories(kernel.elf PRIVATE include)
 target_include_directories(kernel.elf PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/generated")
 target_link_libraries(kernel.elf PRIVATE kernel_Config kernel_autoconf)
-set_property(TARGET kernel.elf APPEND_STRING PROPERTY LINK_FLAGS " -Wl,-T ${linker_lds_path} ")
+target_link_options(kernel.elf PRIVATE "LINKER:-T,${linker_lds_path}")
 set_target_properties(kernel.elf PROPERTIES LINK_DEPENDS "${linker_lds_path}")
 add_dependencies(kernel.elf circular_includes)
 
