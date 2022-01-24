@@ -198,7 +198,8 @@ exception_t handleUnknownSyscall(word_t w)
     } /* end switch(w) */
 #endif /* CONFIG_ENABLE_BENCHMARKS */
 
-    MCS_DO_IF_BUDGET({
+    if (likely(MCS_TERNARY(checkBudgetWithRestart(), true))) {
+
 #ifdef CONFIG_SET_TLS_BASE_SELF
         if (w == SysSetTLSBase)
         {
@@ -213,7 +214,8 @@ exception_t handleUnknownSyscall(word_t w)
 #endif
         current_fault = seL4_Fault_UnknownSyscall_new(w);
         handleFault(NODE_STATE(ksCurThread));
-    })
+
+    }
 
     schedule();
     activateThread();
@@ -223,10 +225,11 @@ exception_t handleUnknownSyscall(word_t w)
 
 exception_t handleUserLevelFault(word_t w_a, word_t w_b)
 {
-    MCS_DO_IF_BUDGET({
+    if (likely(MCS_TERNARY(checkBudgetWithRestart(), true))) {
         current_fault = seL4_Fault_UserException_new(w_a, w_b);
         handleFault(NODE_STATE(ksCurThread));
-    })
+    }
+
     schedule();
     activateThread();
 
@@ -235,14 +238,13 @@ exception_t handleUserLevelFault(word_t w_a, word_t w_b)
 
 exception_t handleVMFaultEvent(vm_fault_type_t vm_faultType)
 {
-    MCS_DO_IF_BUDGET({
-
+    if (likely(MCS_TERNARY(checkBudgetWithRestart(), true))) {
         exception_t status = handleVMFault(NODE_STATE(ksCurThread), vm_faultType);
         if (status != EXCEPTION_NONE)
         {
             handleFault(NODE_STATE(ksCurThread));
         }
-    })
+    }
 
     schedule();
     activateThread();
@@ -509,7 +511,8 @@ exception_t handleSyscall(syscall_t syscall)
 {
     exception_t ret;
     irq_t irq;
-    MCS_DO_IF_BUDGET({
+
+    if (likely(MCS_TERNARY(checkBudgetWithRestart(), true))) {
         switch (syscall)
         {
         case SysSend:
@@ -616,7 +619,7 @@ exception_t handleSyscall(syscall_t syscall)
             fail("Invalid syscall");
         }
 
-    })
+    }
 
     schedule();
     activateThread();
