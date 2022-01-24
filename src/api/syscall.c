@@ -36,16 +36,14 @@
 
 exception_t handleInterruptEntry(void)
 {
-    irq_t irq;
-
 #ifdef CONFIG_KERNEL_MCS
     if (SMP_TERNARY(clh_is_self_in_queue(), 1)) {
         updateTimestamp();
-        checkBudget();
+        (void)checkBudget(); /* ignore result, just update data structures */
     }
-#endif
+#endif /* CONFIG_KERNEL_MCS */
 
-    irq = getActiveIRQ();
+    irq_t irq = getActiveIRQ();
     if (IRQT_TO_IRQ(irq) != IRQT_TO_IRQ(irqInvalid)) {
         handleInterrupt(irq);
     } else {
@@ -65,8 +63,16 @@ exception_t handleInterruptEntry(void)
 
 exception_t handleUnknownSyscall(word_t w)
 {
+    /* The regular syscalls will be executed only when caller has budget left,
+     * for some debug syscall this does not matter. Remember the state here and
+     * use it where needed.
+     */
+    bool_t UNUSED had_budget = MCS_TERNARY(checkBudgetWithRestart(), 1);
+    bool_t do_not_fault = false;
+
 #ifdef CONFIG_PRINTING
     if (w == SysDebugPutChar) {
+        /* ToDo: should check had_budget here? */
         kernel_putchar(getRegister(NODE_STATE(ksCurThread), capRegister));
         return EXCEPTION_NONE;
     }
@@ -200,23 +206,33 @@ exception_t handleUnknownSyscall(word_t w)
     } /* end switch(w) */
 #endif /* CONFIG_ENABLE_BENCHMARKS */
 
-    if (likely(MCS_TERNARY(checkBudgetWithRestart(), true))) {
-
 #ifdef CONFIG_SET_TLS_BASE_SELF
-        if (w == SysSetTLSBase)
+    if (w == SysSetTLSBase) 
+    {
+        if (unlikely(!had_budget)) 
         {
-            word_t tls_base = getRegister(NODE_STATE(ksCurThread), capRegister);
-            /*
-             * This updates the real register as opposed to the thread state
-             * value. For many architectures, the TLS variables only get
-             * updated on a thread switch.
-             */
-            return Arch_setTLSRegister(tls_base);
+            do_not_fault = true;
+            break;
         }
-#endif
+
+        word_t tls_base = getRegister(NODE_STATE(ksCurThread), capRegister);
+        /*
+         * This updates the real register as opposed to the thread state
+         * value. For many architectures, the TLS variables only get
+         * updated on a thread switch.
+         */
+        return Arch_setTLSRegister(tls_base);
+    }
+#endif /* CONFIG_SET_TLS_BASE_SELF */
+
+    /* We arrive here if a syscall is not supported or there was a reason no to
+     * return from the system (e.g. there was no MSC budget to run the syscall).
+     * Check if we are to raise a fault about an unsupported syscall that a
+     * designated fault handler might pick up then.
+     */
+    if (!do_not_fault) {
         current_fault = seL4_Fault_UnknownSyscall_new(w);
         handleFault(NODE_STATE(ksCurThread));
-
     }
 
     schedule();
