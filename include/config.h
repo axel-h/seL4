@@ -24,3 +24,11 @@
 #endif
 #endif /* CONFIG_ARCH_AARCH64 */
 #endif /* CONFIG_ARM_HYPERVISOR_SUPPORT */
+
+#ifdef CONFIG_KERNEL_MCS
+#define MCS_TERNARY(_mcs, _non_mcs) _mcs
+#else /* not CONFIG_KERNEL_MCS */
+#define MCS_TERNARY(_mcs, _non_mcs) _non_mcs
+#endif /* [not] CONFIG_KERNEL_MCS */
+
+#define MSC_COND_STATEMENT(_st)     MCS_TERNARY(_st,)
