@@ -6,6 +6,8 @@
 
 #pragma once
 
+#include <config.h>
+
 /* Using multiple macro layers may look strange, but this is required to make
  * the preprocessor fully evaluate all macro parameters first and then pass the
  * result as parameter to the next macro layer. This allows passing macros as
@@ -139,6 +141,10 @@ void __builtin_unreachable(void);
 #define _config_ternary(value, true, false) _config_ternary_(_macrotest_##value, true, false)
 #define _config_ternary_(comma, true, false) _config_ternary__(comma true, false)
 #define _config_ternary__(_, v, ...) v
+
+#define SMP_TERNARY(_smp, _up)      config_ternary(CONFIG_ENABLE_SMP_SUPPORT, _smp, _up)
+#define SMP_COND_STATEMENT(_st)     SMP_TERNARY(_st,)
+#define UP_COND_STATEMENT(_st)      SMP_TERNARY(,_st)
 
 /** MODIFIES:
     FNSPEC
