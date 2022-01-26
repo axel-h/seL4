@@ -4,6 +4,8 @@
 # SPDX-License-Identifier: GPL-2.0-only
 #
 
+# This is just a dummy line to have some artificial change.
+
 cmake_minimum_required(VERSION 3.8.2)
 include(CheckCCompilerFlag)
 
