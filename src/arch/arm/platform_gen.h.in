@@ -38,6 +38,7 @@ enum IRQConstants {
 #endif
 
 #ifdef CONFIG_KERNEL_MCS
+#include <types.h>
 static inline CONST time_t getKernelWcetUs(void)
 {
     return @CONFIGURE_KERNEL_WCET@;
