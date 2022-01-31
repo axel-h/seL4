@@ -11,29 +11,27 @@
 #include <util.h>
 #include <object/structures.h>
 #include <object/tcb.h>
+#include <model/smp.h>
 #include <arch/model/statedata.h>
 
-#ifdef ENABLE_SMP_SUPPORT
-#define NODE_STATE_BEGIN(_name)                 typedef struct _name {
-#define NODE_STATE_END(_name)                   } _name ## _t
-#define NODE_STATE_TYPE_DECLARE(_name, _state)  _name ## _t _state
-#define NODE_STATE_DECLARE(_type, _state)       _type _state
 
-#define SMP_STATE_DEFINE(_type, _state)         _type _state
-#define UP_STATE_DEFINE(_type, _state)
+#define NODE_STATE_BEGIN(_name) \
+    SMP_COND_STATEMENT(typedef struct _name {)
 
-#else /* not ENABLE_SMP_SUPPORT */
+#define NODE_STATE_TYPE_DECLARE(_name, _state) \
+    SMP_COND_STATEMENT(_name ## _t _state)
 
-#define NODE_STATE_BEGIN(_name)
-#define NODE_STATE_END(_name)
-#define NODE_STATE_TYPE_DECLARE(_name, _state)
-/* UP states are declared as VISIBLE so that they are accessible in assembly */
-#define NODE_STATE_DECLARE(_type, _state)       extern _type _state VISIBLE
+#define NODE_STATE_END(_name) \
+    SMP_COND_STATEMENT(} _name ## _t)
 
-#define SMP_STATE_DEFINE(_name, _state)
-#define UP_STATE_DEFINE(_type, _state)          _type _state
+/* uni-processor states are declared as VISIBLE so that they are accessible in
+ * assembly
+ */
+#define NODE_STATE_DECLARE(_type, _state) \
+    SMP_TERNARY(_type _state, extern _type _state VISIBLE)
 
-#endif /* [not] ENABLE_SMP_SUPPORT */
+#define SMP_STATE_DEFINE(_name, _state)     SMP_TERNARY(_type _state,)
+#define UP_STATE_DEFINE(_type, _state)      SMP_TERNARY(,_type _state)
 
 #include <arch/model/statedata.h> /* this needs NODE_STATE_DECLARE() */
 
