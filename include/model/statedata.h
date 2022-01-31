@@ -101,9 +101,9 @@ extern smpStatedata_t ksSMP[CONFIG_MAX_NUM_NODES];
 
 #endif /* [not] ENABLE_SMP_SUPPORT */
 
-#define MODE_NODE_STATE(_state)    MODE_NODE_STATE_ON_CORE(_state, getCurrentCPUIndex())
-#define ARCH_NODE_STATE(_state)    ARCH_NODE_STATE_ON_CORE(_state, getCurrentCPUIndex())
-#define NODE_STATE(_state)         NODE_STATE_ON_CORE(_state, getCurrentCPUIndex())
+#define MODE_NODE_STATE(_state)    MODE_NODE_STATE_ON_CORE(_state, CURRENT_CPU_INDEX())
+#define ARCH_NODE_STATE(_state)    ARCH_NODE_STATE_ON_CORE(_state, CURRENT_CPU_INDEX())
+#define NODE_STATE(_state)         NODE_STATE_ON_CORE(_state, CURRENT_CPU_INDEX())
 
 #if defined ENABLE_SMP_SUPPORT && defined CONFIG_ARCH_ARM
 #define INT_STATE_ARRAY_SIZE ((CONFIG_MAX_NUM_NODES - 1) * NUM_PPI + maxIRQ + 1)
