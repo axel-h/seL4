@@ -28,7 +28,7 @@
 
 #define CURRENT_CPU_INDEX() getCurrentCPUIndex()
 
-#else
+#else /* not ENABLE_SMP_SUPPORT */
 
 #define NODE_STATE_BEGIN(_name)
 #define NODE_STATE_END(_name)
@@ -45,7 +45,7 @@
 
 #define CURRENT_CPU_INDEX() SEL4_WORD_CONST(0)
 
-#endif /* ENABLE_SMP_SUPPORT */
+#endif /* [not] ENABLE_SMP_SUPPORT */
 
 #define NUM_READY_QUEUES (CONFIG_NUM_DOMAINS * CONFIG_NUM_PRIORITIES)
 #define L2_BITMAP_SIZE ((CONFIG_NUM_PRIORITIES + wordBits - 1) / wordBits)

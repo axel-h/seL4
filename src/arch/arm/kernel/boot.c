@@ -311,7 +311,7 @@ BOOT_CODE static void release_secondary_cpus(void)
 #ifdef CONFIG_ARCH_AARCH32
     cleanInvalidateL1Caches();
     plat_cleanInvalidateL2Cache();
-#endif
+#endif /* CONFIG_ARCH_AARCH64 */
 
     /* Wait until all the secondary cores are done initialising */
     while (ksNumCPUs != CONFIG_MAX_NUM_NODES) {
@@ -649,14 +649,14 @@ BOOT_CODE VISIBLE void init_kernel(
         result = try_init_kernel_secondary_core();
     }
 
-#else
+#else /* not ENABLE_SMP_SUPPORT */
     result = try_init_kernel(ui_p_reg_start,
                              ui_p_reg_end,
                              pv_offset,
                              v_entry,
                              dtb_addr_p, dtb_size);
 
-#endif /* ENABLE_SMP_SUPPORT */
+#endif /* [not] ENABLE_SMP_SUPPORT */
 
     if (!result) {
         fail("ERROR: kernel init failed");

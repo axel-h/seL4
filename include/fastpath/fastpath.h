@@ -154,7 +154,7 @@ static inline void cap_reply_cap_ptr_new_np(cap_t *cap_ptr, word_t capReplyCanGr
                         (capReplyCanGrant << 5) | cap_reply_cap ;
 #endif
 }
-#endif
+#endif /* CONFIG_KERNEL_MCS */
 
 static inline void endpoint_ptr_mset_epQueue_tail_state(endpoint_t *ep_ptr, word_t epQueue_tail,
                                                         word_t state)

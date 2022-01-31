@@ -42,4 +42,4 @@ static inline CONST time_t getKernelWcetUs(void)
 {
     return @CONFIGURE_KERNEL_WCET@;
 }
-#endif
+#endif /* CONFIG_KERNEL_MCS */
