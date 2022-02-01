@@ -11,7 +11,6 @@
 #include <util.h>
 #include <object/structures.h>
 #include <object/tcb.h>
-#include <mode/types.h>
 
 #ifdef ENABLE_SMP_SUPPORT
 #define NODE_STATE_BEGIN(_name)                 typedef struct _name {
