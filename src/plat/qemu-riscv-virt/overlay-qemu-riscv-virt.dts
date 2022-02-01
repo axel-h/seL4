@@ -26,4 +26,18 @@
             reg = <0x00000000 0x2000000 0x00000000 0x000010000>;
         };
     };
+
+    /*
+     * Reserve 2 MiB for SBI at the start of RAM (0x80000000 - 0x80200000). This
+     * is exactly one "megapage" in the MMU table.
+     */
+    reserved-memory {
+        #address-cells = <0x01>;
+        #size-cells = <0x01>;
+        ranges;
+        sbi@80000000 {
+            reg = <0x80000000 0x200000>;
+            no-map;
+        };
+    };
 };
