@@ -25,5 +25,17 @@
             no-map;
         };
 
+    /*
+     * Reserve 2 MiB for SBI at the start of RAM (0x80000000 - 0x80200000). This
+     * is half of a SV32 "megapage" in the MMU table.
+     */
+    reserved-memory {
+        #address-cells = <0x01>;
+        #size-cells = <0x01>;
+        ranges;
+        sbi@80000000 {
+            reg = <0x80000000 0x200000>;
+            no-map;
+        };
     };
 };
