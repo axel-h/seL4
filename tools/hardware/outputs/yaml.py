@@ -14,7 +14,7 @@ import hardware
 from hardware.config import Config
 from hardware.fdt import FdtParser
 from hardware.memory import Region
-from hardware.utils.rule import HardwareYaml
+from hardware.utils.rule import HardwareYaml, KernelInterrupt
 
 assert sys.version_info >= (3, 7)
 
@@ -44,26 +44,16 @@ def create_yaml_file(regions_dict: Dict[str, List[Region]], outputStream):
             outputStream)
 
 
-def get_kernel_devices(tree: FdtParser, hw_yaml: HardwareYaml):
-    kernel_devices = tree.get_kernel_devices()
+def run(tree: FdtParser, hw_yaml: HardwareYaml, config: Config, args: argparse.Namespace):
 
-    groups = []
-    for dev in kernel_devices:
-        rule = hw_yaml.get_rule(dev)
-        groups += rule.get_regions(dev)
-
-    return groups
-
-
-def run(tree: FdtParser, hw_yaml: HardwareYaml, config: Config,
-        args: argparse.Namespace):
     if not args.yaml_out:
         raise ValueError('you need to provide a yaml-out to use the yaml output method')
 
-    phys_mem, reserved, _ = hardware.utils.memory.get_physical_memory(tree, config)
-    kernel_devs = get_kernel_devices(tree, hw_yaml)
-    dev_mem = hardware.utils.memory.get_addrspace_exclude(
-        list(reserved) + phys_mem + kernel_devs, config)
+    # Get the physical memory and device regions, we don't care about the kernel
+    # phy_base address here.
+    phys_mem, dev_mem, _ = hardware.utils.memory.get_phys_mem_regions(tree,
+                                                                      config,
+                                                                      hw_yaml)
 
     create_yaml_file(
         {
