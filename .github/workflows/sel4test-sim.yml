@@ -21,15 +21,10 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        march: [armv7a, armv8a, nehalem, rv32imac, rv64imac]
-        compiler: [gcc, clang]
-        exclude:
-          - march: rv32imac
-            compiler: clang
-          - march: rv64imac
-            compiler: clang
+        march: [armv7a]
+        compiler: [gcc]
     steps:
-    - uses: seL4/ci-actions/sel4test-sim@master
+    - uses: axel-h/ci-actions/sel4test-sim@pr-54
       with:
         march: ${{ matrix.march }}
         compiler: ${{ matrix.compiler }}
