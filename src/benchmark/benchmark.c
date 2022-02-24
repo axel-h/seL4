@@ -19,14 +19,61 @@ seL4_Word ksLogIndex = 0;
 paddr_t ksUserLogBuffer;
 #endif /* CONFIG_KERNEL_LOG_BUFFER */
 
-#if defined(CONFIG_DEBUG_BUILD) || defined(CONFIG_BENCHMARK_TRACK_KERNEL_ENTRIES)
+#if defined(CONFIG_DEBUG_BUILD) || defined(ENABLE_TRACE_KERNEL_ENTRY_EXIT)
 #include <sel4/benchmark_track_types.h>
 kernel_entry_t ksKernelEntry;
-#endif /* CONFIG_DEBUG_BUILD || CONFIG_BENCHMARK_TRACK_KERNEL_ENTRIES */
+#endif /* CONFIG_DEBUG_BUILD || ENABLE_TRACE_KERNEL_ENTRY_EXIT */
 
-#if defined(CONFIG_BENCHMARK_TRACK_KERNEL_ENTRIES) || defined(CONFIG_BENCHMARK_TRACK_UTILISATION)
+#ifdef ENABLE_TRACE_KERNEL_ENTRY_EXIT
+
 timestamp_t ksEnter;
-#endif /* CONFIG_BENCHMARK_TRACK_KERNEL_ENTRIES CONFIG_BENCHMARK_TRACK_UTILISATION */
+
+void trace_kernel_entry(void)
+{
+    ksEnter = timestamp();
+
+    ksKernelEntry = (kernel_entry_t) {
+        .path = 0,
+        /* 29 bits are remaining, usage specific to path */
+        .core = CURRENT_CPU_INDEX(), /* 3 bits */
+        .word = 0, /* 26 bits */
+    };
+}
+
+void trace_kernel_exit(void)
+{
+#if defined(CONFIG_BENCHMARK_TRACK_KERNEL_ENTRIES) || \
+    defined(CONFIG_BENCHMARK_TRACK_UTILISATION)
+
+    timestamp_t now = timestamp();
+    timestamp_t duration = now - ksEnter;
+
+#endif
+
+#ifdef CONFIG_BENCHMARK_TRACK_KERNEL_ENTRIES
+    if (likely(ksUserLogBuffer != 0)) {
+        /* If Log buffer is filled, do nothing */
+        if (likely(ksLogIndex < (seL4_LogBufferSize / sizeof(benchmark_track_kernel_entry_t)))) {
+            benchmark_track_kernel_entry_t *ksLog = (benchmark_track_kernel_entry_t *)KS_LOG_PPTR;
+            ksLog[ksLogIndex].entry = ksKernelEntry;
+            ksLog[ksLogIndex].start_time = ksEnter;
+            ksLog[ksLogIndex].duration = duration;
+            ksLogIndex++;
+        }
+    }
+#endif /* CONFIG_BENCHMARK_TRACK_KERNEL_ENTRIES */
+
+#ifdef CONFIG_BENCHMARK_TRACK_UTILISATION
+    if (likely(NODE_STATE(benchmark_log_utilisation_enabled))) {
+        NODE_STATE(ksCurThread)->benchmark.number_kernel_entries++;
+        NODE_STATE(ksCurThread)->benchmark.kernel_utilisation += duration;
+        NODE_STATE(benchmark_kernel_number_entries)++;
+        NODE_STATE(benchmark_kernel_time) += duration;
+    }
+#endif /* CONFIG_BENCHMARK_TRACK_UTILISATION */
+}
+
+#endif /* ENABLE_TRACE_KERNEL_ENTRY_EXIT */
 
 
 #ifdef ENABLE_KERNEL_TRACEPOINTS
