@@ -16,7 +16,7 @@
 #ifdef CONFIG_KERNEL_LOG_BUFFER
 /* The buffer is used differently depending on the configuration:
  *   - CONFIG_BENCHMARK_TRACK_KERNEL_ENTRIES: benchmark_track_kernel_entry_t
- *   - CONFIG_MAX_NUM_TRACE_POINTS > 0: benchmark_tracepoint_log_entry_t
+ *   - ENABLE_KERNEL_TRACEPOINTS: benchmark_tracepoint_log_entry_t
  */
 seL4_Word ksLogIndex = 0;
 paddr_t ksUserLogBuffer;
@@ -26,10 +26,76 @@ paddr_t ksUserLogBuffer;
 timestamp_t ksEnter;
 #endif /* CONFIG_BENCHMARK_TRACK_KERNEL_ENTRIES CONFIG_BENCHMARK_TRACK_UTILISATION */
 
-#if CONFIG_MAX_NUM_TRACE_POINTS > 0
-timestamp_t ksEntries[CONFIG_MAX_NUM_TRACE_POINTS];
-bool_t ksStarted[CONFIG_MAX_NUM_TRACE_POINTS];
-#endif /* CONFIG_MAX_NUM_TRACE_POINTS > 0 */
+
+#ifdef ENABLE_KERNEL_TRACEPOINTS
+
+static timestamp_t ksEntries[CONFIG_MAX_NUM_TRACE_POINTS];
+static bool_t ksStarted[CONFIG_MAX_NUM_TRACE_POINTS];
+
+void trace_point_start(word_t id)
+{
+    if (unlikely((id >= ARRAY_SIZE(ksEntries)) || (id >= ARRAY_SIZE(ksStarted)))) {
+        /* The assert exists in debug builds only, in release no trace point
+         * start will be recorded if an invalid ID is provided. This seems a
+         * better approach than corrupting memory. Make this a fatal error that
+         * halts the system even for release builds seem too radical, as this is
+         * just a trace problem and not necessarily a system problem.
+         */
+        assert(0);
+        return;
+    }
+
+    ksEntries[id] = timestamp();
+    ksStarted[id] = true;
+}
+
+void trace_point_stop(word_t id)
+{
+
+    if (unlikely(id >= ARRAY_SIZE(ksStarted))) {
+        /* The assert exists in debug builds only, in release we will simply
+         * assume the trace point has not been started.
+         */
+        assert(0);
+        return
+    }
+
+    if (!ksStarted[id]) {
+        return
+    }
+
+    ksStarted[id] = false;
+    if (unlikely(id >= ARRAY_SIZE(ksEntries))) {
+        /* The assert exists in debug builds only, in release we will do
+         * nothing if the ID is out of range.
+         */
+        assert(0);
+        return;
+    }
+
+    if (likely(ksLogIndex < (seL4_LogBufferSize / sizeof(benchmark_tracepoint_log_entry_t)))) {
+        timestamp_t start = ksEntries[id];
+        timestamp_t now = timestamp();
+        assert(now >= start);
+        timestamp_t duration = now - start;
+
+        ((benchmark_tracepoint_log_entry_t *)KS_LOG_PPTR)[ksLogIndex] =
+        (benchmark_tracepoint_log_entry_t) {
+            .id       = id,
+            .duration = duration
+        };
+    }
+
+    /* increment the log index even if we have exceeded the log size, so we can
+     * tell if we need a bigger log
+     */
+    ksLogIndex++;
+    /* If this fails, an integer overflow has occurred. */
+    assert(ksLogIndex > 0);
+}
+
+#endif /* ENABLE_KERNEL_TRACEPOINTS */
+
 
 exception_t handle_SysBenchmarkFlushCaches(void)
 {
