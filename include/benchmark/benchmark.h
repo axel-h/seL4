@@ -31,18 +31,24 @@ exception_t handle_SysBenchmarkResetAllThreadsUtilisation(void);
 #endif /* CONFIG_BENCHMARK_TRACK_UTILISATION */
 #endif /* CONFIG_ENABLE_BENCHMARKS */
 
+#if defined(CONFIG_BENCHMARK_TRACK_KERNEL_ENTRIES) || defined(CONFIG_BENCHMARK_TRACK_UTILISATION)
+/* Having one global kernel entry timestamp does not work in SMP configurations,
+ * as the kernel could be entered in parallel on different cores. For now, it is
+ * assumed that benchmarking is used on single core configurations only.
+ */
+extern timestamp_t ksEnter;
+#endif /* CONFIG_BENCHMARK_TRACK_KERNEL_ENTRIES CONFIG_BENCHMARK_TRACK_UTILISATION */
+
+#ifdef CONFIG_KERNEL_LOG_BUFFER
+extern seL4_Word ksLogIndex;
+#endif /* CONFIG_KERNEL_LOG_BUFFER */
+
 #if CONFIG_MAX_NUM_TRACE_POINTS > 0
 #define TRACE_POINT_START(x) trace_point_start(x)
 #define TRACE_POINT_STOP(x)   trace_point_stop(x)
 
-#define MAX_LOG_SIZE (seL4_LogBufferSize / sizeof(benchmark_tracepoint_log_entry_t))
-
 extern timestamp_t ksEntries[CONFIG_MAX_NUM_TRACE_POINTS];
 extern bool_t ksStarted[CONFIG_MAX_NUM_TRACE_POINTS];
-extern timestamp_t ksExit;
-extern seL4_Word ksLogIndex;
-extern seL4_Word ksLogIndexFinalized;
-extern paddr_t ksUserLogBuffer;
 
 static inline void trace_point_start(word_t id)
 {
@@ -53,22 +59,23 @@ static inline void trace_point_start(word_t id)
 static inline void trace_point_stop(word_t id)
 {
     benchmark_tracepoint_log_entry_t *ksLog = (benchmark_tracepoint_log_entry_t *) KS_LOG_PPTR;
-    ksExit = timestamp();
+    timestamp_t now = timestamp();
 
     if (likely(ksUserLogBuffer != 0)) {
         if (likely(ksStarted[id])) {
             ksStarted[id] = false;
-            if (likely(ksLogIndex < MAX_LOG_SIZE)) {
+            if (likely(ksLogIndex < (seL4_LogBufferSize / sizeof(*ksLog)))) {
                 ksLog[ksLogIndex] = (benchmark_tracepoint_log_entry_t) {
                     .id = id,
-                    .duration = ksExit - ksEntries[id]
+                    .duration = now - ksEntries[id]
                 };
             }
-            /* increment the log index even if we have exceeded the log size
-             * this is so we can tell if we need a bigger log */
+            /* Increment the log index even if we have exceeded the actual log
+             * size, so we can tell if we need a bigger log.
+             */
             ksLogIndex++;
         }
-        /* If this fails integer overflow has occurred. */
+        /* If this fails an integer overflow has occurred. */
         assert(ksLogIndex > 0);
     }
 }

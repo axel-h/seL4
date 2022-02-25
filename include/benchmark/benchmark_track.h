@@ -7,7 +7,7 @@
 #pragma once
 
 #include <config.h>
-#include <arch/benchmark.h>
+#include <benchmark/benchmark.h>
 #include <sel4/benchmark_track_types.h>
 #include <sel4/arch/constants.h>
 #include <machine/io.h>
@@ -19,17 +19,6 @@
 #define TRACK_KERNEL_ENTRIES 1
 extern kernel_entry_t ksKernelEntry;
 #ifdef CONFIG_BENCHMARK_TRACK_KERNEL_ENTRIES
-/**
- *  Calculate the maximum number of kernel entries that can be tracked,
- *  limited by the log buffer size. This is also the number of ksLog entries.
- *
- */
-#define MAX_LOG_SIZE (seL4_LogBufferSize / \
-             sizeof(benchmark_track_kernel_entry_t))
-
-extern timestamp_t ksEnter;
-extern seL4_Word ksLogIndex;
-extern seL4_Word ksLogIndexFinalized;
 
 /**
  * @brief Fill in logging info for kernel entries

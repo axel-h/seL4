@@ -13,6 +13,22 @@
 #include <benchmark/benchmark.h>
 #include <benchmark/benchmark_utilisation.h>
 
+#ifdef CONFIG_KERNEL_LOG_BUFFER
+/* The buffer is used differently depending on the configuration:
+ *   - CONFIG_BENCHMARK_TRACK_KERNEL_ENTRIES: benchmark_track_kernel_entry_t
+ *   - CONFIG_MAX_NUM_TRACE_POINTS > 0: benchmark_tracepoint_log_entry_t
+ */
+seL4_Word ksLogIndex = 0;
+#endif /* CONFIG_KERNEL_LOG_BUFFER */
+
+#if defined(CONFIG_BENCHMARK_TRACK_KERNEL_ENTRIES) || defined(CONFIG_BENCHMARK_TRACK_UTILISATION)
+timestamp_t ksEnter;
+#endif /* CONFIG_BENCHMARK_TRACK_KERNEL_ENTRIES CONFIG_BENCHMARK_TRACK_UTILISATION */
+
+#if CONFIG_MAX_NUM_TRACE_POINTS > 0
+timestamp_t ksEntries[CONFIG_MAX_NUM_TRACE_POINTS];
+bool_t ksStarted[CONFIG_MAX_NUM_TRACE_POINTS];
+#endif /* CONFIG_MAX_NUM_TRACE_POINTS > 0 */
 
 exception_t handle_SysBenchmarkFlushCaches(void)
 {
@@ -61,8 +77,7 @@ exception_t handle_SysBenchmarkResetLog(void)
 exception_t handle_SysBenchmarkFinalizeLog(void)
 {
 #ifdef CONFIG_KERNEL_LOG_BUFFER
-    ksLogIndexFinalized = ksLogIndex;
-    setRegister(NODE_STATE(ksCurThread), capRegister, ksLogIndexFinalized);
+    setRegister(NODE_STATE(ksCurThread), capRegister, ksLogIndex);
 #endif /* CONFIG_KERNEL_LOG_BUFFER */
 
 #ifdef CONFIG_BENCHMARK_TRACK_UTILISATION
