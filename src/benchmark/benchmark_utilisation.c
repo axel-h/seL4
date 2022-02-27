@@ -13,21 +13,19 @@
 
 void benchmark_track_utilisation_dump(void)
 {
-    uint64_t *buffer = ((uint64_t *) & (((seL4_IPCBuffer *)lookupIPCBuffer(true, NODE_STATE(ksCurThread)))->msg[0]));
-    tcb_t *tcb = NULL;
     word_t tcb_cptr = getRegister(NODE_STATE(ksCurThread), capRegister);
-    lookupCap_ret_t lu_ret;
-    word_t cap_type;
-
-    lu_ret = lookupCap(NODE_STATE(ksCurThread), tcb_cptr);
+    lookupCap_ret_t lu_ret = lookupCap(NODE_STATE(ksCurThread), tcb_cptr);
     /* ensure we got a TCB cap */
-    cap_type = cap_get_capType(lu_ret.cap);
+    word_t cap_type = cap_get_capType(lu_ret.cap);
     if (cap_type != cap_thread_cap) {
         userError("SysBenchmarkFinalizeLog: cap is not a TCB, halting");
         return;
     }
 
-    tcb = TCB_PTR(cap_thread_cap_get_capTCBPtr(lu_ret.cap));
+    tcb_t * tcb = TCB_PTR(cap_thread_cap_get_capTCBPtr(lu_ret.cap));
+
+    seL4_IPCBuffer *ipc_buffer = (seL4_IPCBuffer *)lookupIPCBuffer(true, NODE_STATE(ksCurThread))
+    uint64_t *buffer = (uint64_t *)(ipc_buffer->msg);
 
     /* Selected TCB counters */
     buffer[BENCHMARK_TCB_UTILISATION] = tcb->benchmark.utilisation; /* Requested thread utilisation */
