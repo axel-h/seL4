@@ -22,7 +22,8 @@ typedef enum {
     VSPACE_ACCESS_SUCCESSFUL        = 0,
     VSPACE_INVALID_ROOT             = 1,
     VSPACE_LOOKUP_FAILED            = 2,
-    VSPACE_INVALID_ALIGNMENT        = 3
+    VSPACE_INVALID_ALIGNMENT        = 3,
+    VSPACE_INVALID_PTE              = 4
 } vspaceAccessResult_t;
 
 typedef struct readWordFromVSpace_ret {
