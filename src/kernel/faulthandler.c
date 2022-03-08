@@ -48,15 +48,17 @@ bool_t isValidFaultHanderCap(cap_t handlerCap)
 
 #ifdef CONFIG_KERNEL_MCS
 
-static bool_t sendFaultIPC(tcb_t *tptr, cap_t handlerCap, bool_t can_donate)
+static int sendFaultIPC(tcb_t *tptr, cap_t handlerCap, bool_t can_donate)
 {
     sendIPC(true, false,
             cap_endpoint_cap_get_capEPBadge(handlerCap),
             cap_endpoint_cap_get_capCanGrant(handlerCap),
             cap_endpoint_cap_get_capCanGrantReply(handlerCap),
-            can_donate, tptr,
+            can_donate,
+            tptr,
             EP_PTR(cap_endpoint_cap_get_capEPPtr(handlerCap)));
 }
+
 
 void handleTimeout(tcb_t *tptr)
 {
