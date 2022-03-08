@@ -43,7 +43,6 @@ void unmapPageTable(asid_t, vptr_t vaddr, pte_t *pt);
 void unmapPage(vm_page_size_t page_size, asid_t asid, vptr_t vptr, pptr_t pptr);
 void deleteASID(asid_t asid, pte_t *vspace);
 void deleteASIDPool(asid_t asid_base, asid_pool_t *pool);
-bool_t CONST isValidVTableRoot(cap_t cap);
 vm_rights_t CONST maskVMRights(vm_rights_t vm_rights,
                                seL4_CapRights_t cap_rights_mask);
 exception_t decodeRISCVMMUInvocation(word_t label, word_t length, cptr_t cptr,
@@ -54,4 +53,3 @@ exception_t performPageTableInvocationUnmap(cap_t cap, cte_t *ctSlot);
 exception_t performPageInvocationMapPTE(cap_t cap, cte_t *ctSlot,
                                         pte_t pte, pte_t *base);
 exception_t performPageInvocationUnmap(cap_t cap, cte_t *ctSlot);
-void setVMRoot(tcb_t *tcb);
