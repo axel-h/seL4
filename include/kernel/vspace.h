@@ -10,6 +10,8 @@
 
 exception_t checkValidIPCBuffer(vptr_t vptr, cap_t cap);
 word_t *PURE lookupIPCBuffer(bool_t isReceiver, tcb_t *thread);
+bool_t CONST isValidVTableRoot(cap_t cap);
+void setVMRoot(tcb_t *tcb);
 
 exception_t handleVMFault(tcb_t *thread, vm_fault_type_t vm_faultType);
 

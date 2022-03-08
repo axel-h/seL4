@@ -30,8 +30,6 @@ void write_it_asid_pool(cap_t it_ap_cap, cap_t it_pd_cap);
 extern char arm_vector_table[1];
 
 pde_t *pageTableMapped(asid_t asid, vptr_t vaddr, pte_t *pt);
-void setVMRoot(tcb_t *tcb);
-bool_t CONST isValidVTableRoot(cap_t cap);
 
 vm_rights_t CONST maskVMRights(vm_rights_t vm_rights,
                                seL4_CapRights_t cap_rights_mask);
