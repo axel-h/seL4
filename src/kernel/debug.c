@@ -64,6 +64,9 @@ static void debug_printThreadStack(tcb_t *tptr, const char *prefix)
              */
             printf("invalid vspace\n");
             return;
+        case VSPACE_INVALID_PTE:
+            printf("invalid PTE (phys addr 0x%"SEL4_PRIx_word")", ret.paddr);
+            break;
         case VSPACE_INVALID_ALIGNMENT:
             printf("invalid alignment (phys addr 0x%"SEL4_PRIx_word")", ret.paddr);
             break;

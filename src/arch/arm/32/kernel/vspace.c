@@ -2785,44 +2785,11 @@ void kernelDataAbort(word_t pc)
 
 #ifdef CONFIG_PRINTING
 
-readWordFromVSpace_ret_t Arch_readWordFromVSpace(vspace_root_t *vspace_root,
-                                                 word_t vaddr)
+static readWordFromVSpace_ret_t readWordFromPhysBase(paddr_t paddr_base,
+                                                     word_t vaddr,
+                                                     word_t vaddr_bits)
 {
-    paddr_t paddr_base;
-    word_t mask;
-
-    pde_t *pdSlot = lookupPDSlot(vspace_root, vaddr);
-    if (pde_ptr_get_pdeType(pdSlot) == pde_pde_section) {
-        paddr_base = pde_pde_section_ptr_get_address(pdSlot);
-        mask = MASK(ARMSectionBits);
-    } else {
-        lookupPTSlot_ret_t ptSlot = lookupPTSlot(vspace_root, vaddr);
-#ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
-        if (ptSlot.status == EXCEPTION_NONE && pte_ptr_get_pteType(ptSlot.ptSlot) == pte_pte_small) {
-            paddr_base = pte_pte_small_ptr_get_address(ptSlot.ptSlot);
-            if (pte_pte_small_ptr_get_contiguous_hint(ptSlot.ptSlot)) {
-                mask = MASK(ARMLargePageBits);
-            } else {
-                mask = MASK(ARMSmallPageBits);
-            }
-#else /* not CONFIG_ARM_HYPERVISOR_SUPPORT */
-        if (ptSlot.status == EXCEPTION_NONE && pte_ptr_get_pteType(ptSlot.ptSlot) == pte_pte_small) {
-            paddr_base = pte_pte_small_ptr_get_address(ptSlot.ptSlot);
-            mask =MASK(ARMSmallPageBits);
-        } else if (ptSlot.status == EXCEPTION_NONE && pte_ptr_get_pteType(ptSlot.ptSlot) == pte_pte_large) {
-            paddr_base = pte_pte_large_ptr_get_address(ptSlot.ptSlot);
-            mask = MASK(ARMLargePageBits);
-#endif /* [not] CONFIG_ARM_HYPERVISOR_SUPPORT */
-        } else {
-            return (readWordFromVSpace_ret_t) {
-                .status = VSPACE_LOOKUP_FAILED,
-                .paddr  = 0,
-                .value  = 0
-            };
-        }
-    }
-
-    word_t offset = vaddr & mask;
+    word_t offset = vaddr & MASK(vaddr_bits);
     paddr_t paddr = paddr_base + offset;
     pptr_t pptr = (pptr_t)paddr_to_pptr(paddr);
 
@@ -2839,6 +2806,58 @@ readWordFromVSpace_ret_t Arch_readWordFromVSpace(vspace_root_t *vspace_root,
         .status = VSPACE_ACCESS_SUCCESSFUL,
         .paddr  = paddr,
         .value  = *((word_t *)pptr)
+    };
+}
+
+
+readWordFromVSpace_ret_t Arch_readWordFromVSpace(vspace_root_t *vspace_root,
+                                                 word_t vaddr)
+{
+    pde_t *pdSlot = lookupPDSlot(vspace_root, vaddr);
+    if (pde_ptr_get_pdeType(pdSlot) == pde_pde_section) {
+        return readWordFromPhysBase(pde_pde_section_ptr_get_address(pdSlot),
+                                    vaddr, ARMSectionBits);
+    }
+
+    lookupPTSlot_ret_t ptSlot = lookupPTSlot(vspace_root, vaddr);
+    if (ptSlot.status != EXCEPTION_NONE) {
+        return (readWordFromVSpace_ret_t) {
+            .status = VSPACE_LOOKUP_FAILED,
+            .paddr  = 0,
+            .value  = 0
+        };
+    }
+
+    switch (pte_ptr_get_pteType(ptSlot.ptSlot)) {
+        case pte_pte_small:
+            return readWordFromPhysBase(
+                        pte_pte_small_ptr_get_address(ptSlot.ptSlot),
+                        vaddr,
+#ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
+                        (pte_pte_small_ptr_get_contiguous_hint(ptSlot.ptSlot)) ?
+                        ARMLargePageBits : ARMSmallPageBits
+#else /* not CONFIG_ARM_HYPERVISOR_SUPPORT */
+                        ARMSmallPageBits
+#endif /* [not] CONFIG_ARM_HYPERVISOR_SUPPORT */
+                    );
+
+#ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
+        case pte_pte_large:
+            return readWordFromPhysBase(
+                        pte_pte_large_ptr_get_address(ptSlot.ptSlot)
+                        vaddr,
+                        ARMLargePageBits);
+#endif /* CONFIG_ARM_HYPERVISOR_SUPPORT */
+
+        default:
+            /* unsupposed PTE ??? */
+            break;
+    }
+
+    return (readWordFromVSpace_ret_t) {
+        .status = VSPACE_INVALID_PTE,
+        .paddr  = 0,
+        .value  = 0
     };
 }
 
