@@ -6,14 +6,17 @@
 
 ''' generate a yaml file with memory region info from the device tree '''
 
+from __future__ import annotations
+import sys
 import argparse
 import yaml
-from typing import List
 import hardware
 from hardware.config import Config
 from hardware.fdt import FdtParser
 from hardware.memory import Region
 from hardware.utils.rule import HardwareYaml
+
+assert sys.version_info >= (3, 7)
 
 
 def make_yaml_list_of_regions(regions: List[Region]) -> List:

@@ -4,14 +4,16 @@
 # SPDX-License-Identifier: GPL-2.0-only
 #
 
-from typing import List, Set
-
+from __future__ import annotations
+import sys
 import hardware
 from hardware.config import Config
 from hardware.device import WrappedNode
 from hardware.fdt import FdtParser
 from hardware.memory import Region
 from hardware.utils.rule import KernelRegionGroup
+
+assert sys.version_info >= (3, 7)
 
 
 def get_memory_regions(tree: FdtParser) -> Set[Region]:

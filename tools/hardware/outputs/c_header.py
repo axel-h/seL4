@@ -5,14 +5,17 @@
 #
 
 ''' generate a c header file from the device tree '''
+from __future__ import annotations
+import sys
 import argparse
 import builtins
 import jinja2
-from typing import Dict, List
 import hardware
 from hardware.config import Config
 from hardware.fdt import FdtParser
 from hardware.utils.rule import HardwareYaml
+
+assert sys.version_info >= (3, 7)
 
 
 HEADER_TEMPLATE = '''/*
