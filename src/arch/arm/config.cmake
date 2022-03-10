@@ -10,38 +10,74 @@ if(KernelArchARM)
     set_property(TARGET kernel_config_target APPEND PROPERTY TOPLEVELTYPES pde_C)
 endif()
 
-set(KernelArmPASizeBits40 OFF)
-set(KernelArmPASizeBits44 OFF)
-if(KernelArmCortexA35)
+if(KernelArmCortexA7)
+    # nothing special
+elseif(KernelArmCortexA8)
+    # nothing special
+elseif(KernelArmCortexA9)
+    # nothing special
+elseif(KernelArmCortexA15)
+    # supports a 40-bit physical address space via LPAE
+elseif(KernelArmCortexA17)
+    # supports a 40-bit physical address space via LPAE
+elseif(KernelArmCortexA35)
     set(KernelArmICacheVIPT ON)
-    set(KernelArmPASizeBits40 ON)
-    math(EXPR KernelPaddrUserTop "(1 << 40)")
+    set(KernelPhysAddressSpaceBits 40)
 elseif(KernelArmCortexA53)
     set(KernelArmICacheVIPT ON)
-    set(KernelArmPASizeBits40 ON)
-    math(EXPR KernelPaddrUserTop "(1 << 40)")
+    set(KernelPhysAddressSpaceBits 40)
 elseif(KernelArmCortexA55)
     set(KernelArmICacheVIPT ON)
-    set(KernelArmPASizeBits40 ON)
-    math(EXPR KernelPaddrUserTop "(1 << 40)")
+    set(KernelPhysAddressSpaceBits 40)
 elseif(KernelArmCortexA57)
-    set(KernelArmPASizeBits44 ON)
-    math(EXPR KernelPaddrUserTop "(1 << 44)")
+    set(KernelPhysAddressSpaceBits 44)
+#elseif(KernelArmCortexA65)
+#    set(KernelPhysAddressSpaceBits 44)
 elseif(KernelArmCortexA72)
-    # For Cortex-A72 in AArch64 state, the physical address range is 44 bits
-    # (https://developer.arm.com/documentation/100095/0001/memory-management-unit/about-the-mmu)
-    set(KernelArmPASizeBits44 ON)
-    math(EXPR KernelPaddrUserTop "(1 << 44)")
+    # https://developer.arm.com/documentation/100095/0003/Memory-Management-Unit/About-the-MMU
+    set(KernelPhysAddressSpaceBits 44)
+#elseif(KernelArmCortexA73)
+#    set(KernelPhysAddressSpaceBits 40)
+#elseif(KernelArmCortexA75)
+#    set(KernelPhysAddressSpaceBits 44)
+#elseif(KernelArmCortexA76)
+#    set(KernelPhysAddressSpaceBits 40)
+#elseif(KernelArmCortexA77)
+#    set(KernelPhysAddressSpaceBits 40)
+#elseif(KernelArmCortexA78)
+#    set(KernelPhysAddressSpaceBits 40)
+#elseif(KernelArmCortexA78AE)
+#    set(KernelPhysAddressSpaceBits 48)
+#elseif(KernelArmCortexA510)
+#    set(KernelPhysAddressSpaceBits 40)
+#elseif(KernelArmCortexA710)
+#    set(KernelPhysAddressSpaceBits 40)
+else()
+    # In ARMv8, ID_AA64MMFR0_EL1.PARange gives the physical address space size,
+    # values are:
+    #   0:     32 bits (4 GB)
+    #   1:     36 bits (64 GB)
+    #   2:     40 bits (1 TB)
+    #   3:     42 bits (4 TB)
+    #   4:     44 bits (16 TB)
+    #   5:     48 bits (256 TB)
+    #   6:     52 bits (4 PB, added in Armv8.2-A, implies FEAT_LPA)
+    #   7-15:  reserved
+    # A general comparison table for can be found at
+    # https://developer.arm.com/-/media/Arm%20Developer%20Community/PDF/Cortex-A%20R%20M%20datasheets/Arm%20Cortex-A%20Comparison%20Table_v4.ashx
+    message(FATAL_ERROR "unsupported ARM core")
 endif()
-config_set(KernelArmPASizeBits40 ARM_PA_SIZE_BITS_40 "${KernelArmPASizeBits40}")
-config_set(KernelArmPASizeBits44 ARM_PA_SIZE_BITS_44 "${KernelArmPASizeBits44}")
+
 config_set(KernelArmICacheVIPT ARM_ICACHE_VIPT "${KernelArmICacheVIPT}")
 
+# In 32-bit mode (AARCH32) seL4 can handle a maximum physical address space of
+# 32 bits, even if the core supports LPAE that technically allows mapping pages
+# from larger addresses.
 if(KernelSel4ArchAarch32)
-    # 64-bit targets may be building in 32-bit mode,
-    # so make sure maximum paddr is 32-bit.
-    math(EXPR KernelPaddrUserTop "(1 << 32) - 1")
+    set(KernelPhysAddressSpaceBits 32)
 endif()
+
+config_set(KernelArmICacheVIPT ARM_ICACHE_VIPT "${KernelArmICacheVIPT}")
 
 include(src/arch/arm/armv/armv7-a/config.cmake)
 include(src/arch/arm/armv/armv8-a/config.cmake)
@@ -91,7 +127,7 @@ config_option(
 
 config_option(KernelArmGicV3 ARM_GIC_V3_SUPPORT "Build support for GICv3" DEFAULT OFF)
 
-if(KernelArmPASizeBits40 AND ARM_HYPERVISOR_SUPPORT)
+if((KernelPhysAddressSpaceBits EQUAL 40) AND ARM_HYPERVISOR_SUPPORT)
     config_set(KernelAarch64VspaceS2StartL1 AARCH64_VSPACE_S2_START_L1 "ON")
 else()
     config_set(KernelAarch64VspaceS2StartL1 AARCH64_VSPACE_S2_START_L1 "OFF")
