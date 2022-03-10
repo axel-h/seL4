@@ -4,10 +4,13 @@
 # SPDX-License-Identifier: GPL-2.0-only
 #
 
-from typing import List
-
+from __future__ import annotations
+import sys
 from hardware.device import WrappedNode
 from hardware.fdt import FdtParser
+
+assert sys.version_info >= (3, 7)
+
 
 # documentation for CPU bindings:
 # https://www.kernel.org/doc/Documentation/devicetree/bindings/arm/cpus.yaml
