@@ -14,9 +14,9 @@ class Config:
     ''' Abstract config class '''
     arch = 'unknown'
 
-    def __init__(self, sel4arch, addrspace_max):
+    def __init__(self, sel4arch, phys_addr_space_bits):
         self.sel4arch = sel4arch
-        self.addrspace_max = addrspace_max
+        self.phys_addr_space_bits = phys_addr_space_bits
 
     def get_kernel_phys_align(self) -> int:
         ''' Used to align the base of physical memory. Returns alignment size in bits. '''
@@ -38,6 +38,9 @@ class Config:
         '''
         return self.get_page_bits()
 
+    def get_phys_addr_space_bits(self) -> int:
+        ''' Return the physical address space in 2^n bits. '''
+        return self.phys_addr_space_bits
 
 class ARMConfig(Config):
     ''' Config class for ARM '''
@@ -67,7 +70,7 @@ class RISCVConfig(Config):
         raise ValueError('Unsupported sel4arch "{}" specified.'.format(self.sel4arch))
 
 
-def get_arch_config(sel4arch: str, addrspace_max: int) -> Config:
+def get_arch_config(sel4arch: str, phys_addr_space_bits: int) -> Config:
     ''' Return an appropriate Config object for the given architecture '''
 
     for (ctor, arch_list) in [
@@ -75,6 +78,6 @@ def get_arch_config(sel4arch: str, addrspace_max: int) -> Config:
         (RISCVConfig, ['riscv32', 'riscv64']),
     ]:
         if sel4arch in arch_list:
-            return ctor(sel4arch, addrspace_max)
+            return ctor(sel4arch, phys_addr_space_bits)
 
     raise ValueError('Unsupported sel4arch "{}" specified.'.format(sel4arch))
