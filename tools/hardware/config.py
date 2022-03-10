@@ -45,7 +45,7 @@ class Config:
         pass
 
 
-class ARMConfig(Config):
+class Config_ARM(Config):
     ''' Config class for ARM '''
     arch = 'arm'
     SUPERSECTION_BITS = 24  # 2^24 = 16 MiByte
@@ -69,7 +69,7 @@ class ARMConfig(Config):
         return ret, extra_reserved, physBase
 
 
-class RISCVConfig(Config):
+class Config_RISCV(Config):
     ''' Config class for RISCV '''
     arch = 'riscv'
     MEGAPAGE_BITS_RV32 = 22  # 2^22 = 4 MiByte
@@ -112,8 +112,8 @@ class RISCVConfig(Config):
 def get_arch_config(sel4arch: str, addrspace_max: int) -> Config:
     ''' Return an appropriate Config object for the given architecture '''
     if sel4arch in ['aarch32', 'aarch64', 'arm_hyp']:
-        return ARMConfig(sel4arch, addrspace_max)
+        return Config_ARM(sel4arch, addrspace_max)
     elif sel4arch in ['riscv32', 'riscv64']:
-        return RISCVConfig(sel4arch, addrspace_max)
+        return Config_RISCV(sel4arch, addrspace_max)
     else:
         raise ValueError('Unsupported sel4arch "{}" specified.'.format(sel4arch))
