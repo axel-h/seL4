@@ -70,6 +70,12 @@ if(DEFINED CALLED_declare_default_headers)
         math(EXPR BITS "${BITS} + 1")
         math(EXPR MAX_NUM_IRQ "${MAX_NUM_IRQ} >> 1")
     endwhile()
+
+    math(EXPR TMP_SLOTS "1 << ${BITS}")
+    if("${TMP_SLOTS}" LESS "${MAX_NUM_IRQ}")
+        message(FATAL_ERROR "${TMP_SLOTS}" LESS "${MAX_NUM_IRQ}")
+    endif()
+
     set(CONFIGURE_IRQ_SLOT_BITS "${BITS}" CACHE INTERNAL "")
     if(NOT DEFINED CONFIGURE_TIMER_PRECISION)
         set(CONFIGURE_TIMER_PRECISION "0")
