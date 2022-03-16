@@ -6,16 +6,17 @@
 
 ''' generate a header file for the elfloader from a device tree '''
 
+from __future__ import annotations
+import sys
 import argparse
 import builtins
 import logging
 import pyfdt.pyfdt
-
 from jinja2 import Environment, BaseLoader
-from typing import List
-
 from hardware import config, device, fdt
 from hardware.utils import cpu, memory, rule
+
+assert sys.version_info >= (3, 7)
 
 
 HEADER_TEMPLATE = '''/*
@@ -173,6 +174,6 @@ def run(tree: fdt.FdtParser, hardware: rule.HardwareYaml, config: config.Config,
     args.elfloader_out.close()
 
 
-def add_args(parser):
+def add_args(parser: argparse.ArgumentParser):
     parser.add_argument('--elfloader-out', help='output file for elfloader header',
                         type=argparse.FileType('w'))
