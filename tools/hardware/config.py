@@ -70,11 +70,13 @@ class Config_ARM(Config):
 
 
 class Config_RISCV(Config):
-    ''' Config class for RISCV '''
+    ''' Abstract config class for RISC-V architecture'''
     arch = 'riscv'
-    MEGAPAGE_BITS_RV32 = 22  # 2^22 = 4 MiByte
-    MEGAPAGE_BITS_RV64 = 21  # 2^21 = 2 MiByte
-    MEGA_PAGE_SIZE_RV64 = 2**MEGAPAGE_BITS_RV64
+
+
+class Config_RISCV32(Config_RISCV):
+    ''' Config class for RISC-V 32-bit '''
+    MEGAPAGE_BITS = 22  # 2^22 = 4 MiByte
 
     def get_bootloader_reserve(self) -> int:
         ''' OpenSBI reserved the first 2 MiByte of physical memory on rv64,
@@ -99,14 +101,17 @@ class Config_RISCV(Config):
         return ret, extra_reserved, physBase
 
     def get_device_page_bits(self) -> int:
-        ''' Get page size in bits for mapping devices for this arch '''
-        if (self.sel4arch == 'riscv32'):
-            # 4MiB device pages
-            return self.MEGAPAGE_BITS_RV32
-        elif (self.sel4arch == 'riscv64'):
-            # 2MiB device pages for sv39 and sv48
-            return self.MEGAPAGE_BITS_RV64
-        raise ValueError('Unsupported sel4arch "{}" specified.'.format(self.sel4arch))
+        ''' kernel devices are mapped into megapages '''
+        return self.MEGAPAGE_BITS
+
+
+class Config_RISCV64(Config_RISCV):
+    ''' Config class for RISC-V 64-bit '''
+    MEGAPAGE_BITS = 21  # 2^21 = 2 MiByte
+
+    def get_device_page_bits(self) -> int:
+        ''' kernel devices are mapped into megapages '''
+        return self.MEGAPAGE_BITS
 
 
 def get_arch_config(sel4arch: str, addrspace_max: int) -> Config:
@@ -119,8 +124,9 @@ def get_arch_config(sel4arch: str, addrspace_max: int) -> Config:
         raise ValueError('Unsupported sel4arch "{}" specified.'.format(sel4arch))
 
     for (ctor, arch_list) in [
-        (Config_ARM,   ['aarch32', 'aarch64', 'arm_hyp']),
-        (Config_RISCV, ['riscv32', 'riscv64']),
+        (Config_ARM,     ['aarch32', 'aarch64', 'arm_hyp']),
+        (Config_RISCV32, ['riscv32']),
+        (Config_RISCV64, ['riscv64']),
     ]:
         if sel4arch in arch_list:
             return ctor(sel4arch, phys_addr_space_bits)
