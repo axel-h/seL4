@@ -88,20 +88,26 @@ class RISCVConfig(Config):
 
     def get_device_page_bits(self) -> int:
         ''' Get page size in bits for mapping devices for this arch '''
-        if (self.sel4arch == 'riscv32'):
-            # 4MiB device pages
-            return self.MEGAPAGE_BITS_RV32
-        elif (self.sel4arch == 'riscv64'):
-            # 2MiB device pages for sv39 and sv48
-            return self.MEGAPAGE_BITS_RV64
-        raise ValueError('Unsupported sel4arch "{}" specified.'.format(self.sel4arch))
+
+        bit_sizes = {
+            'riscv32': self.MEGAPAGE_BITS_RV32, # 4MiB device pages
+            'riscv64': self.MEGAPAGE_BITS_RV64, # 2MiB device pages for sv39 and sv48
+        }.get(self.sel4arch);
+
+        if bit_size is None:
+            raise ValueError('Unsupported sel4arch "{}" specified.'.format(self.sel4arch))
+
+        return bit_size
 
 
 def get_arch_config(sel4arch: str, addrspace_max: int) -> Config:
     ''' Return an appropriate Config object for the given architecture '''
-    if sel4arch in ['aarch32', 'aarch64', 'arm_hyp']:
-        return ARMConfig(sel4arch, addrspace_max)
-    elif sel4arch in ['riscv32', 'riscv64']:
-        return RISCVConfig(sel4arch, addrspace_max)
-    else:
-        raise ValueError('Unsupported sel4arch "{}" specified.'.format(sel4arch))
+
+    for ctor, arch_list in {
+        ARMConfig:   ['aarch32', 'aarch64', 'arm_hyp']),
+        RISCVConfig: ['riscv32', 'riscv64']),
+    }:
+        if sel4arch in arch_list:
+            return ctor(sel4arch, addrspace_max)
+
+    raise ValueError('Unsupported sel4arch "{}" specified.'.format(sel4arch))
