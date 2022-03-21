@@ -29,18 +29,28 @@
 #define seL4_MinUntypedBits     4
 #define seL4_MaxUntypedBits     29
 
-/* RISC-V Sv32 pages/ptes sizes */
-#define seL4_PageTableEntryBits 2
-#define seL4_PageTableIndexBits 10
-
+/* In the RISC-V architecture (Sv32) a page is 4 KiB and each page table uses
+ * exactly one page. A VSpace is simply the root page table. Since each page
+ * table entry has 2^2 = 4 byte = 32 bit per entry, a page table has 1024
+ * entries. Thus each page table level can cover 2^10 (=1024) times the size of
+ * one entry, which give 4 MiB (2^22) "megapages"
+ */
 #define seL4_PageBits           12
-#define seL4_LargePageBits      22
-#define seL4_PageTableBits      12
+#define seL4_PageTableBits      seL4_PageBits
 #define seL4_VSpaceBits         seL4_PageTableBits
 
-#define seL4_NumASIDPoolsBits    5
+#define seL4_PageTableEntryBits 2
+#define seL4_PageTableIndexBits (seL4_PageTableBits - seL4_PageTableEntryBits)
+
+/* megapages are LargePages in the seL4 terminology */
+#define seL4_LargePageBits      (seL4_PageBits + seL4_PageTableIndexBits)
+
+
+/* The ASID pool uses one page */
+#define seL4_ASIDPoolBits       seL4_PageBits
+#define seL4_NumASIDPoolsBits   5
 #define seL4_ASIDPoolIndexBits  4
-#define seL4_ASIDPoolBits       12
+
 #ifndef __ASSEMBLER__
 
 typedef enum {
