@@ -62,7 +62,6 @@ typedef pte_t pde_t;
 #define PT_INDEX_BITS   seL4_PageTableIndexBits
 
 #define WORD_BITS   (8 * sizeof(word_t))
-#define WORD_PTR(r) ((word_t *)(r))
 
 static inline bool_t CONST cap_get_archCapIsPhysical(cap_t cap)
 {
