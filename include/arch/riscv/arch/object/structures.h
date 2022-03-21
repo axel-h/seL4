@@ -54,7 +54,6 @@ typedef pte_t pde_t;
 #define PTE_PTR(r) ((pte_t *)(r))
 #define PTE_REF(p) ((word_t)(p))
 
-#define PT_SIZE_BITS 12
 #define PT_PTR(r) ((pte_t *)(r))
 #define PT_REF(p) ((word_t)(p))
 
@@ -94,10 +93,11 @@ static inline word_t CONST cap_get_archCapSizeBits(cap_t cap)
 
     switch (ctag) {
     case cap_frame_cap:
+        /* ToDo: could simply use seL4_PageBits here? */
         return pageBitsForSize(cap_frame_cap_get_capFSize(cap));
 
     case cap_page_table_cap:
-        return PT_SIZE_BITS;
+        return seL4_PageTableBits;
 
     case cap_asid_control_cap:
         return 0;
