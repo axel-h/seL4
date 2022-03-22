@@ -51,6 +51,8 @@ if(DEFINED CALLED_declare_default_headers)
     # calculate the irq cnode size based on MAX_NUM_IRQ
     if("${KernelArch}" STREQUAL "riscv")
         math(EXPR MAX_NUM_IRQ "${CONFIGURE_MAX_IRQ} + 2")
+    elseif(KernelArchACME)
+        math(EXPR MAX_NUM_IRQ "${CONFIGURE_MAX_IRQ} + 1")
     else()
         if(
             DEFINED KernelMaxNumNodes
