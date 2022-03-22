@@ -3058,8 +3058,8 @@ if __name__ == '__main__':
                 print("end", file=out_file)
     else:
         print("#pragma once\n", file=out_file)
-        print('\n'.join(map(lambda x: '#include <%s>' % x,
-                            INCLUDES[options.environment])), file=out_file)
+        for i in INCLUDES[options.environment]:
+            print('#include <%s>\n' % i, file=out_file)
         for e in det_values(blocks, unions):
             e.generate(options)
 
