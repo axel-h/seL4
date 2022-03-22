@@ -1420,8 +1420,9 @@ class TaggedUnion:
                  for size, offset, position in self.tag_offsets]
         return reduce(lambda x, y: x | y, parts, 0)
 
-    def generate_hol_proofs(self, params, type_map):
-        output = params.output
+    def generate_hol_proofs(self, params, type_map, ouput=None):
+        if ouput is None:
+            output = params.output
 
         # Add fixed simp rule for struct
         print("lemmas %(name)s_C_words_C_fl_simp[simp] = "
@@ -1646,8 +1647,9 @@ class TaggedUnion:
                                      params, self.name, type_map, params.toplevel_types,
                                      'ptr_union_set_spec', substs)
 
-    def generate_hol_defs(self, params):
-        output = params.output
+    def generate_hol_defs(self, params, output=None):
+        if output is Nonen:
+            output = params.output
 
         empty_blocks = {}
 
@@ -2465,8 +2467,9 @@ class Block:
 
         return empty
 
-    def generate_hol_proofs(self, params, type_map):
-        output = params.output
+    def generate_hol_proofs(self, params, type_map, output=None):
+        if output is None:
+            output = params.output
 
         if self.tagged:
             return
@@ -2792,6 +2795,21 @@ class Block:
 temp_output_files = []
 
 
+class Theory(object):
+    def __init__(self, name):
+        self.name = name
+        self.imports = []
+
+    def add_import(self, imp):
+        self.imports += imp
+
+    def get_lines(self):
+        return [
+            f"theory {self.name}",
+            f"imports {imports[0]}" if 1 == len(imports) \
+            else ["imports", [f"  {imp}" for imp in imports]]]
+
+
 class OutputFile(object):
     def __init__(self, filename, mode='w', atomic=True):
         """Open an output file for writing, recording its filename.
@@ -2812,6 +2830,37 @@ class OutputFile(object):
     def write(self, *args, **kwargs):
         self.file.write(*args, **kwargs)
 
+    def writeln(self, *args):
+        from collections.abc import Iterable   # import directly from collections for Python < 3.3
+        for arg in args:
+            if arg is None:
+                # do nothing for a None element, so this is really different
+                # from an empty string, which creates an empty line
+                continue
+            if isinstance(arg, str):
+                # strings are written
+                self.write(f"{arg}\n")
+            elif callable(arg):
+                # function are called and the result is evaluated again
+                self.writeln(arg())
+            elif isinstance(arg, Iterable):
+                # anything that is iterable is evaluated one-by-one
+                for e in arg:
+                    self.writeln(e)
+            else:
+                # anything else it considered an error
+                raise ValueError("unknown type")
+
+    def writeln_imports(self, imports):
+        if isinstance(imports, str):
+            out_file.writeln(f"imports {imports}")
+        elif isinstance(imports, Iterable):
+            out_file.writeln(
+                "imports",
+                [f"  {imp}" for imp in imports])
+        else:
+            # anything else it considered an error
+            raise ValueError("unknown type")
 
 def finish_output():
     global temp_output_files
@@ -2949,54 +2998,44 @@ if __name__ == '__main__':
 
     options.names = pruned_names
 
+
     # Generate the output
     if options.hol_defs:
         # Fetch kernel
+        imp = os.path.relpath(options.cspec_dir,
+                              os.path.dirname(out_file.filename))
+        imports = [ f'"{imp}/KernelState_C"' ]
+
+        if options.multifile_base is not None:
+            imports.extend([
+                f"  {module_name}_{e.name}_defs"
+                for e in det_values(blocks, unions)
+            ])
+
+        out_file.writeln(f"theory {module_name}_defs")
+        out_file.writeln_imports(imports)
+        out_file.writeln("begin")
+
         if options.multifile_base is None:
-            print("theory %s_defs" % module_name, file=out_file)
-            print("imports \"%s/KernelState_C\"" % (
-                os.path.relpath(options.cspec_dir,
-                                os.path.dirname(out_file.filename))), file=out_file)
-            print("begin", file=out_file)
-            print(file=out_file)
-
-            print(defs_global_lemmas, file=out_file)
-            print(file=out_file)
-
-            for e in det_values(blocks, unions):
-                e.generate_hol_defs(options)
-
-            print("end", file=out_file)
+            out_file.writeln(defs_global_lemmas)
         else:
-            print("theory %s_defs" % module_name, file=out_file)
-            print("imports", file=out_file)
-            print("  \"%s/KernelState_C\"" % (
-                os.path.relpath(options.cspec_dir,
-                                os.path.dirname(out_file.filename))), file=out_file)
             for e in det_values(blocks, unions):
-                print("  %s_%s_defs" % (module_name, e.name),
-                      file=out_file)
-            print("begin", file=out_file)
-            print("end", file=out_file)
-
-            for e in det_values(blocks, unions):
-                base_filename = \
-                    os.path.basename(options.multifile_base).split('.')[0]
-                submodule_name = base_filename + "_" + \
-                    e.name + "_defs"
-                out_file = OutputFile(options.multifile_base + "_" +
-                                      e.name + "_defs" + ".thy")
-
-                print("theory %s imports \"%s/KernelState_C\" begin" % (
-                    submodule_name, os.path.relpath(options.cspec_dir,
-                                                    os.path.dirname(out_file.filename))),
-                      file=out_file)
-                print(file=out_file)
-
-                options.output = out_file
                 e.generate_hol_defs(options)
 
-                print("end", file=out_file)
+        out_file.writeln("end")
+
+        if options.multifile_base is not None:
+            sub_module_base_name = os.path.basename(options.multifile_base).split('.')[0]
+            for e in det_values(blocks, unions):
+                sub_module_name = f"{sub_module_base_name}_{e.name}"
+                sub_out_file = OutputFile(f"{options.multifile_base}_{e.name}_defs.thy")
+                sub_out_file.writeln(
+                    f"theory {sub_module_name}_defs"
+                    f'imports "{imp}/KernelState_C"',
+                    "begin")
+                e.generate_hol_defs(options, output = sub_out_file)
+                sub_out_file.writeln("end")
+
     elif options.hol_proofs:
         def is_bit_type(tp):
             return umm.is_base(tp) & (umm.base_name(tp) in
@@ -3017,49 +3056,43 @@ if __name__ == '__main__':
 
                 type_map[tp] = (toptp, path)
 
-        if options.multifile_base is None:
-            print("theory %s_proofs" % module_name, file=out_file)
-            print("imports %s_defs" % module_name, file=out_file)
-            print("begin", file=out_file)
-            print(file=out_file)
-            print(file=out_file)
+        # top types are broken here.
 
-            for e in det_values(blocks, unions):
-                e.generate_hol_proofs(options, type_map)
+        is_multifile = (options.multifile_base is not None)
 
-            print("end", file=out_file)
+        out_file.writeln(f"theory {module_name}_proofs")
+        if is_multifile:
+            out_file.writeln_imports([
+                f"{module_name}_{e.name}_proofs" \
+                for e in det_values(blocks, unions)])
         else:
-            # top types are broken here.
-            print("theory %s_proofs" % module_name, file=out_file)
-            print("imports", file=out_file)
+            out_file.writeln_imports(f"{module_name}_defs")
+
+        out_file.writeln("begin")
+
+        if not is_multifile:
             for e in det_values(blocks, unions):
-                print("  %s_%s_proofs" % (module_name, e.name),
-                      file=out_file)
-            print("begin", file=out_file)
-            print("end", file=out_file)
-
-            for e in det_values(blocks, unions):
-                base_filename = \
-                    os.path.basename(options.multifile_base).split('.')[0]
-                submodule_name = base_filename + "_" + \
-                    e.name + "_proofs"
-                out_file = OutputFile(options.multifile_base + "_" +
-                                      e.name + "_proofs" + ".thy")
-
-                print(("theory %s imports "
-                       + "%s_%s_defs begin") % (
-                    submodule_name, base_filename, e.name),
-                    file=out_file)
-                print(file=out_file)
-
-                options.output = out_file
                 e.generate_hol_proofs(options, type_map)
 
-                print("end", file=out_file)
+        out_file.writeln("end")
+
+        if is_multifile:
+            sub_module_base_name = os.path.basename(
+                                        options.multifile_base).split('.')[0]
+            for e in det_values(blocks, unions):
+                sub_module_name = f"{sub_module_base_name}_{e.name}"
+                sub_out_file = OutputFile(f"{options.multifile_base}_{e.name}_proofs.thy")
+
+                out_file.writeln(f"theory {sub_module_name}_proofs")
+                out_file.writeln_imports(f"{sub_module_name}_defs")
+                sub_out_file.writeln("begin")
+                e.generate_hol_proofs(options, type_map, sub_out_file)
+                sub_out_file.writeln("end")
     else:
-        print("#pragma once\n", file=out_file)
-        for i in INCLUDES[options.environment]:
-            print('#include <%s>\n' % i, file=out_file)
+        out_file.writeln(
+            "#pragma once",
+            [f"#include <{inc}>" for inc in INCLUDES[options.environment]])
+
         for e in det_values(blocks, unions):
             e.generate(options)
 
