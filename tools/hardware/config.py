@@ -117,12 +117,29 @@ class Config_RISCV64(Config_RISCV):
         return self.MEGAPAGE_BITS
 
 
+class Config_ACME(Config):
+    ''' Config class for ACME '''
+    arch = 'acme'
+
+    def align_memory(self, regions: Set[Region]) -> List[Region]:
+        ''' Arm wants physBase to be the physical load address of the kernel. '''
+        ret = sorted(regions)
+        extra_reserved = set()
+        new = ret[0].align_base(self.get_kernel_phys_align())
+        resv = Region(ret[0].base, new.base - ret[0].base)
+        extra_reserved.add(resv)
+        ret[0] = new
+        physBase = ret[0].base
+        return ret, extra_reserved, physBase
+
+
 def get_arch_config(sel4arch: str, addrspace_max: int) -> Config:
     ''' Return an appropriate Config object for the given architecture '''
     for (ctor, arch_list) in [
         (Config_ARM,     ['aarch32', 'aarch64', 'arm_hyp']),
         (Config_RISCV32, ['riscv32']),
         (Config_RISCV64, ['riscv64']),
+        (Config_ACME,    ['acme64']),
     ]:
         if sel4arch in arch_list:
             return ctor(sel4arch, addrspace_max)
