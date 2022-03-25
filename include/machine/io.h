@@ -7,6 +7,7 @@
 #pragma once
 
 #include <config.h>
+#include <sel4/macros.h>
 
 #ifdef CONFIG_DEBUG_BUILD
 /* io for dumping capdl */
@@ -114,7 +115,7 @@ static inline __attribute__((format(printf, 3, 4))) int snprintf(
  * toolchain. It would just reject the code if it encounters any unsupported
  * things.
  */
-#define printf(...)             ((void)(0))
+#define printf(...)             SEL4_EMPTY_EXPRESSION()
 
 /* Seems there is no need to define out these functions, they are use by code
  * that is active with CONFIG_PRINTING only.

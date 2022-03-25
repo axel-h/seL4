@@ -43,6 +43,14 @@
 
 #endif
 
+/* An expression that does nothing, but it is still a token that requires a
+ * semicolon afterwards. Use this for macros that are reduced to nothing in
+ * certain configurations, so the semicolon is properly consumed and does not
+ * create side effects in corner cases. Using "do {} while(0)" here is another
+ * common method, but "((void)(0))" is preferred for verification.
+ */
+#define SEL4_EMPTY_EXPRESSION()    ((void)(0))
+
 /* _Static_assert() is a c11 feature. Since the kernel is currently compiled
  * with c99, we have to emulate it. */
 #if defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 201112L)
