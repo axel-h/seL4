@@ -85,11 +85,6 @@
 #define SECTION(sec) __attribute__((__section__(sec)))
 #define UNUSED       __attribute__((unused))
 #define USED         __attribute__((used))
-#ifdef __clang__
-#define FORCE_O2     /* nothing */
-#else
-#define FORCE_O2     __attribute__((optimize("O2")))
-#endif
 /** MODIFIES: */
 void __builtin_unreachable(void);
 #define UNREACHABLE()  __builtin_unreachable()
@@ -128,6 +123,8 @@ void __builtin_unreachable(void);
         halt_spec: "\<Gamma> \<turnstile> {} Call halt_'proc {}"
 */
 void halt(void) NORETURN;
+void Arch_halt(void) NORETURN;
+
 void memzero(void *s, unsigned long n);
 void *memset(void *s, unsigned long c, unsigned long n) VISIBLE;
 void *memcpy(void *ptr_dst, const void *ptr_src, unsigned long n) VISIBLE;
