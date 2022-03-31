@@ -10,14 +10,7 @@ declare_platform(imx8mq-evk KernelPlatformImx8mq-evk PLAT_IMX8MQ_EVK KernelArchA
 declare_platform(imx8mm-evk KernelPlatformImx8mm-evk PLAT_IMX8MM_EVK KernelArchARM)
 
 if(KernelPlatformImx8mq-evk OR KernelPlatformImx8mm-evk)
-    if("${KernelSel4Arch}" STREQUAL aarch32)
-        declare_seL4_arch(aarch32)
-    elseif("${KernelSel4Arch}" STREQUAL aarch64)
-        declare_seL4_arch(aarch64)
-    else()
-        fallback_declare_seL4_arch_default(aarch64)
-    endif()
-
+    setup_seL4_arch("aarch64;aarch32")
     set(KernelArmCortexA53 ON)
     set(KernelArchArmV8a ON)
     set(KernelArmGicV3 ON)

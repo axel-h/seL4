@@ -103,12 +103,33 @@ macro(check_platform_and_fallback_to_default var_cmake_kernel_plat default_sub_p
     endif()
 endmacro()
 
-# helper macro that prints a message that no architecture is specified and
-# the default architecture will be used
-# Usage example: fallback_declare_seL4_arch_default(aarch32)
-macro(fallback_declare_seL4_arch_default default_arch)
-    print_message_multiple_options_helper("architectures" ${default_arch})
-    declare_seL4_arch(${default_arch})
+# If a platform supports one architecture only, then using declare_seL4_arch()
+# is sufficient. However, if multiple architectures are supported, this
+# convenience macro should be used. It takes a list of supported architectures
+# and sets up the one selected by KernelSel4Arch. If KernelSel4Arch is not set,
+# the architecture specified by the first list element is used.
+# Usage example: setup_seL4_arch("aarch64;aarch32")
+macro(setup_seL4_arch arch_list)
+    set(_is_default_KernelSel4Arch ON)
+    # This is a macro, the parameter arch_list is no real variable. Construct a
+    # real list variable to iterate over
+    set(_arch_list_var "${arch_list}")
+    list(GET _arch_list_var 0 _use_KernelSel4Arch) # first element is default
+    if(KernelSel4Arch)
+        foreach(loop_var IN LISTS _arch_list_var)
+            if("${KernelSel4Arch}" STREQUAL "${loop_var}")
+                set(_is_default_KernelSel4Arch OFF)
+                set(_use_KernelSel4Arch "${loop_var}")
+            endif()
+        endforeach()
+        if(_is_default_KernelSel4Arch)
+            message(FATAL_ERROR "KernelSel4Arch '${KernelSel4Arch}' not in list '${arch_list}'")
+        endif()
+    endif()
+    if(_is_default_KernelSel4Arch)
+        print_message_multiple_options_helper("architectures" ${_use_KernelSel4Arch})
+    endif()
+    declare_seL4_arch(${_use_KernelSel4Arch})
 endmacro()
 
 # CLK_SHIFT and CLK_MAGIC are generated from tools/reciprocal.py
