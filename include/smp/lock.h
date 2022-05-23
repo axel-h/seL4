@@ -62,6 +62,13 @@ static inline void *sel4_atomic_exchange(void *ptr, bool_t
 {
     clh_qnode_t *prev;
 
+    /* Unfortunately, the compiler builtin __atomic_exchange_n() cannot be used
+     * here, because some architectures lack an actual atomic swap instruction
+     * and spin in a tight loop instead. The spinning duration is undefined,
+     * tests have shown it could be seconds in the worst case.
+     * Performance evaluation has also shown, that it's best to have fences just
+     * before and after a loop over one relaxed atomic exchange attempt.
+     */
     if (memorder == __ATOMIC_RELEASE || memorder == __ATOMIC_ACQ_REL) {
         __atomic_thread_fence(__ATOMIC_RELEASE);
     } else if (memorder == __ATOMIC_SEQ_CST) {
@@ -71,6 +78,7 @@ static inline void *sel4_atomic_exchange(void *ptr, bool_t
     while (!try_arch_atomic_exchange_rlx(&big_kernel_lock.head,
                                          (void *) big_kernel_lock.node_owners[cpu].node,
                                          (void **) &prev)) {
+        /* busy waiting */
     }
 
     if (memorder == __ATOMIC_ACQUIRE || memorder == __ATOMIC_ACQ_REL) {
