@@ -60,7 +60,8 @@ static inline void trace_point_stop(word_t id)
             ksStarted[id] = false;
             if (likely(ksLogIndex < MAX_LOG_SIZE)) {
                 ksLog[ksLogIndex] = (benchmark_tracepoint_log_entry_t) {
-                    id, ksExit - ksEntries[id]
+                    .id = id,
+                    .duration = ksExit - ksEntries[id]
                 };
             }
             /* increment the log index even if we have exceeded the log size
