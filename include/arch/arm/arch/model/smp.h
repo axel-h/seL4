@@ -45,10 +45,17 @@ static inline bool_t try_arch_atomic_exchange_rlx(void *ptr, void *new_val, void
         :
     );
 
-    *prev = temp;
+    if (0 != atomic_status) {
+        /* Specs say 0 indicates success and 1 a exclusivity failure, any other
+         * value is not defined. If the atomic operation has failed, prev is
+         * left untouched. There seems no gain updating it with the value
+         * obtained, as this might no longer be valid anyway.
+         */
+        return false;
+    }
 
-    /* On ARM if an atomic operation succeeds, it returns 0 */
-    return (atomic_status == 0);
+    *prev = temp;
+    return true;
 }
 
 #endif /* ENABLE_SMP_SUPPORT */

@@ -59,7 +59,6 @@ static inline bool_t FORCE_INLINE clh_is_ipi_pending(word_t cpu)
 
 static inline void FORCE_INLINE clh_lock_acquire(word_t cpu, bool_t irqPath)
 {
-    clh_qnode_t *prev;
     big_kernel_lock.node_owners[cpu].node->value = CLHState_Pending;
 
     __atomic_thread_fence(__ATOMIC_RELEASE); /* writes must finish */
@@ -69,15 +68,16 @@ static inline void FORCE_INLINE clh_lock_acquire(word_t cpu, bool_t irqPath)
      * tests have shown it could be seconds in the worst case.
      * Performance evaluation has also shown, that it's best to have fences just
      * before and after a loop over one relaxed atomic exchange attempt.
+     * The content of big_kernel_lock.node_owners[cpu].next will only be
+     * modified if the atomic exchange way successful, otherwise it is left
+     * untouched.
      */
     while (!try_arch_atomic_exchange_rlx(&big_kernel_lock.head,
-                                         (void *) big_kernel_lock.node_owners[cpu].node,
-                                         (void **) &prev)) {
+                                         big_kernel_lock.node_owners[cpu].node,
+                                         &big_kernel_lock.node_owners[cpu].next)) {
         /* busy waiting */
     }
     __atomic_thread_fence(__ATOMIC_ACQUIRE); /* prevent reads before passing here */
-
-    big_kernel_lock.node_owners[cpu].next = prev;
 
     /* We do not have an __atomic_thread_fence here as this is already handled by the
      * atomic_exchange just above */
