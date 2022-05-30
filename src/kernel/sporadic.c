@@ -168,7 +168,7 @@ void refill_new(sched_context_t *sc, word_t max_refills, ticks_t budget, ticks_t
     REFILL_SANITY_CHECK(sc, budget);
 }
 
-void refill_update(sched_context_t *sc, ticks_t new_period, ticks_t new_budget, word_t new_max_refills)
+void refill_update(sched_context_t *sc, word_t max_refills, ticks_t budget, ticks_t period)
 {
 
     /* refill must be initialised in order to be updated - otherwise refill_new should be used */
@@ -178,34 +178,34 @@ void refill_update(sched_context_t *sc, ticks_t new_period, ticks_t new_budget, 
      * so over new_period, new_budget should not be exceeded even temporarily */
 
     /* move the head refill to the start of the list - it's ok as we're going to truncate the
-     * list to size 1 - and this way we can't be in an invalid list position once new_max_refills
+     * list to size 1 - and this way we can't be in an invalid list position once max_refills
      * is updated */
     *refill_index(sc, 0) = *refill_head(sc);
     sc->scRefillHead = 0;
     /* truncate refill list to size 1 */
     sc->scRefillTail = sc->scRefillHead;
     /* update max refills */
-    sc->scRefillMax = new_max_refills;
+    sc->scRefillMax = max_refills;
     /* update period */
-    sc->scPeriod = new_period;
+    sc->scPeriod = period;
 
     if (refill_ready(sc)) {
         refill_head(sc)->rTime = NODE_STATE(ksCurTime);
     }
 
-    if (refill_head(sc)->rAmount >= new_budget) {
+    if (refill_head(sc)->rAmount >= budget) {
         /* if the heads budget exceeds the new budget just trim it */
-        refill_head(sc)->rAmount = new_budget;
+        refill_head(sc)->rAmount = budget;
         maybe_add_empty_tail(sc);
     } else {
         /* otherwise schedule the rest for the next period */
-        refill_t new = { .rAmount = (new_budget - refill_head(sc)->rAmount),
-                         .rTime = refill_head(sc)->rTime + new_period
+        refill_t new = { .rAmount = (budget - refill_head(sc)->rAmount),
+                         .rTime = refill_head(sc)->rTime + period
                        };
         refill_add_tail(sc, new);
     }
 
-    REFILL_SANITY_CHECK(sc, new_budget);
+    REFILL_SANITY_CHECK(sc, budget);
 }
 
 static inline void schedule_used(sched_context_t *sc, refill_t new)

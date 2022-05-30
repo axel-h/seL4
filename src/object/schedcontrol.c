@@ -44,7 +44,7 @@ static exception_t invokeSchedControl_ConfigureFlags(sched_context_t *target, wo
                && isRunnable(target->scTcb)) {
         /* the scheduling context is active - it can be used, so
          * we need to preserve the bandwidth */
-        refill_update(target, period, budget, max_refills);
+        refill_update(target, max_refills, budget, period);
     } else {
         /* the scheduling context isn't active - it's budget is not being used, so
          * we can just populate the parameters from now */

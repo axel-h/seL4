@@ -176,7 +176,7 @@ static inline bool_t sc_constant_bandwidth(sched_context_t *sc)
 void refill_new(sched_context_t *sc, word_t max_refills, ticks_t budget, ticks_t period);
 
 /* Update refills in an active sc without violating bandwidth constraints */
-void refill_update(sched_context_t *sc, ticks_t new_period, ticks_t new_budget, word_t new_max_refills);
+void refill_update(sched_context_t *sc, word_t max_refills, ticks_t budget, ticks_t period);
 
 
 /* Charge `usage` to the current scheduling context.
