@@ -12,8 +12,7 @@
 
 #include <types.h>
 
-void debug_thread_fault(tcb_t *tptr, seL4_Fault_t fault,
-                        lookup_fault_t lookup_fault);
+void debug_thread_fault(tcb_t *tptr);
 
 #ifdef CONFIG_DEBUG_BUILD
 

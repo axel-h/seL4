@@ -12,6 +12,18 @@
 #include <kernel/thread.h>
 #include <arch/machine.h>
 
+
+static void saveFault(tcb_t *tptr)
+{
+    seL4_Fault_t fault = current_fault;
+    lookup_fault_t lookup_fault = current_lookup_fault;
+
+    tptr->tcbFault = fault;
+    if (seL4_Fault_get_seL4_FaultType(fault) == seL4_Fault_CapFault) {
+        tptr->tcbLookupFailure = lookup_fault;
+    }
+}
+
 #ifdef CONFIG_KERNEL_MCS
 
 static bool_t sendFaultIPC(tcb_t *tptr, cap_t handlerCap, bool_t can_donate)
@@ -21,7 +33,6 @@ static bool_t sendFaultIPC(tcb_t *tptr, cap_t handlerCap, bool_t can_donate)
         assert(cap_endpoint_cap_get_capCanGrant(handlerCap) ||
                cap_endpoint_cap_get_capCanGrantReply(handlerCap));
 
-        tptr->tcbFault = current_fault;
         sendIPC(true, false,
                 cap_endpoint_cap_get_capEPBadge(handlerCap),
                 cap_endpoint_cap_get_capCanGrant(handlerCap),
@@ -38,6 +49,7 @@ static bool_t sendFaultIPC(tcb_t *tptr, cap_t handlerCap, bool_t can_donate)
 
 void handleTimeout(tcb_t *tptr)
 {
+    saveFault(tptr);
     assert(validTimeoutHandler(tptr));
     sendFaultIPC(tptr, TCB_PTR_CTE_PTR(tptr, tcbTimeoutHandler)->cap, false);
 }
@@ -46,11 +58,7 @@ void handleTimeout(tcb_t *tptr)
 
 void handleFault(tcb_t *tptr)
 {
-#if defined(CONFIG_PRINTING) || !defined(CONFIG_KERNEL_MCS)
-    /* Save fault details, as this might get overwritten. */
-    seL4_Fault_t fault = current_fault;
-    lookup_fault_t lookup_fault = current_lookup_fault;
-#endif
+    saveFault(tptr);
 
 #ifdef CONFIG_KERNEL_MCS
     if (sendFaultIPC(tptr, TCB_PTR_CTE_PTR(tptr, tcbFaultHandler)->cap,
@@ -65,10 +73,6 @@ void handleFault(tcb_t *tptr)
             cap_endpoint_cap_get_capCanSend(handlerCap) &&
             (cap_endpoint_cap_get_capCanGrant(handlerCap) ||
              cap_endpoint_cap_get_capCanGrantReply(handlerCap))) {
-            tptr->tcbFault = fault;
-            if (seL4_Fault_get_seL4_FaultType(fault) == seL4_Fault_CapFault) {
-                tptr->tcbLookupFailure = lookup_fault;
-            }
             sendIPC(true, true,
                     cap_endpoint_cap_get_capEPBadge(handlerCap),
                     cap_endpoint_cap_get_capCanGrant(handlerCap), true, tptr,
@@ -80,7 +84,7 @@ void handleFault(tcb_t *tptr)
 
     /* Seems there is no fault handler, log the fault and suspend the thread. */
 #ifdef CONFIG_PRINTING
-    debug_thread_fault(tptr, fault, lookup_fault);
+    debug_thread_fault(tptr);
 #endif /* CONFIG_PRINTING */
     setThreadState(tptr, ThreadState_Inactive);
 }
