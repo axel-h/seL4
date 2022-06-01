@@ -36,7 +36,7 @@ void ipiStallCoreCallback(bool_t irqPath)
         switchToIdleThread();
 #ifdef CONFIG_KERNEL_MCS
         commitTime();
-        NODE_STATE(ksCurSC) = NODE_STATE(ksIdleThread)->tcbSchedContext;
+        NODE_STATE(ksCurSC) = NODE_STATE(ksIdleSC);
 #endif
         NODE_STATE(ksSchedulerAction) = SchedulerAction_ResumeCurrentThread;
 
