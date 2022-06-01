@@ -18,8 +18,7 @@
  * in this case it will not print any register content to avoid leaking
  * potentially sensitive data.
  */
-void debug_thread_fault(tcb_t *tptr, seL4_Fault_t fault,
-                        lookup_fault_t lookup_fault)
+void debug_thread_fault(tcb_t *tptr)
 {
     const char *name = config_ternary(CONFIG_DEBUG_BUILD,
                                       TCB_PTR_DEBUG_PTR(tptr)->tcbName,
@@ -33,6 +32,7 @@ void debug_thread_fault(tcb_t *tptr, seL4_Fault_t fault,
            name ? ")" : "");
 
 
+    seL4_Fault_t fault = tptr->tcbFault;
     seL4_Word fault_type = seL4_Fault_get_seL4_FaultType(fault);
     switch (fault_type) {
     case seL4_Fault_NullFault:
@@ -42,7 +42,7 @@ void debug_thread_fault(tcb_t *tptr, seL4_Fault_t fault,
         printf("cap fault in %s phase at address %p",
                seL4_Fault_CapFault_get_inReceivePhase(fault) ? "receive" : "send",
                (void *)seL4_Fault_CapFault_get_address(fault));
-        /* ToDo: show lookup_fault also */
+        /* ToDo: show tptr->tcbLookupFailure also */
         break;
     case seL4_Fault_VMFault:
         printf("vm fault on %s at address %p with status %p",
