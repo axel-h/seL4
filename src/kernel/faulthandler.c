@@ -86,8 +86,9 @@ void handleFault(tcb_t *tptr)
 
 #ifdef CONFIG_KERNEL_MCS
     cap_t handlerCap = TCB_PTR_CTE_PTR(tptr, tcbFaultHandler)->cap;
+    bool_t canDonate = (tptr->tcbSchedContext != NULL);
     if (isValidFaultHanderCap(handlerCap) {
-        sendFaultIPC(tptr, handlerCap, (tptr->tcbSchedContext != NULL));
+        sendFaultIPC(tptr, handlerCap, canDonate);
         return
     }
 #else /* not CONFIG_KERNEL_MCS */
