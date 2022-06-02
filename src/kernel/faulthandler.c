@@ -24,34 +24,58 @@ static void saveFault(tcb_t *tptr)
     }
 }
 
+bool_t isValidFaultHanderCap(cap_t handlerCap)
+{
+    if (!is_cap_endpoint(handlerCap)) {
+#ifdef CONFIG_PRINTING
+        if (!is_cap_null(handlerCap)) {
+            printf("invalid fault handler cap, has type %u\n",
+                   cap_get_capType(handlerCap));
+        }
+#endif /* CONFIG_PRINTING */
+        return false;
+    }
+
+    if (!cap_endpoint_cap_get_capCanSend(handlerCap) ||
+        (!cap_endpoint_cap_get_capCanGrant(handlerCap) &&
+         !cap_endpoint_cap_get_capCanGrantReply(handlerCap))) {
+        printf("insufficient fault handler cap rights\n");
+        return false;
+    }
+
+    return true;
+}
+
 #ifdef CONFIG_KERNEL_MCS
 
 static bool_t sendFaultIPC(tcb_t *tptr, cap_t handlerCap, bool_t can_donate)
 {
-    if (cap_get_capType(handlerCap) == cap_endpoint_cap) {
-        assert(cap_endpoint_cap_get_capCanSend(handlerCap));
-        assert(cap_endpoint_cap_get_capCanGrant(handlerCap) ||
-               cap_endpoint_cap_get_capCanGrantReply(handlerCap));
-
-        sendIPC(true, false,
-                cap_endpoint_cap_get_capEPBadge(handlerCap),
-                cap_endpoint_cap_get_capCanGrant(handlerCap),
-                cap_endpoint_cap_get_capCanGrantReply(handlerCap),
-                can_donate, tptr,
-                EP_PTR(cap_endpoint_cap_get_capEPPtr(handlerCap)));
-
-        return true;
-    } else {
-        assert(cap_get_capType(handlerCap) == cap_null_cap);
-        return false;
-    }
+    sendIPC(true, false,
+            cap_endpoint_cap_get_capEPBadge(handlerCap),
+            cap_endpoint_cap_get_capCanGrant(handlerCap),
+            cap_endpoint_cap_get_capCanGrantReply(handlerCap),
+            can_donate, tptr,
+            EP_PTR(cap_endpoint_cap_get_capEPPtr(handlerCap)));
 }
 
 void handleTimeout(tcb_t *tptr)
 {
     saveFault(tptr);
+    cap_t handlerCap = TCB_PTR_CTE_PTR(tptr, tcbTimeoutHandler)->cap;
+    if (isValidFaultHanderCap(handlerCap) {
+        assert(validTimeoutHandler(tptr));
+        sendFaultIPC(tptr, handlerCap, false);
+        return;
+    }
+
+    /* in debug build this is fatal, there must be a timeout handler */
+    assert(0);
+}
+
+#ifdef CONFIG_PRINTING
+    debug_thread_fault(tptr);
+#endif /* CONFIG_PRINTING */
     assert(validTimeoutHandler(tptr));
-    sendFaultIPC(tptr, TCB_PTR_CTE_PTR(tptr, tcbTimeoutHandler)->cap, false);
 }
 
 #endif /* CONFIG_KERNEL_MCS */
@@ -61,18 +85,17 @@ void handleFault(tcb_t *tptr)
     saveFault(tptr);
 
 #ifdef CONFIG_KERNEL_MCS
-    if (sendFaultIPC(tptr, TCB_PTR_CTE_PTR(tptr, tcbFaultHandler)->cap,
-                     tptr->tcbSchedContext != NULL)) {
-            return;
+    cap_t handlerCap = TCB_PTR_CTE_PTR(tptr, tcbFaultHandler)->cap;
+    if (isValidFaultHanderCap(handlerCap) {
+        bool_t can_donate = (tptr->tcbSchedContext != NULL);
+        sendFaultIPC(tptr, handlerCap, can_donate);
+        return
     }
 #else /* not CONFIG_KERNEL_MCS */
     lookupCap_ret_t lu_ret = lookupCap(tptr, tptr->tcbFaultHandler);
     if (lu_ret.status == EXCEPTION_NONE) {
         cap_t handlerCap = lu_ret.cap;
-        if (cap_get_capType(handlerCap) == cap_endpoint_cap &&
-            cap_endpoint_cap_get_capCanSend(handlerCap) &&
-            (cap_endpoint_cap_get_capCanGrant(handlerCap) ||
-             cap_endpoint_cap_get_capCanGrantReply(handlerCap))) {
+        if (isValidFaultHanderCap(handlerCap)) {
             sendIPC(true, true,
                     cap_endpoint_cap_get_capEPBadge(handlerCap),
                     cap_endpoint_cap_get_capCanGrant(handlerCap), true, tptr,

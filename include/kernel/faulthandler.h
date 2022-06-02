@@ -8,10 +8,24 @@
 
 #include <object.h>
 
+static inline bool_t is_cap_null(cap_t cap)
+{
+    return (cap_get_capType(cap) == cap_null_cap);
+}
+
+static inline bool_t is_cap_endpoint(cap_t cap)
+{
+    return (cap_get_capType(cap) == cap_endpoint_cap);
+}
+
+bool_t isValidFaultHanderCap(cap_t handlerCap);
+
 #ifdef CONFIG_KERNEL_MCS
+
 static inline bool_t validTimeoutHandler(tcb_t *tptr)
 {
-    return cap_get_capType(TCB_PTR_CTE_PTR(tptr, tcbTimeoutHandler)->cap) == cap_endpoint_cap;
+    cap_t handler_cap = TCB_PTR_CTE_PTR(tptr, tcbTimeoutHandler)->cap;
+    return isValidFaultHanderCap(handler_cap);
 }
 
 void handleTimeout(tcb_t *tptr);
