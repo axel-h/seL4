@@ -4,11 +4,13 @@
 # SPDX-License-Identifier: GPL-2.0-only
 #
 
-from typing import Any, Dict, IO, List
+from __future__ import annotations
+import sys
 import pyfdt.pyfdt
-
 from hardware.device import WrappedNode
 from hardware.irq import create_irq_controller, IrqController
+
+assert sys.version_info >= (3, 7)
 
 
 class FdtParser:
