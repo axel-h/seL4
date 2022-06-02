@@ -613,10 +613,24 @@ BOOT_CODE static bool_t create_untypeds_for_region(
     seL4_SlotPos first_untyped_slot
 )
 {
-    while (!is_reg_empty(reg)) {
+    if (is_reg_empty(reg)) {
+        return true; /* nothing to be done for empty regions */
+    }
 
+    word_t reg_size = reg.end - reg.start;
+    assert(reg_size > 0); /* Otherwise is_reg_empty() would have been true. */
+    /* The region end address can be inclusive or exclusive, this must be taken
+     * into account when calculating the region size. An end address is assumed
+     * to be inclusive if the LSB is 1.
+     */
+    if (reg.end & 1) {
+        reg_size++; /* Increment length by 1 for inclusive end addresses. */
+        assert(reg_size > 0); /* Overflows are not expected. */
+    }
+
+    do {
         /* Calculate the bit size of the region. */
-        unsigned int size_bits = seL4_WordBits - 1 - clzl(reg.end - reg.start);
+        unsigned int size_bits = seL4_WordBits - 1 - clzl(reg_size);
         /* The size can't exceed the largest possible untyped size. */
         if (size_bits > seL4_MaxUntypedBits) {
             size_bits = seL4_MaxUntypedBits;
@@ -639,8 +653,14 @@ BOOT_CODE static bool_t create_untypeds_for_region(
                 return false;
             }
         }
-        reg.start += BIT(size_bits);
-    }
+
+        word_t chunk_size = BIT(size_bits);
+        reg.start += chunk_size;
+        assert(reg_size >= chunk_size);
+        reg_size -= chunk_size;
+
+    } while (reg_size > 0);
+
     return true;
 }
 
