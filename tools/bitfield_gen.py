@@ -1864,7 +1864,7 @@ class TaggedUnion:
 
         # Generate typedef
         print(typedef_template %
-              {"type": TYPES[options.environment][self.base],
+              {"type": TYPES[params.environment][self.base],
                "name": self.name,
                "multiple": self.multiple}, file=output)
         print(file=output)
@@ -1884,9 +1884,9 @@ class TaggedUnion:
         print(file=output)
 
         subs = {
-            'inline': INLINE[options.environment],
+            'inline': INLINE[params.environment],
             'union': self.name,
-            'type':  TYPES[options.environment][self.union_base],
+            'type':  TYPES[params.environment][self.union_base],
             'tagname': self.tagname,
             'suf': self.constant_suffix}
 
@@ -1964,7 +1964,7 @@ class TaggedUnion:
         for name, value, ref in self.tags:
             # Generate generators
             param_fields = [field for field in ref.visible_order if field not in self.tag_slices]
-            param_list = ["%s %s" % (TYPES[options.environment][self.base], field)
+            param_list = ["%s %s" % (TYPES[params.environment][self.base], field)
                           for field in param_fields]
 
             if len(param_list) == 0:
@@ -1983,7 +1983,7 @@ class TaggedUnion:
                     f_value = f"0x{self.expanded_tag_val(value):x}{suf}"
                     offset, size, high = 0, self.base, False
                 elif field == self.tagname and not self.sliced_tag:
-                    f_value = "(%s)%s_%s" % (TYPES[options.environment][self.base], self.name, name)
+                    f_value = "(%s)%s_%s" % (TYPES[params.environment][self.base], self.name, name)
                     offset, size, high = ref.field_map[field]
                 elif field not in self.tag_slices:
                     f_value = field
@@ -2015,7 +2015,7 @@ class TaggedUnion:
 
                     field_asserts.append(
                         "    %s((%s & ~0x%x%s) == ((%d && (%s & (1%s << %d))) ? 0x%x : 0));"
-                        % (ASSERTS[options.environment], f_value, mask, suf, self.base_sign_extend,
+                        % (ASSERTS[params.environment], f_value, mask, suf, self.base_sign_extend,
                            f_value, suf, self.base_bits - 1, high_bits))
 
                     field_updates[index].append(
@@ -2031,7 +2031,7 @@ class TaggedUnion:
                 return '\n'.join(["    %s%s" % (prefix, word_init) for word_init in word_inits])
 
             print_params = {
-                "inline":     INLINE[options.environment],
+                "inline":     INLINE[params.environment],
                 "block":      name,
                 "union":      self.name,
                 "gen_params": gen_params,
@@ -2087,11 +2087,11 @@ class TaggedUnion:
                 mask = ((1 << size) - 1) << (offset % self.base)
 
                 subs = {
-                    "inline": INLINE[options.environment],
+                    "inline": INLINE[params.environment],
                     "block": ref.name,
                     "field": field,
-                    "type": TYPES[options.environment][ref.base],
-                    "assert": ASSERTS[options.environment],
+                    "type": TYPES[params.environment][ref.base],
+                    "assert": ASSERTS[params.environment],
                     "index": index,
                     "shift": shift,
                     "r_shift_op": read_shift,
@@ -2612,14 +2612,14 @@ class Block:
 
         # Type definition
         print(typedef_template %
-              {"type": TYPES[options.environment][self.base],
+              {"type": TYPES[params.environment][self.base],
                "name": self.name,
                "multiple": self.multiple}, file=output)
         print(file=output)
 
         # Generator
         param_fields = [field for field in self.visible_order]
-        param_list = ["%s %s" % (TYPES[options.environment][self.base], field)
+        param_list = ["%s %s" % (TYPES[params.environment][self.base], field)
                       for field in param_fields]
 
         if len(param_list) == 0:
@@ -2658,7 +2658,7 @@ class Block:
 
                 field_asserts.append(
                     "    %s((%s & ~0x%x%s) == ((%d && (%s & (1%s << %d))) ? 0x%x : 0));"
-                    % (ASSERTS[options.environment], field, mask, suf, self.base_sign_extend,
+                    % (ASSERTS[params.environment], field, mask, suf, self.base_sign_extend,
                        field, suf, self.base_bits - 1, high_bits))
 
                 field_updates[index].append(
@@ -2675,7 +2675,7 @@ class Block:
             return '\n'.join(["    %s%s" % (prefix, word_init) for word_init in word_inits])
 
         print_params = {
-            "inline": INLINE[options.environment],
+            "inline": INLINE[params.environment],
             "block": self.name,
             "gen_params": gen_params,
             "ptr_params": ptr_params,
@@ -2714,11 +2714,11 @@ class Block:
             mask = ((1 << size) - 1) << (offset % self.base)
 
             subs = {
-                "inline": INLINE[options.environment],
+                "inline": INLINE[params.environment],
                 "block": self.name,
                 "field": field,
-                "type": TYPES[options.environment][self.base],
-                "assert": ASSERTS[options.environment],
+                "type": TYPES[params.environment][self.base],
+                "assert": ASSERTS[params.environment],
                 "index": index,
                 "shift": shift,
                 "r_shift_op": read_shift,
