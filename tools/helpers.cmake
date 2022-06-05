@@ -134,6 +134,7 @@ endfunction(GenBFTarget)
 # generator
 function(GenHBFTarget environment target_name target_file pbf_path pbf_target prunes deps orig_file)
     set(args "")
+    list(APPEND args --mode=c_defs)
     if(NOT "${environment}" STREQUAL "")
         list(APPEND args "--environment=${environment}")
     endif()
@@ -162,7 +163,7 @@ endfunction(GenThyBFTarget)
 # Generate hol definitions from a bitfield specification
 function(GenDefsBFTarget target_name target_file pbf_path pbf_target prunes deps)
     set(args "")
-    list(APPEND args "--hol_defs")
+    list(APPEND args --mode=hol_defs)
     GenThyBFTarget(
         "${args}"
         "${target_name}"
@@ -178,7 +179,7 @@ endfunction(GenDefsBFTarget)
 function(GenProofsBFTarget target_name target_file pbf_path pbf_target prunes deps)
     set(args "")
     # Get an absolute path to cspec_dir so that the final theory file is portable
-    list(APPEND args "--hol_proofs" "--umm_types=${UMM_TYPES}")
+    list(APPEND args "--mode=hol_proofs" "--umm_types=${UMM_TYPES}")
     if(SORRY_BITFIELD_PROOFS)
         list(APPEND args "--sorry_lemmas")
     endif()

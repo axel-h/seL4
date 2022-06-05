@@ -3069,13 +3069,15 @@ def bitfield_gen(module_name, options):
     assert not hasattr(options, 'names')
     options.names = names
 
-    # Generate the requested output, default to C header files.
-    if options.hol_defs:
+    # Generate the requested output.
+    if options.is_mode_hol_defs:
         generate_hol_defs(module_name, obj_list, options)
-    elif options.hol_proofs:
+    elif options.is_mode_hol_proofs:
         generate_hol_proofs(module_name, obj_list, options)
-    else:
+    elif options.is_mode_c_defs:
         generate_c_header(obj_list, options)
+    else:
+        assert False, f"unknown mode '{options.mode}' in MODES?"
 
     # Since "atomic" is the default for file creation, this finally ensures all
     # files flagged as atomic are created.
@@ -3089,6 +3091,7 @@ def main():
     # deterministic, because starting with Python 3.7 dicts are ordered.
     assert sys.version_info >= (3, 7), "Use Python 3.7 or newer"
     ENV_LIST = list(ENV)
+    MODES = ['c_defs', 'hol_defs', 'hol_proofs']
 
     # Parse arguments to set mode and grab I/O filenames.
     parser = argparse.ArgumentParser()
@@ -3104,17 +3107,9 @@ def main():
         default=ENV_LIST[0],
         help=f"one of {list(ENV.keys())}")
     parser.add_argument(
-        '--c_defs',
-        action='store_true',
-        help="generate C header files")
-    parser.add_argument(
-        '--hol_defs',
-        action='store_true',
-        help="generate Isabell/HOL definition theory files")
-    parser.add_argument(
-        '--hol_proofs',
-        action='store_true',
-        help="generate Isabelle/HOL proof theory files. Needs --umm_types option")
+        '--mode', 
+        choices=MODES, 
+        required=True)        
     parser.add_argument(
         '--sorry_lemmas',
         action='store_true',
@@ -3166,6 +3161,13 @@ def main():
 
     args.env = ENV[args.environment]
 
+    # handle mode parameter
+    for mode in MODES:
+        attr_name = f'is_mode_{mode}'
+        attr_val = (mode == args.mode)
+        assert not hasattr(args, mode)
+        setattr(args, attr_name, attr_val)
+
     # Generating HOL proofs or definitions requires an input file,
     # otherwise we can't derive a module name. We could support stdin with an
     # explicit '--module_name' parameter, but it seems there is not really a
@@ -3176,7 +3178,7 @@ def main():
         else None
 
     output_fielname = None if args.output is None else args.output
-    if args.hol_defs or args.hol_proofs:
+    if args.is_mode_hol_defs or args.is_mode_hol_proofs:
         if module_name is None:
             parser.error("input file is required when generating HOL proofs or definitions")
         # Ensure directory that we need to include is known.
@@ -3193,7 +3195,7 @@ def main():
     args.output = OutputPrinter() if output_fielname is None \
         else OutputFile(output_fielname)
 
-    if args.hol_proofs and not args.umm_types_file:
+    if args.is_mode_hol_proofs and not args.umm_types_file:
         parser.error('--umm_types must be specified when generating HOL proofs')
 
     bitfield_gen(module_name, args)
