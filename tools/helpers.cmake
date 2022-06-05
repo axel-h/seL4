@@ -135,7 +135,7 @@ endfunction(GenBFTarget)
 function(GenHBFTarget environment target_name target_file pbf_path pbf_target prunes deps orig_file)
     set(args "")
     if(NOT "${environment}" STREQUAL "")
-        list(APPEND args --environment "${environment}")
+        list(APPEND args "--environment=${environment}")
     endif()
     foreach(prune IN LISTS prunes)
         get_absolute_source_or_binary(prune_absolute "${prune}")
@@ -149,12 +149,12 @@ endfunction(GenHBFTarget)
 # Wrapper for generating different kinds of .thy files from bitfield specifications
 function(GenThyBFTarget args target_name target_file pbf_path pbf_target prunes deps)
     get_filename_component(cspec_dir "${CSPEC_DIR}" ABSOLUTE BASE_DIR)
-    list(APPEND args --cspec-dir "${cspec_dir}")
+    list(APPEND args "--cspec-dir=${cspec_dir}")
     if(SKIP_MODIFIES)
         list(APPEND args "--skip_modifies")
     endif()
     foreach(prune IN LISTS prunes)
-        list(APPEND args "--prune" "${prune}")
+        list(APPEND args "--prune=${prune}")
     endforeach()
     GenBFTarget("${args}" "${target_name}" "${target_file}" "${pbf_path}" "${pbf_target}" "${deps}")
 endfunction(GenThyBFTarget)
@@ -162,7 +162,7 @@ endfunction(GenThyBFTarget)
 # Generate hol definitions from a bitfield specification
 function(GenDefsBFTarget target_name target_file pbf_path pbf_target prunes deps)
     set(args "")
-    list(APPEND args --hol_defs)
+    list(APPEND args "--hol_defs")
     GenThyBFTarget(
         "${args}"
         "${target_name}"
@@ -178,13 +178,7 @@ endfunction(GenDefsBFTarget)
 function(GenProofsBFTarget target_name target_file pbf_path pbf_target prunes deps)
     set(args "")
     # Get an absolute path to cspec_dir so that the final theory file is portable
-    list(
-        APPEND
-            args
-            --hol_proofs
-            --umm_types
-            "${UMM_TYPES}"
-    )
+    list(APPEND args "--hol_proofs" "--umm_types=${UMM_TYPES}")
     if(SORRY_BITFIELD_PROOFS)
         list(APPEND args "--sorry_lemmas")
     endif()
