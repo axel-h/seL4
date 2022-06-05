@@ -56,34 +56,18 @@ def var_name(name, base):
 
 
 # Headers to include depending on which environment we are generating code for.
-INCLUDES = {
-    'sel4': ['config.h', 'assert.h', 'stdint.h', 'util.h'],
-    'libsel4': ['sel4/config.h', 'sel4/simple_types.h', 'sel4/debug_assert.h'],
-}
-
-ASSERTS = {
-    'sel4': 'assert',
-    'libsel4': 'seL4_DebugAssert'
-}
-
-INLINE = {
-    'sel4': 'static inline',
-    'libsel4': 'LIBSEL4_INLINE_FUNC'
-}
-
-TYPES = {
-    "sel4": {
-        8:  "uint8_t",
-        16: "uint16_t",
-        32: "uint32_t",
-        64: "uint64_t"
+ENV = {
+    'sel4': {
+        'include': ['config.h', 'assert.h', 'stdint.h', 'util.h'],
+        'assert':  'assert',
+        'inline':  'static inline',
+        'types':   {w: f'uint{w}_t' for w in [8, 16, 32, 64]},
     },
-
-    "libsel4": {
-        8:  "seL4_Uint8",
-        16: "seL4_Uint16",
-        32: "seL4_Uint32",
-        64: "seL4_Uint64"
+    'libsel4':  {
+        'include': ['sel4/config.h', 'sel4/simple_types.h', 'sel4/debug_assert.h'],
+        'assert':  'seL4_DebugAssert',
+        'inline':  'LIBSEL4_INLINE_FUNC',
+        'types':   {w: f'seL4_Uint{w}' for w in [8, 16, 32, 64]},
     }
 }
 
@@ -1864,7 +1848,7 @@ class TaggedUnion:
 
         # Generate typedef
         print(typedef_template %
-              {"type": TYPES[params.environment][self.base],
+              {"type": params.env['types'][self.base],
                "name": self.name,
                "multiple": self.multiple}, file=output)
         print(file=output)
@@ -1884,9 +1868,9 @@ class TaggedUnion:
         print(file=output)
 
         subs = {
-            'inline': INLINE[params.environment],
+            'inline': params.env['inline'],
             'union': self.name,
-            'type':  TYPES[params.environment][self.union_base],
+            'type':  params.env['types'][self.union_base],
             'tagname': self.tagname,
             'suf': self.constant_suffix}
 
@@ -1964,7 +1948,7 @@ class TaggedUnion:
         for name, value, ref in self.tags:
             # Generate generators
             param_fields = [field for field in ref.visible_order if field not in self.tag_slices]
-            param_list = ["%s %s" % (TYPES[params.environment][self.base], field)
+            param_list = ["%s %s" % (params.env['types'][self.base], field)
                           for field in param_fields]
 
             if len(param_list) == 0:
@@ -1983,7 +1967,7 @@ class TaggedUnion:
                     f_value = f"0x{self.expanded_tag_val(value):x}{suf}"
                     offset, size, high = 0, self.base, False
                 elif field == self.tagname and not self.sliced_tag:
-                    f_value = "(%s)%s_%s" % (TYPES[params.environment][self.base], self.name, name)
+                    f_value = "(%s)%s_%s" % (params.env['types'][self.base], self.name, name)
                     offset, size, high = ref.field_map[field]
                 elif field not in self.tag_slices:
                     f_value = field
@@ -2015,7 +1999,7 @@ class TaggedUnion:
 
                     field_asserts.append(
                         "    %s((%s & ~0x%x%s) == ((%d && (%s & (1%s << %d))) ? 0x%x : 0));"
-                        % (ASSERTS[params.environment], f_value, mask, suf, self.base_sign_extend,
+                        % (params.env['assert'], f_value, mask, suf, self.base_sign_extend,
                            f_value, suf, self.base_bits - 1, high_bits))
 
                     field_updates[index].append(
@@ -2031,7 +2015,7 @@ class TaggedUnion:
                 return '\n'.join(["    %s%s" % (prefix, word_init) for word_init in word_inits])
 
             print_params = {
-                "inline":     INLINE[params.environment],
+                "inline":     params.env['inline'],
                 "block":      name,
                 "union":      self.name,
                 "gen_params": gen_params,
@@ -2087,11 +2071,11 @@ class TaggedUnion:
                 mask = ((1 << size) - 1) << (offset % self.base)
 
                 subs = {
-                    "inline": INLINE[params.environment],
+                    "inline": params.env['inline'],
                     "block": ref.name,
                     "field": field,
-                    "type": TYPES[params.environment][ref.base],
-                    "assert": ASSERTS[params.environment],
+                    "type": params.env['types'][ref.base],
+                    "assert": params.env['assert'],
                     "index": index,
                     "shift": shift,
                     "r_shift_op": read_shift,
@@ -2612,14 +2596,14 @@ class Block:
 
         # Type definition
         print(typedef_template %
-              {"type": TYPES[params.environment][self.base],
+              {"type": params.env['types'][self.base],
                "name": self.name,
                "multiple": self.multiple}, file=output)
         print(file=output)
 
         # Generator
         param_fields = [field for field in self.visible_order]
-        param_list = ["%s %s" % (TYPES[params.environment][self.base], field)
+        param_list = ["%s %s" % (params.env['types'][self.base], field)
                       for field in param_fields]
 
         if len(param_list) == 0:
@@ -2658,7 +2642,7 @@ class Block:
 
                 field_asserts.append(
                     "    %s((%s & ~0x%x%s) == ((%d && (%s & (1%s << %d))) ? 0x%x : 0));"
-                    % (ASSERTS[params.environment], field, mask, suf, self.base_sign_extend,
+                    % (params.env['assert'], field, mask, suf, self.base_sign_extend,
                        field, suf, self.base_bits - 1, high_bits))
 
                 field_updates[index].append(
@@ -2675,7 +2659,7 @@ class Block:
             return '\n'.join(["    %s%s" % (prefix, word_init) for word_init in word_inits])
 
         print_params = {
-            "inline": INLINE[params.environment],
+            "inline": params.env['inline'],
             "block": self.name,
             "gen_params": gen_params,
             "ptr_params": ptr_params,
@@ -2714,11 +2698,11 @@ class Block:
             mask = ((1 << size) - 1) << (offset % self.base)
 
             subs = {
-                "inline": INLINE[params.environment],
+                "inline": params.env['inline'],
                 "block": self.name,
                 "field": field,
-                "type": TYPES[params.environment][self.base],
-                "assert": ASSERTS[params.environment],
+                "type": params.env['types'][self.base],
+                "assert": params.env['assert'],
                 "index": index,
                 "shift": shift,
                 "r_shift_op": read_shift,
@@ -2837,8 +2821,8 @@ if __name__ == '__main__':
 
     parser = optparse.OptionParser()
     parser.add_option('--environment', action='store', default='sel4',
-                      choices=list(INCLUDES.keys()),
-                      help="one of %s" % list(INCLUDES.keys()))
+                      choices=list(ENV.keys()),
+                      help="one of %s" % list(ENV.keys()))
     parser.add_option('--hol_defs', action='store_true', default=False,
                       help="generate Isabell/HOL definition theory files")
     parser.add_option('--hol_proofs', action='store_true', default=False,
@@ -2876,6 +2860,8 @@ if __name__ == '__main__':
 
     options, args = parser.parse_args()
     DEBUG = options.debug
+
+    options.env = ENV[options.environment]
 
     if len(args) > 0:
         in_filename = args[0]
@@ -3023,7 +3009,7 @@ if __name__ == '__main__':
             print(f"/* generated from {options.from_file} */\n", file=out_file)
         print("#pragma once\n", file=out_file)
         print('\n'.join(map(lambda x: '#include <%s>' % x,
-                            INCLUDES[options.environment])), file=out_file)
+                            options.env['include'])), file=out_file)
         for e in det_values(blocks, unions):
             e.generate(options)
 
