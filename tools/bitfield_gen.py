@@ -2825,7 +2825,6 @@ def finish_output():
 # Toplevel
 if __name__ == '__main__':
     # Parse arguments
-    params = {}
     in_filename = None
     in_file = sys.stdin
     out_file = sys.stdout
