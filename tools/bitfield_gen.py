@@ -2791,10 +2791,22 @@ class Block:
         return names
 
 
-temp_output_files = []
-
-
+# ------------------------------------------------------------------------------
 class OutputFile(object):
+
+    atomic_output_files = []  # elements are instances of ourself
+
+    # --------------------------------------------------------------------------
+    @classmethod
+    def finish_output(cls):
+        """
+        Create all files where creation is supposed to be atomic.
+        """
+        for inst in cls.atomic_output_files:
+            os.rename(inst.file.name, inst.filename)
+        cls.atomic_output_files.clear()
+
+    # --------------------------------------------------------------------------
     def __init__(self, filename, mode='w', atomic=True):
         """Open an output file for writing, recording its filename.
            If atomic is True, use a temporary file for writing.
@@ -2806,22 +2818,16 @@ class OutputFile(object):
                 mode=mode, dir=dirname, prefix=basename + '.', delete=False)
             if DEBUG:
                 print('Temp file: %r -> %r' % (self.file.name, self.filename), file=sys.stderr)
-            global temp_output_files
-            temp_output_files.append(self)
+            self.atomic_output_files.append(self)
         else:
             self.file = open(filename, mode, encoding="utf-8")
 
+    # --------------------------------------------------------------------------
     def write(self, *args, **kwargs):
         self.file.write(*args, **kwargs)
 
 
-def finish_output():
-    global temp_output_files
-    for f in temp_output_files:
-        os.rename(f.file.name, f.filename)
-    temp_output_files = []
-
-
+# ------------------------------------------------------------------------------
 # Toplevel
 if __name__ == '__main__':
     # Parse arguments
@@ -3021,4 +3027,6 @@ if __name__ == '__main__':
         for e in det_values(blocks, unions):
             e.generate(options)
 
-    finish_output()
+    # Since "atomic" is the default for file creation, this finally ensures all
+    # files flagged as atomic are created.
+    OutputFile.finish_output()
