@@ -16,7 +16,7 @@
 from __future__ import print_function, division
 import sys
 import os.path
-import optparse
+import argparse
 import re
 import itertools
 import tempfile
@@ -2814,93 +2814,131 @@ class OutputFile(object):
 # ------------------------------------------------------------------------------
 # Toplevel
 if __name__ == '__main__':
-    # Parse arguments
-    in_filename = None
-    in_file = sys.stdin
-    out_file = sys.stdout
 
-    parser = optparse.OptionParser()
-    parser.add_option('--environment', action='store', default='sel4',
-                      choices=list(ENV.keys()),
-                      help="one of %s" % list(ENV.keys()))
-    parser.add_option('--hol_defs', action='store_true', default=False,
-                      help="generate Isabell/HOL definition theory files")
-    parser.add_option('--hol_proofs', action='store_true', default=False,
-                      help="generate Isabelle/HOL proof theory files. "
-                           "Needs --umm_types option")
-    parser.add_option('--sorry_lemmas', action='store_true',
-                      dest='sorry', default=False,
-                      help="emit lemma statements, but omit the proofs for "
-                           "faster processing")
-    parser.add_option('--prune', action='append',
-                      dest="prune_files", default=[],
-                      help="add a pruning file. Only functions mentioned in "
-                           "one of the pruning files will be generated.")
-    parser.add_option('--toplevel', action='append',
-                      dest="toplevel_types", default=[],
-                      help="add a Isabelle/HOL top-level heap type. These are "
-                           "used to generate frame conditions.")
-    parser.add_option('--umm_types', action='store',
-                      dest="umm_types_file", default=None,
-                      help="set umm_types.txt file location. The file is "
-                           "expected to contain type dependency information.")
-    parser.add_option('--cspec-dir', action='store', default=None,
-                      help="location of the 'cspec' directory containing theory"
-                           " 'KernelState_C'")
-    parser.add_option('--thy-output-path', action='store', default=None,
-                      help="where to put output theory files")
-    parser.add_option('--skip_modifies', action='store_true', default=False,
-                      help="do not generate 'modifies' proofs")
-    parser.add_option('--showclasses', action='store_true', default=False,
-                      help="print parsed classes for debugging")
-    parser.add_option('--debug', action='store_true', default=False,
-                      help="switch on generator debug output")
-    parser.add_option('--from_file', action='store', default=None,
-                      help="original source file before preprocessing")
+    # Get list of keys, where the first element is the default. This is
+    # deterministic, because starting with Python 3.7 dicts are ordered.
+    assert sys.version_info >= (3, 7), "Use Python 3.7 or newer"
+    ENV_LIST = list(ENV)
 
-    options, args = parser.parse_args()
+    # Parse arguments to set mode and grab I/O filenames.
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        'input',
+        nargs='?')
+    parser.add_argument(
+        'output',
+        nargs='?')
+    parser.add_argument(
+        '--environment',
+        choices=ENV_LIST,
+        default=ENV_LIST[0],
+        help=f"one of {list(ENV.keys())}")
+    parser.add_argument(
+        '--c_defs',
+        action='store_true',
+        help="generate C header files")
+    parser.add_argument(
+        '--hol_defs',
+        action='store_true',
+        help="generate Isabell/HOL definition theory files")
+    parser.add_argument(
+        '--hol_proofs',
+        action='store_true',
+        help="generate Isabelle/HOL proof theory files. Needs --umm_types option")
+    parser.add_argument(
+        '--sorry_lemmas',
+        action='store_true',
+        dest='sorry',
+        help="emit lemma statements, but omit the proofs for faster processing")
+    parser.add_argument(
+        '--prune',
+        action='append',
+        dest="prune_files",
+        default=[],
+        help="add a pruning file. Only functions mentioned in one of the pruning files will be generated.")
+    parser.add_argument(
+        '--toplevel',
+        action='append',
+        dest="toplevel_types",
+        default=[],
+        help="add a Isabelle/HOL top-level heap type. These are used to generate frame conditions.")
+    parser.add_argument(
+        '--umm_types',
+        dest="umm_types_file",
+        help="set umm_types.txt file location. The file is expected to contain type dependency information.")
+    parser.add_argument(
+        '--cspec-dir',
+        help="Location of the 'cspec' directory containing theory 'KernelState_C'.")
+    parser.add_argument(
+        '--thy-output-path',
+        help="where to put output theory files")
+    parser.add_argument(
+        '--skip_modifies',
+        action='store_true',
+        help="do not generate 'modifies' proofs")
+    parser.add_argument(
+        '--showclasses',
+        action='store_true',
+        help="print parsed classes for debugging")
+    parser.add_argument(
+        '--debug',
+        action='store_true',
+        help="switch on generator debug output")
+    parser.add_argument(
+        '--from_file',
+        default=None,
+        help="original source file before preprocessing")
+
+    options = parser.parse_args()
+
     DEBUG = options.debug
 
     options.env = ENV[options.environment]
 
-    if len(args) > 0:
-        in_filename = args[0]
-        in_file = open(in_filename, encoding="utf-8")
+    # Generating HOL proofs or definitions requires an input file,
+    # otherwise we can't derive a module name. We could support stdin with an
+    # explicit '--module_name' parameter, but it seems there is not really a
+    # usecase for this, effectively there is always an input file unless it's
+    # for script debugging.
+    module_name = 'debug' if options.debug and options.input is None \
+        else None if options.input is None \
+        else os.path.basename(options.input).split('.')[0]
 
-        if len(args) > 1:
-            out_file = OutputFile(args[1])
+    in_stream = sys.stdin if options.input is None \
+        else open(options.input, encoding="utf-8")
 
-    #
-    # If generating Isabelle scripts, ensure we have enough information for
-    # relative paths required by Isabelle.
-    #
+    output_fielname = None if options.output is None else options.output
+
     if options.hol_defs or options.hol_proofs:
+        if module_name is None:
+            parser.error("input file is required when generating HOL proofs or definitions")
         # Ensure directory that we need to include is known.
         if options.cspec_dir is None:
             parser.error("'cspec_dir' not defined.")
-
-        # Ensure that if an output file was not specified, an output path was.
-        if len(args) <= 1:
+        # Ensure we have enough information for relative paths required by
+        # Isabelle. If an output file was not specified, an output path must
+        # exist at least,
+        if output_fielname is None:
             if options.thy_output_path is None:
                 parser.error("Theory output path was not specified")
-            if out_file == sys.stdout:
-                parser.error(
-                    'Output file name must be given when generating HOL definitions or proofs')
-            out_file.filename = os.path.abspath(options.thy_output_path)
+            output_fielname = os.path.abspath(options.thy_output_path)
+
+    out_file = sys.stdout if output_fielname is None \
+        else OutputFile(output_fielname)
+
+    options.output = out_file
 
     if options.hol_proofs and not options.umm_types_file:
         parser.error('--umm_types must be specified when generating HOL proofs')
 
     del parser
 
-    options.output = out_file
-
     # Parse the spec
     lexer = lex.lex()
     yacc.yacc(debug=0, write_tables=0)
     blocks = {}
     unions = {}
-    _, block_map, union_map = yacc.parse(input=in_file.read(), lexer=lexer)
+    _, block_map, union_map = yacc.parse(input=in_stream.read(), lexer=lexer)
     base_list = [8, 16, 32, 64]
     # assumes that unsigned int = 32 bit on 32-bit and 64-bit platforms,
     # and that unsigned long long = 64 bit on 64-bit platforms.
@@ -2929,12 +2967,6 @@ if __name__ == '__main__':
             suffix = suffix_map[base]
             u.resolve(options, symtab)
             u.set_base(base, base_bits, base_sign_extend, suffix)
-
-    if not in_filename is None:
-        base_filename = os.path.basename(in_filename).split('.')[0]
-
-        # Generate the module name from the input filename
-        module_name = base_filename
 
     # Prune list of names to generate
     name_list = []
