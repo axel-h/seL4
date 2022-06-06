@@ -2824,39 +2824,6 @@ class OutputFile(OutputBase):
         super().__init__(stream)
         self.filename = filename
 
-# ------------------------------------------------------------------------------
-class OutputFileAtomic(OutputBase):
-
-    atomic_output_files = []  # elements are instances of ourself
-
-    # --------------------------------------------------------------------------
-    @classmethod
-    def finish_output(cls):
-        """
-        Create all files where creation is supposed to be atomic.
-        """
-        for inst in cls.atomic_output_files:
-            os.rename(inst.tmpfile.name, inst.filename)
-        cls.atomic_output_files.clear()
-
-    # --------------------------------------------------------------------------
-    def __init__(self, filename, mode='w'):
-        """Open an output file for writing, recording its filename.
-           If atomic is True, use a temporary file for writing.
-           Call finish_output to finalise all temporary files."""
-
-        dirname, basename = os.path.split(os.path.abspath(filename))
-        self.tmpfile = tempfile.NamedTemporaryFile(mode=mode, dir=dirname,
-                                                   prefix=basename + '.',
-                                                   delete=False)
-        super().__init__(self.tmpfile)
-        self.filename = filename
-        self.atomic_output_files.append(self)
-
-        if DEBUG:
-            print(f'Temp file: {self.tmpfile.name} -> {self.filename}',
-                  file=sys.stderr)
-
 
 # ------------------------------------------------------------------------------
 # This class represents a theory file
@@ -3082,10 +3049,6 @@ def bitfield_gen(module_name, options):
         generate_c_header(obj_list, options)
     else:
         assert False, f"unknown mode '{options.mode}' in MODES?"
-
-    # Since "atomic" is the default for file creation, this finally ensures all
-    # files flagged as atomic are created.
-    OutputFileAtomic.finish_output()
 
 
 # ------------------------------------------------------------------------------
