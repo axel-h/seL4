@@ -2724,44 +2724,18 @@ class Block:
     def make_names(self, union=None):
         "Return the set of candidate function names for a block"
 
-        if union is None:
-            # Don't generate raw accessors for blocks in tagged unions
-            if self.tagged:
-                return []
+        # Don't generate raw accessors for blocks in tagged unions
+        if union is None and self.tagged:
+            return []
 
-            substs = {"block": self.name}
-
-            # A standalone block
-            field_templates = [
-                "%(block)s_get_%(field)s",
-                "%(block)s_set_%(field)s",
-                "%(block)s_ptr_get_%(field)s",
-                "%(block)s_ptr_set_%(field)s"]
-
-            names = [t % substs for t in [
-                "%(block)s_new",
-                "%(block)s_ptr_new"]]
-        else:
-            substs = {"block": self.name,
-                      "union": union.name}
-
-            # A tagged union block
-            field_templates = [
-                "%(union)s_%(block)s_get_%(field)s",
-                "%(union)s_%(block)s_set_%(field)s",
-                "%(union)s_%(block)s_ptr_get_%(field)s",
-                "%(union)s_%(block)s_ptr_set_%(field)s"]
-
-            names = [t % substs for t in [
-                "%(union)s_%(block)s_new",
-                "%(union)s_%(block)s_ptr_new"]]
+        union_prefix = "" if union is None else f"{union.name}_"
+        prefix = f"{union_prefix}{self.name}_"
+        names = [f"{prefix}{op}" for op in ["new", "ptr_new"]]
 
         for field, offset, size, high in self.fields:
-            if not union is None and field == union.tagname:
-                continue
-
-            substs["field"] = field
-            names += [t % substs for t in field_templates]
+            if union is None or (field != union.tagname):
+                names += [ f"{prefix}{op}_{field}"
+                           for op in ["get", "set", "ptr_get", "ptr_set"]]
 
         return names
 
