@@ -21,6 +21,7 @@ import re
 import itertools
 # import directly from collections for Python < 3.3
 from collections.abc import Iterable
+from abc import ABC, abstractmethod
 
 import tempfile
 
@@ -285,6 +286,120 @@ def p_masks(t):
 def p_error(t):
     print("Syntax error at token '%s'" % t.value, file=sys.stderr)
     sys.exit(1)
+
+
+class C_expr(ABC):
+    @classmethod
+    def as_atom(cls, s):
+        return f"({s})"
+    @abstractmethod
+    def as_str(self):
+        pass
+    def __str__(self):
+        return self.as_str()
+
+class C_Atom(C_expr):
+    def __init__(self, expr):
+        if not any([isinstance(expr, t) for t in [int, str, C_expr, C_Atom]]):
+            raise ValueError(f"invalid expression: {expr}")
+        self.expr = self.unwrap_atoms(expr)
+    @staticmethod
+    def unwrap_atoms(expr):
+        while isinstance(expr, C_Atom):
+            expr = expr.unwrap()
+        return expr
+    def unwrap(self):
+        return self.unwrap_atoms(self.expr)
+    def as_str(self):
+        return self.expr if isinstance(self.expr, str) else f"{self.expr}"
+
+class C_Op_Unary(C_expr):
+    def __init__(self, op, expr):
+        if not isinstance(op, str):
+            raise ValueError("invalid op")
+        self.atom = C_Atom(expr)
+        self.op = op.strip()
+    def as_str(self):
+        return self.as_atom(f"{self.op}{self.atom}")
+
+class C_Op_ArithBitInvert(C_Op_Unary):
+    def __init__(self, expr):
+        super().__init__('~', expr)
+
+class C_Op_LogNot(C_Op_Unary):
+    def __init__(self, expr):
+        super().__init__('!', expr)
+
+class C_Op_Binary(C_expr):
+    def __init__(self, op, expr_a, expr_b):
+        if not isinstance(op, str):
+            raise ValueError("invalid op")
+        self.op = op.strip()
+        self.atom_a = C_Atom(expr_a)
+        self.atom_b = C_Atom(expr_b)
+    def as_str(self):
+        return self.as_atom(f"{self.atom_a} {self.op} {self.atom_b}")
+
+class C_Op_Eq(C_Op_Binary):
+    def __init__(self, expr_a, expr_b):
+        super().__init__('==', expr_a, expr_b)
+
+class C_Op_ArithAnd(C_Op_Binary):
+    def __init__(self, expr_a, expr_b):
+        super().__init__('&', expr_a, expr_b)
+
+class C_Op_Shl(C_Op_Binary):
+    def __init__(self, expr_a, expr_b):
+        super().__init__('<<', expr_a, expr_b)
+
+class C_Op_Shr(C_Op_Binary):
+    def __init__(self, expr_a, expr_b):
+        super().__init__('>>', expr_a, expr_b)
+
+class C_Op_Multary(C_expr):
+    def __init__(self, op, *exprs):
+        if not isinstance(op, str):
+            raise ValueError("invalid op")
+        self.op = op.strip()
+        self.atoms = [C_Atom(e) for e in exprs]
+    def unwrap(self):
+        lst = []
+        for expr in self.exprs:
+            expr = self.unwrap_atoms(expr)
+            if isinstance(expr, self):
+                lst.extend(expr.unwrap())
+            else:
+                lst.append(expr)
+        return lst
+    def as_str(self):
+        return self.as_atom(f" {self.op} ".join([a.as_str() for a in self.atoms]))
+
+class C_Op_LogAnd(C_Op_Multary):
+    def __init__(self, *exprs):
+        super().__init__('&&', *exprs)
+
+class C_Op_LogOr(C_Op_Multary):
+    def __init__(self, *exprs):
+        super().__init__('||', *exprs)
+
+class C_Ternary(C_expr):
+    def __init__(self, expr_cond, expr_a, expr_b):
+        self.atom_cond = C_Atom(expr_cond)
+        self.atom_a = C_Atom(expr_a)
+        self.atom_b = C_Atom(expr_b)
+    def as_str(self):
+        return self.as_atom(f"{self.atom_cond} ? {self.atom_a} : {self.atom_b}")
+
+class C_Assert(C_expr):
+    def __init__(self, expr, func='assert'):
+        self.func = func
+        self.atom = C_Atom(expr)
+    def as_str(self):
+        return f"{self.func}{self.atom};"
+
+class C_AssertEq(C_Assert):
+    def __init__(self, expr_a, expr_b, func='assert'):
+        super().__init__(C_Op_Eq(expr_a, expr_b), func=func)
 
 # Templates
 
@@ -2595,24 +2710,16 @@ class Block:
         print(file=output)
 
         # Generator
-        param_fields = [field for field in self.visible_order]
-        param_list = ["%s %s" % (params.env['types'][self.base], field)
-                      for field in param_fields]
-
-        if len(param_list) == 0:
-            gen_params = 'void'
-        else:
-            gen_params = ', '.join(param_list)
-
-        ptr_params = ', '.join(["%s_t *%s_ptr" % (self.name, self.name)] + param_list)
+        uint_type = params.env['types'][self.base]
+        param_list = [f"{uint_type} {field}" for field in self.visible_order]
 
         field_updates = {word: [] for word in range(self.multiple)}
         field_asserts = ["    /* fail if user has passed bits that we will override */"]
 
         for field, offset, size, high in self.fields:
+            c_shift_op = C_Op_Shr if high else C_Op_Shl
             index = offset // self.base
             if high:
-                shift_op = ">>"
                 shift = self.base_bits - size - (offset % self.base)
                 if self.base_sign_extend:
                     high_bits = ((self.base_sign_extend << (
@@ -2621,56 +2728,78 @@ class Block:
                     high_bits = 0
                 if shift < 0:
                     shift = -shift
-                    shift_op = "<<"
+                    c_shift_op = C_Op_Shl
             else:
-                shift_op = "<<"
                 shift = offset % self.base
                 high_bits = 0
             if size < self.base:
+                mask = (1 << size) - 1
                 if high:
-                    mask = ((1 << size) - 1) << (self.base_bits - size)
-                else:
-                    mask = (1 << size) - 1
-                suf = self.constant_suffix
+                    mask <<= (self.base_bits - size)
 
-                field_asserts.append(
-                    "    %s((%s & ~0x%x%s) == ((%d && (%s & (1%s << %d))) ? 0x%x : 0));"
-                    % (params.env['assert'], field, mask, suf, self.base_sign_extend,
-                       field, suf, self.base_bits - 1, high_bits))
+
+                hex_mask = f"{mask:#x}{self.constant_suffix}"  # "0x...."
+
+                field_asserts.append("    " +
+                    C_AssertEq(
+                        C_Op_ArithAnd(field, C_Op_ArithBitInvert(hex_mask)),
+                        C_Ternary(
+                            C_Op_LogAnd(
+                                self.base_sign_extend,
+                                C_Op_ArithAnd(
+                                    field,
+                                    C_Op_Shl(f"1{self.constant_suffix}", self.base_bits - 1)
+                                )
+                            ),
+                            f"{high_bits:#x}",
+                            "0"
+                        ),
+                        func=params.env['assert']
+                    ).as_str()
+                )
 
                 field_updates[index].append(
-                    "(%s & 0x%x%s) %s %d" % (field, mask, suf, shift_op, shift))
+                    c_shift_op(C_Op_ArithAnd(field, hex_mask), shift))
 
             else:
-                field_updates[index].append("%s %s %d;" % (field, shift_op, shift))
+                field_updates[index].append(c_shift_op(field, shift))
 
         word_inits = [
-            ("words[%d] = 0" % index) + ''.join(["\n        | %s" % up for up in ups]) + ';'
+              f"words[{index}] = 0\n" +
+              '\n'.join([f"        | {up}" for up in ups]) +
+              ';'
             for (index, ups) in field_updates.items()]
 
         def mk_inits(prefix):
-            return '\n'.join(["    %s%s" % (prefix, word_init) for word_init in word_inits])
+            return '\n'.join([f"    {prefix}{init}" for init in word_inits])
 
         print_params = {
             "inline": params.env['inline'],
             "block": self.name,
-            "gen_params": gen_params,
-            "ptr_params": ptr_params,
-            "gen_inits": mk_inits("%s." % self.name),
-            "ptr_inits": mk_inits("%s_ptr->" % self.name),
+            "gen_params": ', '.join(param_list) or 'void',  # 'Python's elvis-operator ('?:')
+            "ptr_params":  ', '.join([f"{self.name}_t *{self.name}_ptr"] + param_list),
+            "gen_inits": mk_inits(f"{self.name}."),
+            "ptr_inits": mk_inits(f"{self.name}_ptr->"),
             "asserts": '  \n'.join(field_asserts)
         }
 
-        generator = generator_template % print_params
-        ptr_generator = ptr_generator_template % print_params
+        emit_named(
+            f"{self.name}_new",
+            params,
+            generator_template % print_params)
 
-        emit_named("%s_new" % self.name, params, generator)
-        emit_named("%s_ptr_new" % self.name, params, ptr_generator)
+        emit_named(
+            f"{self.name}_ptr_new",
+            params,
+            ptr_generator_template % print_params)
 
         # Accessors
         for field, offset, bit_size, high in self.fields:
             bit_offset = offset % self.base
-            shift = self.base_bits - (bit_size + bit_offset) if high else bits
+            shift = bit_offset
+            if high:
+                shift = self.base_bits - bit_size - shift
+
             subs = {
                 "inline": params.env['inline'],
                 "block": self.name,
@@ -2681,7 +2810,7 @@ class Block:
                 "shift": abs(shift),
                 "r_shift_op": "<<" if (shift >= 0) else ">>",
                 "w_shift_op": ">>" if (shift >= 0) else "<<",
-                "mask":  (1 << bit_size) - 1) << bit_offset,
+                "mask":  ((1 << bit_size) - 1) << bit_offset,
                 "suf": self.constant_suffix,
                 "high_bits": 0 if not (high and self.base_sign_extend)
                     else ((self.base_sign_extend << (self.base - self.base_bits)) - 1) << self.base_bits,
