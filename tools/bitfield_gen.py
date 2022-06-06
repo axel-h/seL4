@@ -2948,8 +2948,9 @@ def generate_hol_defs(module_name, obj_list, options):
 def generate_hol_proofs(module_name, obj_list, options):
 
     def is_bit_type(tp):
-        return umm.is_base(tp) & (umm.base_name(tp) in
-                                  map(lambda e: e.name + '_C', obj_list))
+        def is_in_obj_list(bn):
+            return bn.endswith("_C") and (bn[:-2] in [e.name for e in obj_list])
+        return umm.is_base(tp) and is_in_obj_list(umm.base_name(tp))
 
     # invert type map
     tps = umm.build_types(options.umm_types_file)
