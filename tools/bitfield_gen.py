@@ -2818,6 +2818,15 @@ class OutputPrinter(OutputBase):
 # ------------------------------------------------------------------------------
 class OutputFile(OutputBase):
 
+    # --------------------------------------------------------------------------
+    def __init__(self, filename, mode='w'):
+        stream = open(filename, mode=mode, encoding="utf-8")
+        super().__init__(stream)
+        self.filename = filename
+
+# ------------------------------------------------------------------------------
+class OutputFileAtomic(OutputBase):
+
     atomic_output_files = []  # elements are instances of ourself
 
     # --------------------------------------------------------------------------
@@ -2831,16 +2840,10 @@ class OutputFile(OutputBase):
         cls.atomic_output_files.clear()
 
     # --------------------------------------------------------------------------
-    def __init__(self, filename, mode='w', atomic=True):
+    def __init__(self, filename, mode='w'):
         """Open an output file for writing, recording its filename.
            If atomic is True, use a temporary file for writing.
            Call finish_output to finalise all temporary files."""
-
-        if not atomic:
-            stream = open(filename, mode=mode, encoding="utf-8")
-            super().__init__(stream)
-            self.filename = filename
-            return
 
         dirname, basename = os.path.split(os.path.abspath(filename))
         self.tmpfile = tempfile.NamedTemporaryFile(mode=mode, dir=dirname,
@@ -3082,7 +3085,7 @@ def bitfield_gen(module_name, options):
 
     # Since "atomic" is the default for file creation, this finally ensures all
     # files flagged as atomic are created.
-    OutputFile.finish_output()
+    OutputFileAtomic.finish_output()
 
 
 # ------------------------------------------------------------------------------
