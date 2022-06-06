@@ -317,7 +317,10 @@ ptr_generator_template = \
 %(ptr_inits)s
 }"""
 
-reader_template = \
+
+TEMPLATES = {
+    # --------------------------------------------------------------------------
+    "get":  # Reader
     """%(inline)s %(type)s CONST
 %(block)s_get_%(field)s(%(block)s_t %(block)s) {
     %(type)s ret;
@@ -327,9 +330,19 @@ reader_template = \
         ret |= 0x%(high_bits)x;
     }
     return ret;
-}"""
-
-ptr_reader_template = \
+}""",
+    # --------------------------------------------------------------------------
+    "set":  # Writer
+    """%(inline)s %(block)s_t CONST
+%(block)s_set_%(field)s(%(block)s_t %(block)s, %(type)s v%(base)d) {
+    /* fail if user has passed bits that we will override */
+    %(assert)s((((~0x%(mask)x%(suf)s %(r_shift_op)s %(shift)d ) | 0x%(high_bits)x) & v%(base)d) == ((%(sign_extend)d && (v%(base)d & (1%(suf)s << (%(extend_bit)d)))) ? 0x%(high_bits)x : 0));
+    %(block)s.words[%(index)d] &= ~0x%(mask)x%(suf)s;
+    %(block)s.words[%(index)d] |= (v%(base)d %(w_shift_op)s %(shift)d) & 0x%(mask)x%(suf)s;
+    return %(block)s;
+}""",
+    # --------------------------------------------------------------------------
+    "ptr_get":  # Pointer lifted reader
     """%(inline)s %(type)s PURE
 %(block)s_ptr_get_%(field)s(%(block)s_t *%(block)s_ptr) {
     %(type)s ret;
@@ -340,19 +353,9 @@ ptr_reader_template = \
         ret |= 0x%(high_bits)x;
     }
     return ret;
-}"""
-
-writer_template = \
-    """%(inline)s %(block)s_t CONST
-%(block)s_set_%(field)s(%(block)s_t %(block)s, %(type)s v%(base)d) {
-    /* fail if user has passed bits that we will override */
-    %(assert)s((((~0x%(mask)x%(suf)s %(r_shift_op)s %(shift)d ) | 0x%(high_bits)x) & v%(base)d) == ((%(sign_extend)d && (v%(base)d & (1%(suf)s << (%(extend_bit)d)))) ? 0x%(high_bits)x : 0));
-    %(block)s.words[%(index)d] &= ~0x%(mask)x%(suf)s;
-    %(block)s.words[%(index)d] |= (v%(base)d %(w_shift_op)s %(shift)d) & 0x%(mask)x%(suf)s;
-    return %(block)s;
-}"""
-
-ptr_writer_template = \
+}""",
+    # --------------------------------------------------------------------------
+    "ptr_set":  # Pointer lifted writer
     """%(inline)s void
 %(block)s_ptr_set_%(field)s(%(block)s_t *%(block)s_ptr, %(type)s v%(base)d) {
     /* fail if user has passed bits that we will override */
@@ -361,6 +364,8 @@ ptr_writer_template = \
     %(block)s_ptr->words[%(index)d] |= (v%(base)d %(w_shift_op)s """ \
     """%(shift)d) & 0x%(mask)x;
 }"""
+}
+
 
 union_generator_template = \
     """%(inline)s %(union)s_t CONST
@@ -2705,21 +2710,11 @@ class Block:
                 "extend_bit": self.base_bits - 1,
                 "base": self.base}
 
-            # Reader
-            emit_named("%s_get_%s" % (self.name, field), params,
-                       reader_template % subs)
-
-            # Writer
-            emit_named("%s_set_%s" % (self.name, field), params,
-                       writer_template % subs)
-
-            # Pointer lifted reader
-            emit_named("%s_ptr_get_%s" % (self.name, field), params,
-                       ptr_reader_template % subs)
-
-            # Pointer lifted writer
-            emit_named("%s_ptr_set_%s" % (self.name, field), params,
-                       ptr_writer_template % subs)
+            for op, template in TEMPLATES.items():
+                emit_named(
+                    f"{self.name}_{op}_{field}",
+                    params,
+                    template % subs)
 
     def make_names(self, union=None):
         "Return the set of candidate function names for a block"
