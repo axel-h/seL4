@@ -2668,41 +2668,23 @@ class Block:
         emit_named("%s_ptr_new" % self.name, params, ptr_generator)
 
         # Accessors
-        for field, offset, size, high in self.fields:
-            index = offset // self.base
-            if high:
-                write_shift = ">>"
-                read_shift = "<<"
-                shift = self.base_bits - size - (offset % self.base)
-                if shift < 0:
-                    shift = -shift
-                    write_shift = "<<"
-                    read_shift = ">>"
-                if self.base_sign_extend:
-                    high_bits = ((self.base_sign_extend << (
-                        self.base - self.base_bits)) - 1) << self.base_bits
-                else:
-                    high_bits = 0
-            else:
-                write_shift = "<<"
-                read_shift = ">>"
-                shift = offset % self.base
-                high_bits = 0
-            mask = ((1 << size) - 1) << (offset % self.base)
-
+        for field, offset, bit_size, high in self.fields:
+            bit_offset = offset % self.base
+            shift = self.base_bits - (bit_size + bit_offset) if high else bits
             subs = {
                 "inline": params.env['inline'],
                 "block": self.name,
                 "field": field,
                 "type": params.env['types'][self.base],
                 "assert": params.env['assert'],
-                "index": index,
-                "shift": shift,
-                "r_shift_op": read_shift,
-                "w_shift_op": write_shift,
-                "mask": mask,
+                "index": offset // self.base,
+                "shift": abs(shift),
+                "r_shift_op": "<<" if (shift >= 0) else ">>",
+                "w_shift_op": ">>" if (shift >= 0) else "<<",
+                "mask":  (1 << bit_size) - 1) << bit_offset,
                 "suf": self.constant_suffix,
-                "high_bits": high_bits,
+                "high_bits": 0 if not (high and self.base_sign_extend)
+                    else ((self.base_sign_extend << (self.base - self.base_bits)) - 1) << self.base_bits,
                 "sign_extend": self.base_sign_extend and high,
                 "extend_bit": self.base_bits - 1,
                 "base": self.base}
