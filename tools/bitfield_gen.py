@@ -19,6 +19,9 @@ import os.path
 import argparse
 import re
 import itertools
+# import directly from collections for Python < 3.3
+from collections.abc import Iterable
+
 import tempfile
 
 from six.moves import range
@@ -1244,13 +1247,6 @@ def sign_extend_proof(high, base_bits, base_sign_extend):
         return ""
 
 
-def det_values(*dicts):
-    """Deterministically iterate over the values of each dict in `dicts`."""
-    def values(d):
-        return (d[key] for key in sorted(d.keys()))
-    return itertools.chain(*(values(d) for d in dicts))
-
-
 def shiftr(n):
     """Shift right by possibly negative amount"""
     return f">> {n}" if n >= 0 else f"<< {-n}"
@@ -1406,8 +1402,7 @@ class TaggedUnion:
                  for size, offset, position in self.tag_offsets]
         return reduce(lambda x, y: x | y, parts, 0)
 
-    def generate_hol_proofs(self, params, type_map):
-        output = params.output
+    def generate_hol_proofs(self, ouput, params, type_map):
 
         # Add fixed simp rule for struct
         print("lemmas %(name)s_C_words_C_fl_simp[simp] = "
@@ -1632,8 +1627,7 @@ class TaggedUnion:
                                      params, self.name, type_map, params.toplevel_types,
                                      'ptr_union_set_spec', substs)
 
-    def generate_hol_defs(self, params):
-        output = params.output
+    def generate_hol_defs(self, output, params):
 
         empty_blocks = {}
 
@@ -1647,7 +1641,8 @@ class TaggedUnion:
 
         # Generate block records with tag field removed
         for name, value, ref in self.tags:
-            if ref.generate_hol_defs(params,
+            if ref.generate_hol_defs(output,
+                                     params,
                                      suppressed_fields=self.tag_slices,
                                      prefix="%s_" % self.name,
                                      in_union=True):
@@ -1843,8 +1838,7 @@ class TaggedUnion:
             f"(({source} {bit_and} ({mask(size)} << {offset})) {shiftr(offset-position)})"
             for size, offset, position in self.tag_offsets])
 
-    def generate(self, params):
-        output = params.output
+    def generate(self, output, params):
 
         # Generate typedef
         print(typedef_template %
@@ -2382,9 +2376,8 @@ class Block:
                                  "crosses a word boundary"
                                  % (name, self.name))
 
-    def generate_hol_defs(self, params, suppressed_fields=[],
+    def generate_hol_defs(self, output, params, suppressed_fields=[],
                           prefix="", in_union=False):
-        output = params.output
 
         # Don't generate raw records for blocks in tagged unions
         if self.tagged and not in_union:
@@ -2451,8 +2444,7 @@ class Block:
 
         return empty
 
-    def generate_hol_proofs(self, params, type_map):
-        output = params.output
+    def generate_hol_proofs(self, output, params, type_map):
 
         if self.tagged:
             return
@@ -2587,8 +2579,7 @@ class Block:
                                  type_map, params.toplevel_types,
                                  'ptr_set_spec', substs)
 
-    def generate(self, params):
-        output = params.output
+    def generate(self, output, params):
 
         # Don't generate raw accessors for blocks in tagged unions
         if self.tagged:
@@ -2776,7 +2767,56 @@ class Block:
 
 
 # ------------------------------------------------------------------------------
-class OutputFile(object):
+class OutputBase(object):
+
+    # --------------------------------------------------------------------------
+    def __init__(self, stream=None):
+        self.stream = stream
+
+    # --------------------------------------------------------------------------
+    # derived classes must overwrite this
+    def write(self, *args, **kwargs):
+        if self.stream is not None:
+            self.stream.write(*args, **kwargs)
+
+    # --------------------------------------------------------------------------
+    def writeln(self, *args):
+        # empty calls generate an empty line
+        if 0 == len(args):
+            self.writeln("")
+            return
+
+        for arg in args:
+            if arg is None:
+                # Do nothing for a None element, so empty arrays or functions
+                # returning None can be used as parameters and they wont create
+                # empty lines.
+                pass
+            elif isinstance(arg, str) or isinstance(arg, int):
+                # Strings are written.
+                self.write(f"{arg}\n")
+            elif isinstance(arg, Iterable):
+                # evaluate each element
+                for e in arg:
+                    self.writeln(e)
+            elif callable(arg):
+                # Functions are called and the result is evaluated again.
+                self.writeln(arg())
+            else:
+                # Anything else it considered an error.
+                raise ValueError("unknown type")
+
+
+# ------------------------------------------------------------------------------
+class OutputPrinter(OutputBase):
+
+    # --------------------------------------------------------------------------
+    def __init__(self):
+        super().__init__(sys.stdout)
+
+
+# ------------------------------------------------------------------------------
+class OutputFile(OutputBase):
 
     atomic_output_files = []  # elements are instances of ourself
 
@@ -2787,7 +2827,7 @@ class OutputFile(object):
         Create all files where creation is supposed to be atomic.
         """
         for inst in cls.atomic_output_files:
-            os.rename(inst.file.name, inst.filename)
+            os.rename(inst.tmpfile.name, inst.filename)
         cls.atomic_output_files.clear()
 
     # --------------------------------------------------------------------------
@@ -2795,25 +2835,255 @@ class OutputFile(object):
         """Open an output file for writing, recording its filename.
            If atomic is True, use a temporary file for writing.
            Call finish_output to finalise all temporary files."""
-        self.filename = os.path.abspath(filename)
-        if atomic:
-            dirname, basename = os.path.split(self.filename)
-            self.file = tempfile.NamedTemporaryFile(
-                mode=mode, dir=dirname, prefix=basename + '.', delete=False)
-            if DEBUG:
-                print('Temp file: %r -> %r' % (self.file.name, self.filename), file=sys.stderr)
-            self.atomic_output_files.append(self)
-        else:
-            self.file = open(filename, mode, encoding="utf-8")
 
-    # --------------------------------------------------------------------------
-    def write(self, *args, **kwargs):
-        self.file.write(*args, **kwargs)
+        if not atomic:
+            stream = open(filename, mode=mode, encoding="utf-8")
+            super().__init__(stream)
+            self.filename = filename
+            return
+
+        dirname, basename = os.path.split(os.path.abspath(filename))
+        self.tmpfile = tempfile.NamedTemporaryFile(mode=mode, dir=dirname,
+                                                   prefix=basename + '.',
+                                                   delete=False)
+        super().__init__(self.tmpfile)
+        self.filename = filename
+        self.atomic_output_files.append(self)
+
+        if DEBUG:
+            print(f'Temp file: {self.tmpfile.name} -> {self.filename}',
+                  file=sys.stderr)
 
 
 # ------------------------------------------------------------------------------
-# Toplevel
-if __name__ == '__main__':
+# This class represents a theory file
+class Theory_file(object):
+
+    # --------------------------------------------------------------------------
+    def __init__(self, name):
+        self.name = name
+        self.imports = []
+        self.globals = []
+        self.hol_defs = []
+        self.hol_proofs = []
+
+    # --------------------------------------------------------------------------
+    def add_import(self, arg):
+        if isinstance(arg, str):
+            self.imports.append(arg)
+        elif isinstance(arg, Iterable):
+            self.imports.extend(arg)
+        else:
+            raise ValueError("unknown type")
+
+        self.imports.append(imp)
+
+    # --------------------------------------------------------------------------
+    def add_globals(self, gbls):
+        self.globals.append(gbls)
+
+    # --------------------------------------------------------------------------
+    def add_hol_defs(self, obj_list, options):
+        item = (obj_list, options)
+        self.hol_defs.append(item)
+
+    # --------------------------------------------------------------------------
+    def add_hol_proofs(self, obj_list, type_map, options):
+        item = (obj_list, type_map, options)
+        self.hol_proofs.append(item)
+
+    # --------------------------------------------------------------------------
+    def write_to_file(self, output):
+        assert isinstance(output, OutputBase)
+
+        output.writeln(
+            f"theory {self.name}",
+            None if (0 == len(self.imports))
+            else f"imports {self.imports[0]}" if (1 == len(self.imports))
+            else ["imports"] + [f"  {imp}" for imp in self.imports],
+            "begin",
+            self.globals
+        )
+
+        for obj_list, options in self.hol_defs:
+            for e in obj_list:
+                e.generate_hol_defs(output, options)
+
+        for obj_list, type_map, options in self.hol_proofs:
+            for e in obj_list:
+                e.generate_hol_proofs(output, type_map, options)
+
+        output.writeln("end")
+
+
+# ------------------------------------------------------------------------------
+def generate_hol_defs(module_name, obj_list, options):
+
+    kernel_import = os.path.join(
+        os.path.relpath(
+            options.cspec_dir,
+            os.path.dirname(out.filename)),
+        "KernelState_C")
+
+    assert module_name is not None
+    theory = Theory_file(f"{module_name}_defs")
+    theory.add_import(kernel_import)
+
+    if multifile_base is None:
+        theory.add_globals(defs_global_lemmas)
+        theory.add_hol_defs(options, obj_list)
+    else:
+        sub_module_base_name = os.path.basename(multifile_base).split('.')[0]
+        for e in obj_list:
+            sub_theory = Theory_file(f"{sub_module_base_name}_{e.name}_defs")
+            sub_theory.add_import(kernel_import)
+            sub_theory.add_hol_defs([e], option)
+            sub_theory.write_to_file(OutputFile(f"{multifile_base}_{e.name}_defs.thy"))
+            theory.add_import(f"{module_name}_{e.name}_defs")
+
+    theory.write_to_file(options.output)
+
+
+# ------------------------------------------------------------------------------
+def generate_hol_proofs(module_name, obj_list, options):
+
+    def is_bit_type(tp):
+        return umm.is_base(tp) & (umm.base_name(tp) in
+                                  map(lambda e: e.name + '_C', obj_list))
+
+    # invert type map
+    tps = umm.build_types(options.umm_types_file)
+    type_map = {}
+    for toptp in options.toplevel_types:
+        paths = umm.paths_to_type(tps, is_bit_type, toptp)
+        for path, tp in paths:
+            tp = umm.base_name(tp)
+            if tp in type_map:
+                raise ValueError("Type %s has multiple parents" % tp)
+            type_map[tp] = (toptp, path)
+
+    # top types are broken here.
+
+    assert module_name is not None
+    theory = Theory_file(f"{module_name}_proofs")
+
+    if options.multifile_base is None:
+        theory.add_import(f"{module_name}_defs")
+        theory.add_hol_proofs(options, type_map, obj_list)
+    else:
+        sub_module_base_name = os.path.basename(options.multifile_base).split('.')[0]
+        for e in obj_list:
+            theory.add_import(f"{module_name}_{e.name}_proofs")
+            sub_theory = Theory_file(f"{sub_module_base_name}_{e.name}_proofs")
+            sub_theory.add_import(f"{sub_module_base_name}_{e.name}_defs")
+            sub_theory.add_hol_proofs([e], type_map, options)
+            sub_theory.write_to_file(
+                OutputFile(f"{options.multifile_base}_{e.name}_proofs.thy"))
+
+    theory.write_to_file(options.output)
+
+
+# ------------------------------------------------------------------------------
+def generate_c_header(obj_list, options):
+
+    output = options.output
+
+    if options.from_file:
+        output.writeln(
+            f"/* generated from {options.from_file} */",
+            "")
+
+    output.writeln(
+        "#pragma once",
+        "",
+    )
+
+    includes = options.env['include']
+    if (0 == len(includes)):
+        output.writeln(
+            [f"#include <{inc}>" for inc in includes],
+            ""
+        )
+
+    for e in obj_list:
+        e.generate(output, options)
+
+
+# ------------------------------------------------------------------------------
+def bitfield_gen(module_name, options):
+
+    # Prune files each contain a list of names to use, any names not in these
+    # list will be ignored eventually.
+    pruned_names = None
+    if (len(options.prune_files) > 0):
+        pruned_names = set()  # sets have no duplicates
+        search_re = re.compile('[a-zA-Z0-9_]+')
+        for filename in options.prune_files:
+            pruned_names.update(
+                search_re.findall(
+                    open(filename, encoding="utf-8").read()))
+
+    # Parse the spec
+    input_stream = sys.stdin if options.input is None \
+        else open(options.input, encoding="utf-8")
+    yacc.yacc(debug=0, write_tables=0)
+    _, block_map, union_map = yacc.parse(input=input_stream.read(), lexer=lex.lex())
+    objects = [block_map, union_map]
+
+    # Build the symbol table.
+    symtab = {}
+    for obj_map in objects:
+        for _, obj_item_map in obj_map.items():
+            for name, item in obj_item_map.items():
+                symtab[name] = item
+
+    # Process the objects (blocks, unions).
+    obj_list = []
+    names = set()  # sets have no duplicates
+    for obj_map in objects:
+        obj_dict = {}
+        for base_info, obj_item_map in obj_map.items():
+            base, base_bits, base_sign_extend = base_info
+            # We assume 'unsigned int' is 32 bit on both 32-bit and 64-bit
+            # platforms, and 'unsigned long long' is 64 bit on 64-bit platforms.
+            # Should still work fine if 'ull' is 128 bit, but wont work if
+            # 'unsigned int' is less than 32 bit.
+            suffix = {8: 'u', 16: 'u', 32: 'u', 64: 'ull'}.get(base)
+            if suffix is None:
+                raise ValueError("Invalid base size: %d" % base)
+            for name, item in obj_item_map.items():
+                if isinstance(item, TaggedUnion):
+                    item.resolve(options, symtab)
+                item.set_base(base, base_bits, base_sign_extend, suffix)
+                obj_dict[name] = item
+        # The 'obj_dict' is complete now, sorting keys alphabetically creates
+        # some determinism. Note that until Python 3.7 dicts were not even
+        # guaranteed to be ordered.
+        for key in sorted(obj_dict.keys()):
+            val = obj_dict[key]
+            obj_list.append(val)
+            new_names = val.make_names()
+            names.update(new_names if pruned_names is None
+                         else pruned_names.intersection(new_names))
+
+    assert not hasattr(options, 'names')
+    options.names = names
+
+    # Generate the requested output, default to C header files.
+    if options.hol_defs:
+        generate_hol_defs(module_name, obj_list, options)
+    elif options.hol_proofs:
+        generate_hol_proofs(module_name, obj_list, options)
+    else:
+        generate_c_header(obj_list, options)
+
+    # Since "atomic" is the default for file creation, this finally ensures all
+    # files flagged as atomic are created.
+    OutputFile.finish_output()
+
+
+# ------------------------------------------------------------------------------
+def main():
 
     # Get list of keys, where the first element is the default. This is
     # deterministic, because starting with Python 3.7 dicts are ordered.
@@ -2889,162 +3159,46 @@ if __name__ == '__main__':
         default=None,
         help="original source file before preprocessing")
 
-    options = parser.parse_args()
+    args = parser.parse_args()
 
-    DEBUG = options.debug
+    global DEBUG
+    DEBUG = args.debug
 
-    options.env = ENV[options.environment]
+    args.env = ENV[args.environment]
 
     # Generating HOL proofs or definitions requires an input file,
     # otherwise we can't derive a module name. We could support stdin with an
     # explicit '--module_name' parameter, but it seems there is not really a
     # usecase for this, effectively there is always an input file unless it's
     # for script debugging.
-    module_name = 'debug' if options.debug and options.input is None \
-        else None if options.input is None \
-        else os.path.basename(options.input).split('.')[0]
+    module_name = os.path.basename(args.input).split('.')[0] if args.input is not None \
+        else 'debug' if args.debug \
+        else None
 
-    in_stream = sys.stdin if options.input is None \
-        else open(options.input, encoding="utf-8")
-
-    output_fielname = None if options.output is None else options.output
-
-    if options.hol_defs or options.hol_proofs:
+    output_fielname = None if args.output is None else args.output
+    if args.hol_defs or args.hol_proofs:
         if module_name is None:
             parser.error("input file is required when generating HOL proofs or definitions")
         # Ensure directory that we need to include is known.
-        if options.cspec_dir is None:
+        if args.cspec_dir is None:
             parser.error("'cspec_dir' not defined.")
         # Ensure we have enough information for relative paths required by
         # Isabelle. If an output file was not specified, an output path must
         # exist at least,
         if output_fielname is None:
-            if options.thy_output_path is None:
+            if args.thy_output_path is None:
                 parser.error("Theory output path was not specified")
-            output_fielname = os.path.abspath(options.thy_output_path)
-
-    out_file = sys.stdout if output_fielname is None \
+            output_fielname = os.path.abspath(args.thy_output_path)
+    # overwrite arg parser's setting with a stream object
+    args.output = OutputPrinter() if output_fielname is None \
         else OutputFile(output_fielname)
 
-    options.output = out_file
-
-    if options.hol_proofs and not options.umm_types_file:
+    if args.hol_proofs and not args.umm_types_file:
         parser.error('--umm_types must be specified when generating HOL proofs')
 
-    del parser
+    bitfield_gen(module_name, args)
 
-    # Parse the spec
-    lexer = lex.lex()
-    yacc.yacc(debug=0, write_tables=0)
-    blocks = {}
-    unions = {}
-    _, block_map, union_map = yacc.parse(input=in_stream.read(), lexer=lexer)
-    base_list = [8, 16, 32, 64]
-    # assumes that unsigned int = 32 bit on 32-bit and 64-bit platforms,
-    # and that unsigned long long = 64 bit on 64-bit platforms.
-    # Should still work fine if ull = 128 bit, but will not work
-    # if unsigned int is less than 32 bit.
-    suffix_map = {8: 'u', 16: 'u', 32: 'u', 64: 'ull'}
-    for base_info, block_list in block_map.items():
-        base, base_bits, base_sign_extend = base_info
-        for name, b in block_list.items():
-            if not base in base_list:
-                raise ValueError("Invalid base size: %d" % base)
-            suffix = suffix_map[base]
-            b.set_base(base, base_bits, base_sign_extend, suffix)
-            blocks[name] = b
 
-    symtab = {}
-    symtab.update(blocks)
-    for base, union_list in union_map.items():
-        unions.update(union_list)
-    symtab.update(unions)
-    for base_info, union_list in union_map.items():
-        base, base_bits, base_sign_extend = base_info
-        for u in union_list.values():
-            if not base in base_list:
-                raise ValueError("Invalid base size: %d" % base)
-            suffix = suffix_map[base]
-            u.resolve(options, symtab)
-            u.set_base(base, base_bits, base_sign_extend, suffix)
-
-    # Prune list of names to generate
-    name_list = []
-    for e in det_values(blocks, unions):
-        name_list += e.make_names()
-
-    name_list = set(name_list)
-    if len(options.prune_files) > 0:
-        search_re = re.compile('[a-zA-Z0-9_]+')
-
-        pruned_names = set()
-        for filename in options.prune_files:
-            f = open(filename, encoding="utf-8")
-            string = f.read()
-
-            matched_tokens = set(search_re.findall(string))
-            pruned_names.update(matched_tokens & name_list)
-    else:
-        pruned_names = name_list
-
-    options.names = pruned_names
-
-    # Generate the output
-    if options.hol_defs:
-        # Fetch kernel
-        print("theory %s_defs" % module_name, file=out_file)
-        print("imports \"%s/KernelState_C\"" % (
-            os.path.relpath(options.cspec_dir,
-                            os.path.dirname(out_file.filename))), file=out_file)
-        print("begin", file=out_file)
-        print(file=out_file)
-
-        print(defs_global_lemmas, file=out_file)
-        print(file=out_file)
-
-        for e in det_values(blocks, unions):
-            e.generate_hol_defs(options)
-
-        print("end", file=out_file)
-    elif options.hol_proofs:
-        def is_bit_type(tp):
-            return umm.is_base(tp) & (umm.base_name(tp) in
-                                      map(lambda e: e.name + '_C', det_values(blocks, unions)))
-
-        tps = umm.build_types(options.umm_types_file)
-        type_map = {}
-
-        # invert type map
-        for toptp in options.toplevel_types:
-            paths = umm.paths_to_type(tps, is_bit_type, toptp)
-
-            for path, tp in paths:
-                tp = umm.base_name(tp)
-
-                if tp in type_map:
-                    raise ValueError("Type %s has multiple parents" % tp)
-
-                type_map[tp] = (toptp, path)
-
-        print("theory %s_proofs" % module_name, file=out_file)
-        print("imports %s_defs" % module_name, file=out_file)
-        print("begin", file=out_file)
-        print(file=out_file)
-        print(file=out_file)
-
-        for e in det_values(blocks, unions):
-            e.generate_hol_proofs(options, type_map)
-
-        print("end", file=out_file)
-    else:
-        if options.from_file:
-            print(f"/* generated from {options.from_file} */\n", file=out_file)
-        print("#pragma once\n", file=out_file)
-        print('\n'.join(map(lambda x: '#include <%s>' % x,
-                            options.env['include'])), file=out_file)
-        for e in det_values(blocks, unions):
-            e.generate(options)
-
-    # Since "atomic" is the default for file creation, this finally ensures all
-    # files flagged as atomic are created.
-    OutputFile.finish_output()
+# ------------------------------------------------------------------------------
+if __name__ == '__main__':
+    main()
