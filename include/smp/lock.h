@@ -59,8 +59,9 @@ static inline bool_t FORCE_INLINE clh_is_ipi_pending(word_t cpu)
 
 static inline void FORCE_INLINE clh_lock_acquire(word_t cpu, bool_t irqPath)
 {
-    big_kernel_lock.node_owners[cpu].node->value = CLHState_Pending;
-
+    clh_qnode_p_t volatile *node_owner = &big_kernel_lock.node_owners[cpu];
+    node_owner->node->value = CLHState_Pending;
+    
     __atomic_thread_fence(__ATOMIC_RELEASE); /* writes must finish */
     /* Unfortunately, the compiler builtin __atomic_exchange_n() cannot be used
      * here, because some architectures lack an actual atomic swap instruction
@@ -73,15 +74,15 @@ static inline void FORCE_INLINE clh_lock_acquire(word_t cpu, bool_t irqPath)
      * untouched.
      */
     while (!try_arch_atomic_exchange_rlx(&big_kernel_lock.head,
-                                         big_kernel_lock.node_owners[cpu].node,
-                                         &big_kernel_lock.node_owners[cpu].next)) {
+                                         node_owner->node,
+                                         &node_owner->next)) {
         /* busy waiting */
     }
     __atomic_thread_fence(__ATOMIC_ACQUIRE); /* prevent reads before passing here */
 
     /* We do not have an __atomic_thread_fence here as this is already handled by the
      * atomic_exchange just above */
-    while (big_kernel_lock.node_owners[cpu].next->value != CLHState_Granted) {
+    while (node_owner->next->value != CLHState_Granted) {
         /* As we are in a loop we need to ensure that any loads of future iterations of the
          * loop are performed after this one */
         __atomic_thread_fence(__ATOMIC_ACQUIRE);
