@@ -61,24 +61,15 @@ static inline void FORCE_INLINE clh_lock_acquire(word_t cpu, bool_t irqPath)
 {
     clh_qnode_p_t volatile *node_owner = &big_kernel_lock.node_owners[cpu];
     node_owner->node->value = CLHState_Pending;
-    
-    __atomic_thread_fence(__ATOMIC_RELEASE); /* writes must finish */
-    /* Unfortunately, the compiler builtin __atomic_exchange_n() cannot be used
-     * here, because some architectures lack an actual atomic swap instruction
-     * and spin in a tight loop instead. The spinning duration is undefined,
-     * tests have shown it could be seconds in the worst case.
-     * Performance evaluation has also shown, that it's best to have fences just
-     * before and after a loop over one relaxed atomic exchange attempt.
-     * The content of big_kernel_lock.node_owners[cpu].next will only be
-     * modified if the atomic exchange way successful, otherwise it is left
-     * untouched.
-     */
-    while (!try_arch_atomic_exchange_rlx(&big_kernel_lock.head,
-                                         node_owner->node,
-                                         &node_owner->next)) {
-        /* busy waiting */
-    }
-    __atomic_thread_fence(__ATOMIC_ACQUIRE); /* prevent reads before passing here */
+
+#ifdef CONFIG_BKL_SWAP_MANUAL
+    node_owner->next = arch_atomic_exchange(&big_kernel_lock.head,
+                                            node_owner->node);
+#else
+    node_owner->next = __atomic_exchange_n(&big_kernel_lock.head,
+                                           node_owner->node,
+                                           __ATOMIC_ACQ_REL);
+#endif
 
     /* We do not have an __atomic_thread_fence here as this is already handled by the
      * atomic_exchange just above */

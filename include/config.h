@@ -18,3 +18,12 @@
 #define AARCH64_VSPACE_S2_START_L1
 #endif
 #endif
+
+#ifdef CONFIG_ARCH_ARM
+/* ToDo: Check if we can disable this by default and only enable this for
+ *       platforms where __atomic_exchange_n() can't be used. Document the
+ *       reason then, as it might just be a compiler limitation in the end that
+ *       is lifted in a future release.
+ */
+#define CONFIG_BKL_SWAP_MANUAL
+#endif
