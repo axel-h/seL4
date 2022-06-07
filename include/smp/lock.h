@@ -57,11 +57,12 @@ static inline bool_t FORCE_INLINE clh_is_ipi_pending(word_t cpu)
     return big_kernel_lock.node_owners[cpu].ipi == 1;
 }
 
-static inline void *sel4_atomic_exchange(void *ptr, bool_t
-                                         irqPath, word_t cpu, int memorder)
+static inline void FORCE_INLINE clh_lock_acquire(word_t cpu, bool_t irqPath)
 {
     clh_qnode_t *prev;
+    big_kernel_lock.node_owners[cpu].node->value = CLHState_Pending;
 
+    __atomic_thread_fence(__ATOMIC_RELEASE); /* writes must finish */
     /* Unfortunately, the compiler builtin __atomic_exchange_n() cannot be used
      * here, because some architectures lack an actual atomic swap instruction
      * and spin in a tight loop instead. The spinning duration is undefined,
@@ -69,33 +70,12 @@ static inline void *sel4_atomic_exchange(void *ptr, bool_t
      * Performance evaluation has also shown, that it's best to have fences just
      * before and after a loop over one relaxed atomic exchange attempt.
      */
-    if (memorder == __ATOMIC_RELEASE || memorder == __ATOMIC_ACQ_REL) {
-        __atomic_thread_fence(__ATOMIC_RELEASE);
-    } else if (memorder == __ATOMIC_SEQ_CST) {
-        __atomic_thread_fence(__ATOMIC_SEQ_CST);
-    }
-
     while (!try_arch_atomic_exchange_rlx(&big_kernel_lock.head,
                                          (void *) big_kernel_lock.node_owners[cpu].node,
                                          (void **) &prev)) {
         /* busy waiting */
     }
-
-    if (memorder == __ATOMIC_ACQUIRE || memorder == __ATOMIC_ACQ_REL) {
-        __atomic_thread_fence(__ATOMIC_ACQUIRE);
-    } else if (memorder == __ATOMIC_SEQ_CST) {
-        __atomic_thread_fence(__ATOMIC_SEQ_CST);
-    }
-
-    return prev;
-}
-
-static inline void FORCE_INLINE clh_lock_acquire(word_t cpu, bool_t irqPath)
-{
-    clh_qnode_t *prev;
-    big_kernel_lock.node_owners[cpu].node->value = CLHState_Pending;
-
-    prev = sel4_atomic_exchange(&big_kernel_lock.head, irqPath, cpu, __ATOMIC_ACQ_REL);
+    __atomic_thread_fence(__ATOMIC_ACQUIRE); /* prevent reads before passing here */
 
     big_kernel_lock.node_owners[cpu].next = prev;
 
