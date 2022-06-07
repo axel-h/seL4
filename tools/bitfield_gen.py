@@ -2521,68 +2521,65 @@ class Block:
 
         # Generate get/set specs
         for (field, offset, size, high) in self.fields:
-            mask = field_mask_proof(self.base, self.base_bits, self.base_sign_extend, high, size)
-            sign_extend = sign_extend_proof(high, self.base_bits, self.base_sign_extend)
 
-            substs = {"name": self.name,
-                      "field": field,
-                      "mask": mask,
-                      "sign_extend": sign_extend,
-                      "ret_name": return_name(self.base),
-                      "base": self.base}
+            def do_emit_named_op(op, proof_name, spec):
+                emit_named(
+                    f"{self.name}_{op}_{field}",
+                    params,
+                    make_proof(proof_name, spec, params.sorry))
 
-            if not params.skip_modifies:
-                # Get modifies spec
-                emit_named("%s_get_%s" % (self.name, field), params,
-                           make_proof('const_modifies_proof',
-                                      {"fun_name": "%s_get_%s" % (self.name, field),
-                                       "args": ', '.join([
-                                           "\<acute>ret__unsigned_long",
-                                           "\<acute>%s" % self.name])},
-                                      params.sorry))
+            def emit_named_op(op):
+                do_emit_named_op(
+                    op,
+                    f'{op}_spec',
+                    {"name": self.name,
+                     "field": field,
+                     "mask": field_mask_proof(self.base, self.base_bits, self.base_sign_extend, high, size),
+                     "sign_extend": sign_extend_proof(high, self.base_bits, self.base_sign_extend),
+                     "ret_name": return_name(self.base),
+                     "base": self.base})
 
-                # Ptr get modifies spec
-                emit_named("%s_ptr_get_%s" % (self.name, field), params,
-                           make_proof('const_modifies_proof',
-                                      {"fun_name": "%s_ptr_get_%s" % (self.name, field),
-                                       "args": ', '.join([
-                                           "\<acute>ret__unsigned_long",
-                                           "\<acute>%s_ptr" % self.name])},
-                                      params.sorry))
-
-            # Get spec
-            emit_named("%s_get_%s" % (self.name, field), params,
-                       make_proof('get_spec', substs, params.sorry))
+            def emit_named_op_modifies(op, proof_name, acutes):
+                do_emit_named_op(
+                    op,
+                    proof_name,
+                    {"fun_name": func_name,
+                     "args": ', '.join([f"\<acute>{s}" for s in acutes])})
 
             if not params.skip_modifies:
-                # Set modifies spec
-                emit_named("%s_set_%s" % (self.name, field), params,
-                           make_proof('const_modifies_proof',
-                                      {"fun_name": "%s_set_%s" % (self.name, field),
-                                       "args": ', '.join([
-                                           "\<acute>ret__struct_%s_C" % self.name,
-                                           "\<acute>%s" % self.name,
-                                           "\<acute>v%(base)d"])},
-                                      params.sorry))
+                emit_named_op_modifies(
+                    "get",
+                    'const_modifies_proof',
+                    ["ret__unsigned_long", self.name])
 
-                emit_named("%s_ptr_set_%s" % (self.name, field), params,
-                           make_proof('ptr_set_modifies_proof',
-                                      {"fun_name": "%s_ptr_set_%s" % (self.name, field),
-                                       "args": ', '.join([
-                                           "\<acute>%s_ptr" % self.name,
-                                           "\<acute>v%(base)d"])},
-                                      params.sorry))
+                emit_named_op_modifies(
+                    "ptr_get",
+                    'const_modifies_proof',
+                    ["ret__unsigned_long", f"{self.name}_ptr"])
 
-            # Set spec
-            emit_named("%s_set_%s" % (self.name, field), params,
-                       make_proof('set_spec', substs, params.sorry))
+            emit_named_op("get")
 
-            emit_named_ptr_proof("%s_ptr_get_%s" % (self.name, field), params, self.name,
-                                 type_map, params.toplevel_types,
-                                 'ptr_get_spec', substs)
-            emit_named_ptr_proof("%s_ptr_set_%s" % (self.name, field), params, self.name,
-                                 type_map, params.toplevel_types,
-                                 'ptr_set_spec', substs)
+            if not params.skip_modifies:
+                emit_named_op_modifies(
+                    "set",
+                    'const_modifies_proof',
+                    [f"ret__struct_{self.name}_C", f"{self.name}", f"v{self.base}"])
+                emit_named_op_modifies(
+                    "ptr_set"
+                    'ptr_set_modifies_proof',
+                    [f"{self.name}_ptr", f"v{self.base}"])
+
+            emit_named_op("set")
+
+            for op in ["get", "set"]:
+                emit_named_ptr_proof(
+                    f"{self.name}_{op}_{field}",
+                    params,
+                    self.name,
+                    type_map,
+                    params.toplevel_types,
+                    f'ptr_{op}_spec',
+                    substs)
 
     def generate(self, output, params):
 
