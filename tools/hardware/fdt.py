@@ -5,11 +5,13 @@
 #
 
 from __future__ import annotations
-import sys
 import pyfdt.pyfdt
 from hardware.device import WrappedNode
 from hardware.irq import create_irq_controller, IrqController
 
+# "annotations" exists in __future__ since 3.7.0b1, but even in 3.10 the
+# decision to make it mandatory has been postponed.
+import sys
 assert sys.version_info >= (3, 7)
 
 

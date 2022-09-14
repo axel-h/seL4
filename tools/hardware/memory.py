@@ -4,16 +4,15 @@
 # SPDX-License-Identifier: GPL-2.0-only
 #
 
-# Type hint support was added in Python 3 and improved continuously ever since,
-# in 3.10 it became mature enough to cover all our use cases natively. The
-# features can be enabled in 3.7 using an import from future. Just circular type
-# dependency support for types has been postponed to Python 4, thus we cannot
-# use "from hardware.device import WrappedNode".
 from __future__ import annotations
-import sys
 import functools
 import hardware
 
+# "annotations" exists in __future__ since 3.7.0b1, but even in 3.10 the
+# decision to make it mandatory has been postponed. Just circular type
+# dependency support for types has been postponed to Python 4, thus we cannot
+# use "from hardware.device import WrappedNode".
+import sys
 assert sys.version_info >= (3, 7)
 
 

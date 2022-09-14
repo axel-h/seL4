@@ -5,12 +5,14 @@
 #
 
 from __future__ import annotations
-import sys
 from collections import OrderedDict
 import logging
 import pyfdt.pyfdt
 from hardware.memory import Region
 
+# "annotations" exists in __future__ since 3.7.0b1, but even in 3.10 the
+# decision to make it mandatory has been postponed.
+import sys
 assert sys.version_info >= (3, 7)
 
 
