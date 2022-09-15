@@ -16,7 +16,7 @@
 
 static inline CONST time_t getKernelWcetUs(void)
 {
-    return  10u;
+    return _as_time_t(10u);
 }
 
 static inline PURE ticks_t usToTicks(time_t us)
@@ -57,7 +57,7 @@ static inline CONST ticks_t getMaxTicksToUs(void)
 
 static inline PURE time_t ticksToUs(ticks_t ticks)
 {
-    return div64(ticks, x86KStscMhz);
+    return _as_time_t(div64(ticks, x86KStscMhz));
 }
 
 static inline void setDeadline(ticks_t deadline)

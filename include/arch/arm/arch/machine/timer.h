@@ -49,9 +49,9 @@ void initTimer(void);
 static inline CONST time_t getMaxUsToTicks(void)
 {
 #if USE_KHZ
-    return UINT64_MAX / TIMER_CLOCK_KHZ;
+    return _as_time_t(UINT64_MAX / TIMER_CLOCK_KHZ);
 #else
-    return UINT64_MAX / TIMER_CLOCK_MHZ;
+    return _as_time_t(UINT64_MAX / TIMER_CLOCK_MHZ);
 #endif
 }
 
@@ -61,15 +61,15 @@ static inline CONST ticks_t usToTicks(time_t us)
     /* reciprocal division overflows too quickly for dividing by KHZ_IN_MHZ.
      * This operation isn't used frequently or on many platforms, so use manual
      * division here */
-    return div64(us * TIMER_CLOCK_KHZ, KHZ_IN_MHZ);
+    return div64(_from_time_t(us) * TIMER_CLOCK_KHZ, KHZ_IN_MHZ);
 #else
-    return us * TIMER_CLOCK_MHZ;
+    return _from_time_t(us) * TIMER_CLOCK_MHZ;
 #endif
 }
 
 static inline CONST ticks_t getTimerPrecision(void)
 {
-    return usToTicks(TIMER_PRECISION) + TIMER_OVERHEAD_TICKS;
+    return usToTicks(_as_time_t(TIMER_PRECISION)) + TIMER_OVERHEAD_TICKS;
 }
 
 # endif /* CONFIG_KERNEL_MCS */

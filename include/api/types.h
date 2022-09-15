@@ -26,7 +26,22 @@ typedef word_t prio_t;
  * which is represented by time_t in the kernel.
  */
 typedef uint64_t ticks_t;
-typedef uint64_t time_t;
+typedef struct {
+    uint64_t val;
+} time_t;
+
+static inline time_t _as_time_t(uint64_t val)
+{
+    return (time_t) {
+        .val = val
+    };
+}
+
+static inline uint64_t _from_time_t(time_t t)
+{
+    return t.val;
+}
+
 
 enum domainConstants {
     minDom = 0,

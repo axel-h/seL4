@@ -311,7 +311,7 @@ static void nextDomain(void)
     ksWorkUnitsCompleted = 0;
     ksCurDomain = ksDomSchedule[ksDomScheduleIdx].domain;
 #ifdef CONFIG_KERNEL_MCS
-    ksDomainTicks = usToTicks(ksDomSchedule[ksDomScheduleIdx].length * US_IN_MS);
+    ksDomainTicks = usToTicks(_as_time_t(ksDomSchedule[ksDomScheduleIdx].length * US_IN_MS));
 #else
     ksDomainTicks = ksDomSchedule[ksDomScheduleIdx].length;
 #endif

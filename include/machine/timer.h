@@ -19,7 +19,7 @@ static inline ticks_t getCurrentTicks(void);
 /** MODIFIES: [*] */
 static inline time_t getCurrentTime(void)
 {
-    return ticksToUs(getCurrentTicks());
+    return _from_time_t(ticksToUs(getCurrentTicks()));
 }
 /* Set the next deadline irq - deadline is absolute and may be slightly in
    the past. If it is set in the past, we expect an interrupt to be raised
@@ -33,7 +33,7 @@ static inline void ackDeadlineIRQ(void);
 /* get the expected wcet of the kernel for this platform */
 static PURE inline ticks_t getKernelWcetTicks(void)
 {
-    return usToTicks(getKernelWcetUs());
+    return _from_time_t(usToTicks(getKernelWcetUs()));
 }
 #else /* CONFIG_KERNEL_MCS */
 static inline void resetTimer(void);

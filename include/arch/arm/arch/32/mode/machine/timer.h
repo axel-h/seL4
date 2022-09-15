@@ -32,9 +32,9 @@ static inline CONST time_t ticksToUs(ticks_t ticks)
 {
     /* simulate 64bit division using multiplication by reciprocal */
 #if USE_KHZ
-    return (ticks * KHZ_IN_MHZ) * CLK_MAGIC >> CLK_SHIFT;
+    return _as_time_t((ticks * KHZ_IN_MHZ) * CLK_MAGIC >> CLK_SHIFT);
 #else
-    return (ticks * CLK_MAGIC) >> CLK_SHIFT;
+    return _as_time_t((ticks * CLK_MAGIC) >> CLK_SHIFT);
 #endif
 }
 #endif /* CONFIG_KERNEL_MCS */

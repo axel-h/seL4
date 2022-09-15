@@ -558,7 +558,7 @@ BOOT_CODE tcb_t *create_initial_thread(cap_t root_cnode_cap, cap_t it_pd_cap, vp
 
     ksCurDomain = ksDomSchedule[ksDomScheduleIdx].domain;
 #ifdef CONFIG_KERNEL_MCS
-    ksDomainTicks = usToTicks(ksDomSchedule[ksDomScheduleIdx].length * US_IN_MS);
+    ksDomainTicks = usToTicks(_as_time_t(ksDomSchedule[ksDomScheduleIdx].length * US_IN_MS));
 #else
     ksDomainTicks = ksDomSchedule[ksDomScheduleIdx].length;
 #endif
