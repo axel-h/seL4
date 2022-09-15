@@ -61,6 +61,7 @@ class ARMConfig(Config):
         ret = sorted(regions)
         extra_reserved = set()
 
+        # kernel is in the first region
         new = ret[0].align_base(self.get_kernel_phys_align())
         resv = Region(ret[0].base, new.base - ret[0].base)
         extra_reserved.add(resv)
@@ -91,8 +92,10 @@ class RISCVConfig(Config):
         ret = sorted(regions)
         extra_reserved = set()
 
+        # kernel is in the first region
         physBase = ret[0].base
 
+        # reserve space for bootloader in the region
         resv = Region(ret[0].base, self.get_bootloader_reserve())
         extra_reserved.add(resv)
         ret[0].base += self.get_bootloader_reserve()
