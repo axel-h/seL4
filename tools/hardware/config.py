@@ -91,10 +91,10 @@ class RISCVConfig(Config):
         physBase = regions[0].base
 
         # reserve bootloader region
-        resv = Region(regions[0].base, self.get_bootloader_reserve())
-        extra_reserved.add(resv)
-        regions[0].base += self.get_bootloader_reserve()
-        regions[0].size -= self.get_bootloader_reserve()
+        reserved_len = self.get_bootloader_reserve()
+        extra_reserved.add(Region(regions[0].base, reserved_len))
+        regions[0].base += reserved_len
+        regions[0].size -= reserved_len
 
         return regions, extra_reserved, physBase
 
