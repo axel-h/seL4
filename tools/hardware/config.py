@@ -3,47 +3,47 @@
 #
 # SPDX-License-Identifier: GPL-2.0-only
 #
-from typing import List, Set
+
+from __future__ import annotations
 from hardware.memory import Region
+
+# "annotations" exists in __future__ since 3.7.0b1, but even in 3.10 the
+# decision to make it mandatory has been postponed.
+import sys
+assert sys.version_info >= (3, 7)
 
 
 class Config:
     ''' Abstract config class '''
     arch = 'unknown'
 
-    def __init__(self, sel4arch, addrspace_max):
+    def __init__(self, sel4arch, phys_addr_space_bits):
         self.sel4arch = sel4arch
-        self.addrspace_max = addrspace_max
+        self.phys_addr_space_bits = phys_addr_space_bits
 
     def get_kernel_phys_align(self) -> int:
         ''' Used to align the base of physical memory. Returns alignment size in bits. '''
         return 0
 
-    def get_bootloader_reserve(self) -> int:
-        ''' Used to reserve a fixed amount of memory for the bootloader. Offsets
-            the kernel load address by the amount returned in bytes. '''
-        return 0
-
     def get_page_bits(self) -> int:
-        ''' Get page size in bits for this arch '''
-        return 12  # 4096-byte pages
+        '''
+        Get page size in 2^n  bits for this arch. Defaults to 2^12 (4096).
+        '''
+        return 12
 
     def get_smallest_kernel_object_alignment(self) -> int:
         return 4  # seL4_MinUntypedBits is 4 for all configurations
 
     def get_device_page_bits(self) -> int:
-        ''' Get page size in bits for mapping devices for this arch '''
+        '''
+        Get page size in 2^n  bits for mapping devices for this arch. Defaults
+        to the page size.
+        '''
         return self.get_page_bits()
 
-    def align_memory(self, regions: Set[Region]) -> List[Region]:
-        ''' Given a set of regions, sort them and align the first so that the
-        ELF loader will be able to load the kernel into it. Will return the
-        aligned memory region list, a set of any regions of memory that were
-        aligned out and the physBase value that the kernel will use. memory
-        region list, a set of any regions of memory that were aligned out and
-        the physBase value that the kernel will use. '''
-        pass
-
+    def get_phys_addr_space_bits(self) -> int:
+        ''' Return the physical address space in 2^n bits. '''
+        return self.phys_addr_space_bits
 
 class ARMConfig(Config):
     ''' Config class for ARM '''
@@ -54,20 +54,6 @@ class ARMConfig(Config):
         ''' on ARM the ELF loader expects to be able to map a supersection page to load the kernel. '''
         return self.SUPERSECTION_BITS
 
-    def align_memory(self, regions: Set[Region]) -> List[Region]:
-        ''' Arm wants physBase to be the physical load address of the kernel. '''
-        ret = sorted(regions)
-        extra_reserved = set()
-
-        new = ret[0].align_base(self.get_kernel_phys_align())
-        resv = Region(ret[0].base, new.base - ret[0].base)
-        extra_reserved.add(resv)
-        ret[0] = new
-
-        physBase = ret[0].base
-
-        return ret, extra_reserved, physBase
-
 
 class RISCVConfig(Config):
     ''' Config class for RISCV '''
@@ -75,28 +61,6 @@ class RISCVConfig(Config):
     MEGAPAGE_BITS_RV32 = 22  # 2^22 = 4 MiByte
     MEGAPAGE_BITS_RV64 = 21  # 2^21 = 2 MiByte
     MEGA_PAGE_SIZE_RV64 = 2**MEGAPAGE_BITS_RV64
-
-    def get_bootloader_reserve(self) -> int:
-        ''' OpenSBI reserved the first 2 MiByte of physical memory on rv64,
-        which is exactly a megapage. For rv32 we use the same value for now, as
-        this seems to work nicely - even if this is just half of the 4 MiByte
-        magepages that exist there. '''
-        return self.MEGA_PAGE_SIZE_RV64
-
-    def align_memory(self, regions: Set[Region]) -> List[Region]:
-        ''' Currently the RISC-V port expects physBase to be the address that the
-        bootloader is loaded at. To be generalised in the future. '''
-        ret = sorted(regions)
-        extra_reserved = set()
-
-        physBase = ret[0].base
-
-        resv = Region(ret[0].base, self.get_bootloader_reserve())
-        extra_reserved.add(resv)
-        ret[0].base += self.get_bootloader_reserve()
-        ret[0].size -= self.get_bootloader_reserve()
-
-        return ret, extra_reserved, physBase
 
     def get_device_page_bits(self) -> int:
         ''' Get page size in bits for mapping devices for this arch '''
@@ -109,11 +73,14 @@ class RISCVConfig(Config):
         raise ValueError('Unsupported sel4arch "{}" specified.'.format(self.sel4arch))
 
 
-def get_arch_config(sel4arch: str, addrspace_max: int) -> Config:
+def get_arch_config(sel4arch: str, phys_addr_space_bits: int) -> Config:
     ''' Return an appropriate Config object for the given architecture '''
-    if sel4arch in ['aarch32', 'aarch64', 'arm_hyp']:
-        return ARMConfig(sel4arch, addrspace_max)
-    elif sel4arch in ['riscv32', 'riscv64']:
-        return RISCVConfig(sel4arch, addrspace_max)
-    else:
-        raise ValueError('Unsupported sel4arch "{}" specified.'.format(sel4arch))
+
+    for (ctor, arch_list) in [
+        (ARMConfig,   ['aarch32', 'aarch64', 'arm_hyp']),
+        (RISCVConfig, ['riscv32', 'riscv64']),
+    ]:
+        if sel4arch in arch_list:
+            return ctor(sel4arch, phys_addr_space_bits)
+
+    raise ValueError('Unsupported sel4arch "{}" specified.'.format(sel4arch))
