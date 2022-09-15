@@ -88,7 +88,6 @@ class RISCVConfig(Config):
         bootloader is loaded at. To be generalised in the future. '''
         regions = sorted(regions)
         extra_reserved = set()
-
         physBase = regions[0].base
 
         resv = Region(regions[0].base, self.get_bootloader_reserve())
