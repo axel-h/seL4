@@ -47,18 +47,17 @@ class ARMConfig(Config):
         '''On ARM the ELF loader expects to be able to map a supersection page
         to load the kernel and 'physBase' must be the physical load address of
         the kernel. '''
-        ret = sorted(regions)
+        regions = sorted(regions)
         extra_reserved = set()
 
         # kernel is in the first region
-        new = ret[0].align_base(self.SUPERSECTION_BITS)
-        resv = Region(ret[0].base, new.base - ret[0].base)
-        extra_reserved.add(resv)
-        ret[0] = new
+        reg = regions[0]
+        reg_aligned = reg.align_base(self.SUPERSECTION_BITS)
+        regions[0] = reg_aligned
+        physBase = reg_aligned.base
+        extra_reserved.add(Region(reg.base, reg_aligned.base - reg.base))
 
-        physBase = ret[0].base
-
-        return ret, extra_reserved, physBase
+        return regions, extra_reserved, physBase
 
 
 class RISCVConfig(Config):
@@ -74,20 +73,19 @@ class RISCVConfig(Config):
         is exactly a megapage. On rv32 we use the same value for now, as this
         seems to work nicely - even if this is just half of the 4 MiByte
         magepages that exist there.'''
-        ret = sorted(regions)
+        regions = sorted(regions)
         extra_reserved = set()
 
         # kernel is in the first region
-        physBase = ret[0].base
-
+        reg = regions[0]
+        physBase = reg.base
         # reserve space for bootloader in the region
         len_bootloader_reserved = 1 << self.MEGAPAGE_BITS_RV64
-        resv = Region(ret[0].base, len_bootloader_reserved)
-        extra_reserved.add(resv)
-        ret[0].base += len_bootloader_reserved
-        ret[0].size -= len_bootloader_reserved
+        extra_reserved.add(Region(reg.base, len_bootloader_reserved))
+        reg.base += len_bootloader_reserved
+        reg.size -= len_bootloader_reserved
 
-        return ret, extra_reserved, physBase
+        return regions, extra_reserved, physBase
 
     def get_device_page_bits(self) -> int:
         ''' Get page size in bits for mapping devices for this arch '''
