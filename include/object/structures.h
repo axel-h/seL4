@@ -411,6 +411,7 @@ compile_assert(notification_size_sane, sizeof(notification_t) == BIT(seL4_Notifi
 /* Check the IPC buffer is the right size */
 compile_assert(ipc_buf_size_sane, sizeof(seL4_IPCBuffer) == BIT(seL4_IPCBufferSizeBits))
 #ifdef CONFIG_KERNEL_MCS
+compile_assert(sc_size_sane, sizeof(sched_context_t) <= BIT(seL4_MinSchedContextBits))
 compile_assert(sc_core_size_sane, (sizeof(sched_context_t) + MIN_REFILLS *sizeof(refill_t) ==
                                    seL4_CoreSchedContextBytes))
 compile_assert(reply_size_sane, sizeof(reply_t) == BIT(seL4_ReplyBits))
