@@ -467,23 +467,24 @@ BOOT_CODE bool_t init_sched_control(cap_t root_cnode_cap, word_t num_nodes)
 
 BOOT_CODE void create_idle_thread(void)
 {
-    pptr_t pptr;
-
 #ifdef ENABLE_SMP_SUPPORT
-    for (unsigned int i = 0; i < CONFIG_MAX_NUM_NODES; i++) {
-#endif /* ENABLE_SMP_SUPPORT */
-        pptr = (pptr_t) &ksIdleThreadTCB[SMP_TERNARY(i, 0)];
-        NODE_STATE_ON_CORE(ksIdleThread, i) = TCB_PTR(pptr + TCB_OFFSET);
-        configureIdleThread(NODE_STATE_ON_CORE(ksIdleThread, i));
-#ifdef CONFIG_DEBUG_BUILD
-        setThreadName(NODE_STATE_ON_CORE(ksIdleThread, i), "idle_thread");
+    for (unsigned int core = 0; core < CONFIG_MAX_NUM_NODES; core++) {
+#else
+    const unsigned int core = 0;
 #endif
-        SMP_COND_STATEMENT(NODE_STATE_ON_CORE(ksIdleThread, i)->tcbAffinity = i);
+        tcb_t *tcb = TCB_PTR((pptr_t)&ksIdleThreadTCB[core] + TCB_OFFSET);
+#ifdef CONFIG_DEBUG_BUILD
+        setThreadName(tcb, "idle_thread");
+#endif
+        configureIdleThread(tcb);
+        SMP_COND_STATEMENT(tcb->tcbAffinity = core;)
+        NODE_STATE_ON_CORE(ksIdleThread, core) = tcb;
+
 #ifdef CONFIG_KERNEL_MCS
-        configure_sched_context(NODE_STATE_ON_CORE(ksIdleThread, i), SC_PTR(&ksIdleThreadSC[SMP_TERNARY(i, 0)]),
-                                usToTicks(CONFIG_BOOT_THREAD_TIME_SLICE * US_IN_MS));
-        SMP_COND_STATEMENT(NODE_STATE_ON_CORE(ksIdleThread, i)->tcbSchedContext->scCore = i;)
-        NODE_STATE_ON_CORE(ksIdleSC, i) = SC_PTR(&ksIdleThreadSC[SMP_TERNARY(i, 0)]);
+        sched_context_t *sc = SC_PTR(&ksIdleThreadSC[core]);
+        configure_sched_context(tcb, sc, usToTicks(CONFIG_BOOT_THREAD_TIME_SLICE * US_IN_MS));
+        SMP_COND_STATEMENT(tcb->tcbSchedContext->scCore = core;)
+        NODE_STATE_ON_CORE(ksIdleSC, core) = sc;
 #endif
 #ifdef ENABLE_SMP_SUPPORT
     }
