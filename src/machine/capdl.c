@@ -135,10 +135,10 @@ void obj_sc_print_attrs(cap_t sc_cap)
 void obj_ut_print_attrs(cte_t *slot, tcb_t *tcb)
 {
     /* might have two untypeds with the same address but different size */
-    printf("%p_%lu_untyped = ut (%lu bits, paddr: %p) {",
+    printf("%p_%"SEL4_PRIu_word"_untyped = ut (%"SEL4_PRIu_word" bits, paddr: %p) {",
            (void *)cap_untyped_cap_get_capPtr(slot->cap),
-           (long unsigned int)cap_untyped_cap_get_capBlockSize(slot->cap),
-           (long unsigned int)cap_untyped_cap_get_capBlockSize(slot->cap),
+           (word_t)cap_untyped_cap_get_capBlockSize(slot->cap),
+           (word_t)cap_untyped_cap_get_capBlockSize(slot->cap),
            WORD_PTR(cap_untyped_cap_get_capPtr(slot->cap)));
 
     /* there is no need to check for a NullCap as NullCaps are
@@ -162,7 +162,7 @@ void obj_ut_print_attrs(cte_t *slot, tcb_t *tcb)
 
 void obj_cnode_print_attrs(cap_t cnode)
 {
-    printf("(%lu bits)\n", (long unsigned int)cap_cnode_cap_get_capCNodeRadix(cnode));
+    printf("(%"SEL4_PRIu_word" bits)\n", (word_t)cap_cnode_cap_get_capCNodeRadix(cnode));
 }
 
 void obj_tcb_print_cnodes(cap_t cnode, tcb_t *tcb)
@@ -196,29 +196,63 @@ void obj_tcb_print_cnodes(cap_t cnode, tcb_t *tcb)
 
 void cap_cnode_print_attrs(cap_t cnode)
 {
-    printf("(guard: %lu, guard_size: %lu)\n",
-           (long unsigned int)cap_cnode_cap_get_capCNodeGuard(cnode),
-           (long unsigned int)cap_cnode_cap_get_capCNodeGuardSize(cnode));
+    printf("(guard: %"SEL4_PRIu_word", guard_size: %"SEL4_PRIu_word")\n",
+           (word_t)cap_cnode_cap_get_capCNodeGuard(cnode),
+           (word_t)cap_cnode_cap_get_capCNodeGuardSize(cnode));
 }
 
 void cap_ep_print_attrs(cap_t ep)
 {
+    unsigned int cnt_attr = 0;
+
     printf("(");
-    cap_endpoint_cap_get_capCanReceive(ep) ? putchar('R') : 0;
-    cap_endpoint_cap_get_capCanSend(ep) ? putchar('W') : 0;
-    cap_endpoint_cap_get_capCanGrant(ep) ? putchar('G') : 0;
-    cap_endpoint_cap_get_capCanGrantReply(ep) ? putchar('P') : 0;
-    long unsigned int badge = cap_endpoint_cap_get_capEPBadge(ep);
-    badge ? printf(", badge: %lu)\n", badge) : printf(")\n");
+    if (cap_endpoint_cap_get_capCanReceive(ep)) {
+        cnt_attr++;
+        putchar('R');
+    }
+    if (cap_endpoint_cap_get_capCanSend(ep)) {
+        cnt_attr++;
+        putchar('W');
+    }
+    if (cap_endpoint_cap_get_capCanGrant(ep)) {
+        cnt_attr++;
+        putchar('G');
+    }
+    if (cap_endpoint_cap_get_capCanGrantReply(ep)) {
+        cnt_attr++;
+        putchar('P');
+    }
+    word_t badge = (word_t)cap_endpoint_cap_get_capEPBadge(ep);
+    if (0 != badge) {
+        if (cnt_attr > 0) {
+            printf(", ");
+        }
+        printf("badge: %"SEL4_PRIu_word, badge);
+    }
+    printf(")\n");
 }
 
 void cap_ntfn_print_attrs(cap_t ntfn)
 {
+    unsigned int cnt_attr = 0;
+
     printf("(");
-    cap_notification_cap_get_capNtfnCanReceive(ntfn) ? putchar('R') : 0;
-    cap_notification_cap_get_capNtfnCanSend(ntfn) ? putchar('W') : 0;
-    long unsigned int badge = cap_notification_cap_get_capNtfnBadge(ntfn);
-    badge ? printf(", badge: %lu)\n", badge) : printf(")\n");
+    if (cap_notification_cap_get_capNtfnCanReceive(ntfn)) {
+        cnt_attr++;
+        putchar('R');
+    }
+    if (cap_notification_cap_get_capNtfnCanSend(ntfn)) {
+        cnt_attr++;
+        putchar('W');
+    }
+    word_t badge = (word_t)cap_notification_cap_get_capNtfnBadge(ntfn);
+    if (badge) {
+        if (cnt_attr > 0) {
+            printf(", ");
+        }
+        printf("badge: %"SEL4_PRIu_word, badge);
+    }
+    printf(")\n");
 }
 
 /*
