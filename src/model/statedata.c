@@ -97,12 +97,12 @@ word_t ksDomScheduleIdx;
 /* Only used by lockTLBEntry */
 word_t tlbLockCount = 0;
 
-/* Idle thread. */
-SECTION("._idle_thread") char ksIdleThreadTCB[CONFIG_MAX_NUM_NODES][BIT(seL4_TCBBits)] ALIGN(BIT(TCB_SIZE_BITS));
+/* memory for Idle thread TCB. */
+SECTION("._idle_thread") mem_block_tcb_t ksIdleThreadTCB[CONFIG_MAX_NUM_NODES] ALIGN(BIT(TCB_SIZE_BITS));
 
 #ifdef CONFIG_KERNEL_MCS
 /* Idle thread Schedcontexts */
-char ksIdleThreadSC[CONFIG_MAX_NUM_NODES][BIT(seL4_MinSchedContextBits)] ALIGN(BIT(seL4_MinSchedContextBits));
+mem_block_sc_t ksIdleThreadSC[CONFIG_MAX_NUM_NODES] ALIGN(BIT(seL4_MinSchedContextBits));
 #endif
 
 #if (defined CONFIG_DEBUG_BUILD || defined CONFIG_BENCHMARK_TRACK_KERNEL_ENTRIES)
