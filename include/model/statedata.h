@@ -114,10 +114,18 @@ extern word_t ksDomainTime;
 #endif
 extern word_t tlbLockCount VISIBLE;
 
-extern char ksIdleThreadTCB[CONFIG_MAX_NUM_NODES][BIT(seL4_TCBBits)];
-
+/* For the idle thread, we follow the kernel's memory allocation pattern used
+ * for all other thread. Every TCB exists in a memory block of the size
+ * BIT(seL4_TCBBits), which has additional management data before the actual
+ * tcb_t data. Every SC exists in a memory block of the size
+ * BIT(seL4_MinSchedContextBits), but there is no additional data besides
+ * sched_context_t in there.
+ */
+typedef char mem_block_tcb_t[BIT(seL4_TCBBits)];
+extern mem_block_tcb_t ksIdleThreadTCB[CONFIG_MAX_NUM_NODES];
 #ifdef CONFIG_KERNEL_MCS
-extern char ksIdleThreadSC[CONFIG_MAX_NUM_NODES][BIT(seL4_MinSchedContextBits)];
+typedef char mem_block_sc_t[BIT(seL4_MinSchedContextBits)];
+extern mem_block_sc_t ksIdleThreadSC[CONFIG_MAX_NUM_NODES];
 #endif
 
 #ifdef CONFIG_KERNEL_LOG_BUFFER
