@@ -177,6 +177,15 @@ devices:
       - index: 0
         kernel: WDT1_PPTR
         user: true
+  # i.MX6 UART
+  - compatible:
+      - fsl,imx6q-uart
+    regions:
+      - index: 0
+        kernel: UART_PPTR
+        macro: CONFIG_PRINTING
+        user: true
+        kernel_size: 0x10000
   # various serial consoles (`grep <compatible> serial/*`)
   - compatible:
       - amlogic,meson-gx-uart
