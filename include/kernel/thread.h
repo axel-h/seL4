@@ -146,7 +146,7 @@ static inline void commitTime(void)
         NODE_STATE(ksCurSC)->scConsumed += NODE_STATE(ksConsumed);
     }
 
-    NODE_STATE(ksConsumed) = 0llu;
+    NODE_STATE(ksConsumed) = 0;
 }
 
 static inline bool_t PURE isSchedulable(const tcb_t *thread)
