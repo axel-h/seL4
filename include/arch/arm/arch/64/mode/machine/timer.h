@@ -12,6 +12,8 @@
 #include <util.h>
 
 /* timer function definitions that work for all 64 bit arm platforms */
+
+/* Get the max value ticksToUs() can handle without overflowing. */
 static inline CONST ticks_t getMaxTicksToUs(void)
 {
 #if USE_KHZ

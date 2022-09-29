@@ -20,6 +20,12 @@
 /* seL4_CapRights_t defined in mode/api/shared_types.bf */
 
 typedef word_t prio_t;
+
+/* The userland API uses ticks_t, which is micro seconds, while the kernel uses
+ * ticks_t, which is ticks. The tick frequency is usually well above 1 MHz, thus
+ * there are several ticks per us. The functions ticksToUs() and usToTicks()
+ * convert between ticks_t and time_t.
+ */
 typedef uint64_t ticks_t;
 typedef uint64_t time_t;
 

@@ -37,11 +37,13 @@ static inline PURE ticks_t getTimerPrecision(void)
     return usToTicks(1);
 }
 
+/* Get the max value ticksToUs() can handle without overflowing. */
 static inline CONST ticks_t getMaxTicksToUs(void)
 {
     return UINT64_MAX;
 }
 
+/* Get the max value usToTicks() can handle without overflowing. */
 static inline CONST time_t getMaxUsToTicks(void)
 {
     return UINT64_MAX / TICKS_IN_US;
