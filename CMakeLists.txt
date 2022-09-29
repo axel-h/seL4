@@ -41,6 +41,8 @@ RequireTool(XMLLINT_PATH xmllint.sh)
 # Process the configuration scripts
 include(config.cmake)
 
+message("CMAKE_C_COMPILER: ID='${CMAKE_C_COMPILER_ID}', VERSION='${CMAKE_C_COMPILER_VERSION}'")
+
 # Define default global flag information so that users can compile with the same
 # basic architecture flags as the kernel
 
