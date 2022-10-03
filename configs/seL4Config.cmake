@@ -111,11 +111,11 @@ macro(fallback_declare_seL4_arch_default default_arch)
     declare_seL4_arch(${default_arch})
 endmacro()
 
-# CLK_SHIFT and CLK_MAGIC are generated from tools/reciprocal.py
-# based on the TIMER_CLK_HZ to simulate division.
-# This could be moved to a cmake function
-# in future to build the values on the first build. Note the calculation
-# can take a long time though.
+# CLK_SHIFT and CLK_MAGIC are generated from tools/reciprocal.py based on the
+# TIMER_CLK_HZ to avoid doing a 64-bit division on 32-bit platforms. The
+# calculation could happen automatically in a CMake function also, but the
+# python script also verifies the multiply-and-shift operation works for every
+# 32-bit integer, and this check takes a very long time.
 macro(declare_default_headers)
     cmake_parse_arguments(
         CONFIGURE
