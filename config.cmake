@@ -48,6 +48,9 @@ set_property(
 
 # These options are now set in seL4Config.cmake
 if(DEFINED CALLED_declare_default_headers)
+    message("CONFIGURE_MAX_IRQ = ${CONFIGURE_MAX_IRQ}")
+    message("KernelMaxNumNodes = ${KernelMaxNumNodes}")
+    message("CONFIGURE_NUM_PPI = ${CONFIGURE_NUM_PPI}")
     # calculate the irq cnode size based on MAX_NUM_IRQ
     if("${KernelArch}" STREQUAL "riscv")
         math(EXPR MAX_NUM_IRQ "${CONFIGURE_MAX_IRQ} + 2")
@@ -65,6 +68,7 @@ if(DEFINED CALLED_declare_default_headers)
             set(MAX_NUM_IRQ "${CONFIGURE_MAX_IRQ}")
         endif()
     endif()
+    message("MAX_NUM_IRQ = ${MAX_NUM_IRQ}")
     set(BITS "0")
     while(MAX_NUM_IRQ GREATER "0")
         math(EXPR BITS "${BITS} + 1")
