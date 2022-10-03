@@ -51,15 +51,19 @@ if(DEFINED CALLED_declare_default_headers)
     # calculate the irq cnode size based on MAX_NUM_IRQ
     if(KernelArchRiscV)
         math(EXPR MAX_NUM_IRQ "${CONFIGURE_PLIC_MAX_NUM_INT} + 2")
-    else()
-        if(DEFINED KernelMaxNumNodes AND CONFIGURE_NUM_PPI GREATER "0" AND KernelArchARM)
+    elseif(KernelArchARM)
+        set(MAX_NUM_IRQ "${CONFIGURE_MAX_IRQ}")
+        if(DEFINED CONFIGURE_NUM_PPI)
+            # The PPIs are a part of CONFIGURE_MAX_IRQ, but they are separate
+            # for each core.
             math(
                 EXPR MAX_NUM_IRQ
-                "(${KernelMaxNumNodes}-1)*${CONFIGURE_NUM_PPI} + ${CONFIGURE_MAX_IRQ}"
+                "${MAX_NUM_IRQ} + ((${KernelMaxNumNodes} - 1) * ${CONFIGURE_NUM_PPI})"
             )
-        else()
-            set(MAX_NUM_IRQ "${CONFIGURE_MAX_IRQ}")
         endif()
+    else()
+        # Don't make any assumption about other architectures.
+        message(FATAL_ERROR "unsupported architecture: '${KernelArch}'")
     endif()
     set(BITS "0")
     while(MAX_NUM_IRQ GREATER "0")
