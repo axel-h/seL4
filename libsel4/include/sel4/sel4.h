@@ -5,6 +5,9 @@
  */
 
 #pragma once
+
+#include <sel4/config.h>
+
 #include <sel4/types.h>
 #include <sel4/macros.h>
 
@@ -18,7 +21,6 @@
 
 #include <sel4/bootinfo.h>
 #include <sel4/faults.h>
-#include <sel4/deprecated.h>
 #include <sel4/constants.h>
 #include <sel4/sel4_arch/constants.h>
 #include <sel4/arch/constants.h>

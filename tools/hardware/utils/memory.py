@@ -4,8 +4,7 @@
 # SPDX-License-Identifier: GPL-2.0-only
 #
 
-from typing import List, Set
-
+from __future__ import annotations
 import hardware
 from hardware.config import Config
 from hardware.device import WrappedNode
@@ -13,8 +12,13 @@ from hardware.fdt import FdtParser
 from hardware.memory import Region
 from hardware.utils.rule import KernelRegionGroup
 
+# "annotations" exists in __future__ since 3.7.0b1, but even in 3.10 the
+# decision to make it mandatory has been postponed.
+import sys
+assert sys.version_info >= (3, 7)
 
-def get_memory_regions(tree: FdtParser):
+
+def get_memory_regions(tree: FdtParser) -> Set[Region]:
     ''' Get all regions with device_type = memory in the tree '''
     regions = set()
 

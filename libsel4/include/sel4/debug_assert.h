@@ -14,8 +14,10 @@
 
 #ifdef NDEBUG
 
+#include <sel4/macros.h>
+
 /** NDEBUG is defined do nothing */
-#define seL4_DebugAssert(expr) ((void)(0))
+#define seL4_DebugAssert(expr)  SEL4_EMPTY_EXPRESSION()
 
 #else // NDEBUG is not defined
 

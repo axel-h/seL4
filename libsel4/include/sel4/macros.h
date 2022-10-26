@@ -6,7 +6,7 @@
 
 #pragma once
 
-#include <autoconf.h>
+#include <sel4/config.h>
 
 #ifndef CONST
 #define CONST   __attribute__((__const__))
@@ -42,6 +42,14 @@
 #define LIBSEL4_INLINE_FUNC     static inline
 
 #endif
+
+/* An expression that does nothing, but it is still a token that requires a
+ * semicolon afterwards. Use this for macros that are reduced to nothing in
+ * certain configurations, so the semicolon is properly consumed and does not
+ * create side effects in corner cases. Using "do {} while(0)" here is another
+ * common method, but "((void)(0))" is preferred for verification.
+ */
+#define SEL4_EMPTY_EXPRESSION()    ((void)(0))
 
 /* _Static_assert() is a c11 feature. Since the kernel is currently compiled
  * with c99, we have to emulate it. */

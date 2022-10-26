@@ -3,8 +3,14 @@
 #
 # SPDX-License-Identifier: GPL-2.0-only
 #
-from typing import List, Set
+
+from __future__ import annotations
 from hardware.memory import Region
+
+# "annotations" exists in __future__ since 3.7.0b1, but even in 3.10 the
+# decision to make it mandatory has been postponed.
+import sys
+assert sys.version_info >= (3, 7)
 
 
 class Config:
@@ -45,7 +51,7 @@ class Config:
         pass
 
 
-class ARMConfig(Config):
+class Config_ARM(Config):
     ''' Config class for ARM '''
     arch = 'arm'
     SUPERSECTION_BITS = 24  # 2^24 = 16 MiByte
@@ -56,25 +62,27 @@ class ARMConfig(Config):
 
     def align_memory(self, regions: Set[Region]) -> List[Region]:
         ''' Arm wants physBase to be the physical load address of the kernel. '''
-        ret = sorted(regions)
+        regions = sorted(regions)
         extra_reserved = set()
 
-        new = ret[0].align_base(self.get_kernel_phys_align())
-        resv = Region(ret[0].base, new.base - ret[0].base)
+        new = regions[0].align_base(self.get_kernel_phys_align())
+        resv = Region(regions[0].base, new.base - regions[0].base)
         extra_reserved.add(resv)
-        ret[0] = new
+        regions[0] = new
 
-        physBase = ret[0].base
+        physBase = regions[0].base
 
-        return ret, extra_reserved, physBase
+        return regions, extra_reserved, physBase
 
 
-class RISCVConfig(Config):
-    ''' Config class for RISCV '''
+class Config_RISCV(Config):
+    ''' Abstract config class for RISC-V architecture'''
     arch = 'riscv'
-    MEGAPAGE_BITS_RV32 = 22  # 2^22 = 4 MiByte
-    MEGAPAGE_BITS_RV64 = 21  # 2^21 = 2 MiByte
-    MEGA_PAGE_SIZE_RV64 = 2**MEGAPAGE_BITS_RV64
+
+
+class Config_RISCV32(Config_RISCV):
+    ''' Config class for RISC-V 32-bit '''
+    MEGAPAGE_BITS = 22  # 2^22 = 4 MiByte
 
     def get_bootloader_reserve(self) -> int:
         ''' OpenSBI reserved the first 2 MiByte of physical memory on rv64,
@@ -86,27 +94,28 @@ class RISCVConfig(Config):
     def align_memory(self, regions: Set[Region]) -> List[Region]:
         ''' Currently the RISC-V port expects physBase to be the address that the
         bootloader is loaded at. To be generalised in the future. '''
-        ret = sorted(regions)
+        regions = sorted(regions)
         extra_reserved = set()
+        physBase = regions[0].base
 
-        physBase = ret[0].base
+        # reserve bootloader region
+        extra_reserved.add(
+            regions[0].cut_from_start(self.get_bootloader_reserve()))
 
-        resv = Region(ret[0].base, self.get_bootloader_reserve())
-        extra_reserved.add(resv)
-        ret[0].base += self.get_bootloader_reserve()
-        ret[0].size -= self.get_bootloader_reserve()
-
-        return ret, extra_reserved, physBase
+        return regions, extra_reserved, physBase
 
     def get_device_page_bits(self) -> int:
-        ''' Get page size in bits for mapping devices for this arch '''
-        if (self.sel4arch == 'riscv32'):
-            # 4MiB device pages
-            return self.MEGAPAGE_BITS_RV32
-        elif (self.sel4arch == 'riscv64'):
-            # 2MiB device pages for sv39 and sv48
-            return self.MEGAPAGE_BITS_RV64
-        raise ValueError('Unsupported sel4arch "{}" specified.'.format(self.sel4arch))
+        ''' kernel devices are mapped into megapages '''
+        return self.MEGAPAGE_BITS
+
+
+class Config_RISCV64(Config_RISCV):
+    ''' Config class for RISC-V 64-bit '''
+    MEGAPAGE_BITS = 21  # 2^21 = 2 MiByte
+
+    def get_device_page_bits(self) -> int:
+        ''' kernel devices are mapped into megapages '''
+        return self.MEGAPAGE_BITS
 
 
 def get_arch_config(sel4arch: str, addrspace_max: int) -> Config:
@@ -117,3 +126,13 @@ def get_arch_config(sel4arch: str, addrspace_max: int) -> Config:
         return RISCVConfig(sel4arch, addrspace_max)
     else:
         raise ValueError('Unsupported sel4arch "{}" specified.'.format(sel4arch))
+
+    for (ctor, arch_list) in [
+        (Config_ARM,     ['aarch32', 'aarch64', 'arm_hyp']),
+        (Config_RISCV32, ['riscv32']),
+        (Config_RISCV64, ['riscv64']),
+    ]:
+        if sel4arch in arch_list:
+            return ctor(sel4arch, phys_addr_space_bits)
+
+    raise ValueError('Unsupported sel4arch "{}" specified.'.format(sel4arch))

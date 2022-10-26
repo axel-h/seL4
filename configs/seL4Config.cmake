@@ -124,6 +124,19 @@ macro(declare_default_headers)
         ""
         ${ARGN}
     )
+
+    if(NOT KernelArchARM AND DEFINED CONFIGURE_NUM_PPI)
+        message(FATAL_ERROR "NUM_PPI is for ARM only")
+    endif()
+
+    if(KernelArchRiscV)
+        if(DEFINED CONFIGURE_MAX_IRQ)
+            message(FATAL_ERROR "Use PLIC_MAX_NUM_INT instead MAX_IRQ on RISC-V")
+        endif()
+    elseif(DEFINED CONFIGURE_PLIC_MAX_NUM_INT)
+        message(FATAL_ERROR "PLIC_MAX_NUM_INT is for RISC-V only")
+    endif()
+
     set(CALLED_declare_default_headers 1)
 endmacro()
 
