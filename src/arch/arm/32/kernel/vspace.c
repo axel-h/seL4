@@ -2781,95 +2781,106 @@ void kernelDataAbort(word_t pc)
 }
 #endif /* CONFIG_ARM_HYPERVISOR_SUPPORT */
 
-#endif
+#endif /* CONFIG_DEBUG_BUILD */
 
 #ifdef CONFIG_PRINTING
-typedef struct readWordFromVSpace_ret {
-    exception_t status;
-    word_t value;
-} readWordFromVSpace_ret_t;
 
-static readWordFromVSpace_ret_t readWordFromVSpace(pde_t *pd, word_t vaddr)
+static readWordFromVSpace_ret_t readWordFromPhysBase(word_t vaddr,
+                                                     word_t vaddr_bits,
+                                                     paddr_t paddr_base)
 {
-    readWordFromVSpace_ret_t ret;
-    lookupPTSlot_ret_t ptSlot;
-    pde_t *pdSlot;
-    paddr_t paddr;
-    word_t offset;
-    pptr_t kernel_vaddr;
-    word_t *value;
+    word_t mask = MASK(vaddr_bits);
+    word_t offset = vaddr & mask;
+    paddr_t paddr = paddr_base + offset;
+    pptr_t pptr = (pptr_t)paddr_to_pptr(paddr_base) + offset;
 
-    pdSlot = lookupPDSlot(pd, vaddr);
+    if (!IS_ALIGNED(pptr, seL4_WordSizeBits)) {
+        return (readWordFromVSpace_ret_t) {
+            .status = VSPACE_INVALID_ALIGNMENT,
+            .paddr  = paddr,
+        };
+    }
+
+    /* After all the checks, this access should not cause a fault ... */
+    word_t data = *((word_t *)pptr);
+
+    return (readWordFromVSpace_ret_t) {
+        .status = VSPACE_ACCESS_SUCCESSFUL,
+        .paddr  = paddr,
+        .value  = data
+    };
+}
+
+
+readWordFromVSpace_ret_t Arch_readWordFromVSpace(vspace_root_t *vspace_root,
+                                                 word_t vaddr)
+{
+    pde_t *pdSlot = lookupPDSlot(vspace_root, vaddr);
     if (pde_ptr_get_pdeType(pdSlot) == pde_pde_section) {
-        paddr = pde_pde_section_ptr_get_address(pdSlot);
-        offset = vaddr & MASK(ARMSectionBits);
-    } else {
-        ptSlot = lookupPTSlot(pd, vaddr);
+        return readWordFromPhysBase(vaddr, ARMSectionBits,
+                                    pde_pde_section_ptr_get_address(pdSlot));
+    }
+
+    lookupPTSlot_ret_t ptSlot = lookupPTSlot(vspace_root, vaddr);
+    if (ptSlot.status == EXCEPTION_NONE) {
+        switch (pte_ptr_get_pteType(ptSlot.ptSlot)) {
+            case pte_pte_small:
+                return readWordFromPhysBase(
+                            vaddr,
 #ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
-        if (ptSlot.status == EXCEPTION_NONE && pte_ptr_get_pteType(ptSlot.ptSlot) == pte_pte_small) {
-            paddr = pte_pte_small_ptr_get_address(ptSlot.ptSlot);
-            if (pte_pte_small_ptr_get_contiguous_hint(ptSlot.ptSlot)) {
-                offset = vaddr & MASK(ARMLargePageBits);
-            } else {
-                offset = vaddr & MASK(ARMSmallPageBits);
-            }
-#else
-        if (ptSlot.status == EXCEPTION_NONE && pte_ptr_get_pteType(ptSlot.ptSlot) == pte_pte_small) {
-            paddr = pte_pte_small_ptr_get_address(ptSlot.ptSlot);
-            offset = vaddr & MASK(ARMSmallPageBits);
-        } else if (ptSlot.status == EXCEPTION_NONE && pte_ptr_get_pteType(ptSlot.ptSlot) == pte_pte_large) {
-            paddr = pte_pte_large_ptr_get_address(ptSlot.ptSlot);
-            offset = vaddr & MASK(ARMLargePageBits);
-#endif
-        } else {
-            ret.status = EXCEPTION_LOOKUP_FAULT;
-            return ret;
+                            (pte_pte_small_ptr_get_contiguous_hint(ptSlot.ptSlot)) ?
+                            ARMLargePageBits : ARMSmallPageBits,
+#else /* not CONFIG_ARM_HYPERVISOR_SUPPORT */
+                            ARMSmallPageBits,
+#endif /* [not] CONFIG_ARM_HYPERVISOR_SUPPORT */
+                            pte_pte_small_ptr_get_address(ptSlot.ptSlot)
+                        );
+
+#ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
+            case pte_pte_large:
+                return readWordFromPhysBase(
+                            vaddr
+                            pte_pte_large_ptr_get_address(ptSlot.ptSlot),
+                            ARMLargePageBits);
+#endif /* CONFIG_ARM_HYPERVISOR_SUPPORT */
+
+            default:
+                break;
         }
     }
 
-
-    kernel_vaddr = (word_t)paddr_to_pptr(paddr);
-    value = (word_t *)(kernel_vaddr + offset);
-    ret.status = EXCEPTION_NONE;
-    ret.value = *value;
-    return ret;
+    return (readWordFromVSpace_ret_t) {
+        .status = VSPACE_LOOKUP_FAILED,
+    };
 }
 
-void Arch_userStackTrace(tcb_t *tptr)
+readWordFromStack_ret_t Arch_readWordFromThreadStack(tcb_t *tptr, word_t i)
 {
-    cap_t threadRoot;
-    pde_t *pd;
-    word_t sp;
-    int i;
+    /* Lookup the stack pointer and the requested stack word address. */
+    word_t sp = getRegister(tptr, SP);
+    /* Stack grows to lower addresses */
+    word_t vaddr = sp + (i * sizeof(word_t));
 
-    threadRoot = TCB_PTR_CTE_PTR(tptr, tcbVTable)->cap;
-
-    /* lookup the PD */
+    /* Lookup the vspace root. */
+    cap_t threadRoot = TCB_PTR_CTE_PTR(tptr, tcbVTable)->cap;
     if (cap_get_capType(threadRoot) != cap_page_directory_cap) {
-        printf("Invalid vspace\n");
-        return;
+        /* Seems the capabilities are broken, so we can't access the stack. All
+         * we can tell the caller is the virtual address of the stack word.
+         */
+        return (readWordFromStack_ret_t) {
+            .status = VSPACE_INVALID_ROOT,
+            .vaddr  = vaddr,
+        };
     }
-
-    pd = (pde_t *)pptr_of_cap(threadRoot);
-
-    sp = getRegister(tptr, SP);
-    /* check for alignment so we don't have to worry about accessing
-     * words that might be on two different pages */
-    if (!IS_ALIGNED(sp, seL4_WordSizeBits)) {
-        printf("SP not aligned\n");
-        return;
-    }
-
-    for (i = 0; i < CONFIG_USER_STACK_TRACE_LENGTH; i++) {
-        word_t address = sp + (i * sizeof(word_t));
-        readWordFromVSpace_ret_t result;
-        result = readWordFromVSpace(pd, address);
-        if (result.status == EXCEPTION_NONE) {
-            printf("0x%lx: 0x%lx\n", (long)address, (long)result.value);
-        } else {
-            printf("0x%lx: INVALID\n", (long)address);
-        }
-    }
+    vspace_root_t *vspace_root = (vspace_root_t *)pptr_of_cap(threadRoot);
+    readWordFromVSpace_ret_t ret = Arch_readWordFromVSpace(vspace_root, vaddr);
+    return (readWordFromStack_ret_t) {
+        .status      = ret.status,
+        .vspace_root = vspace_root,
+        .vaddr       = vaddr,
+        .paddr       = ret.paddr,
+        .value       = ret.value
+    };
 }
-#endif
 
+#endif /* CONFIG_PRINTING */

@@ -1530,23 +1530,13 @@ exception_t decodeX86ModeMapPage(word_t label, vm_page_size_t page_size, cte_t *
 }
 
 #ifdef CONFIG_PRINTING
-typedef struct readWordFromVSpace_ret {
-    exception_t status;
-    word_t value;
-} readWordFromVSpace_ret_t;
 
 static readWordFromVSpace_ret_t readWordFromVSpace(vspace_root_t *vspace, word_t vaddr)
 {
-    readWordFromVSpace_ret_t ret;
-    lookupPTSlot_ret_t ptSlot;
-    lookupPDSlot_ret_t pdSlot;
-    lookupPDPTSlot_ret_t pdptSlot;
     paddr_t paddr;
     word_t offset;
-    pptr_t kernel_vaddr;
-    word_t *value;
 
-    pdptSlot = lookupPDPTSlot(vspace, vaddr);
+    lookupPDPTSlot_ret_t pdptSlot = lookupPDPTSlot(vspace, vaddr);
     if (pdptSlot.status == EXCEPTION_NONE &&
         pdpte_ptr_get_page_size(pdptSlot.pdptSlot) == pdpte_pdpte_1g &&
         pdpte_pdpte_1g_ptr_get_present(pdptSlot.pdptSlot)) {
@@ -1554,7 +1544,7 @@ static readWordFromVSpace_ret_t readWordFromVSpace(vspace_root_t *vspace, word_t
         paddr = pdpte_pdpte_1g_ptr_get_page_base_address(pdptSlot.pdptSlot);
         offset = vaddr & MASK(seL4_HugePageBits);
     } else {
-        pdSlot = lookupPDSlot(vspace, vaddr);
+        lookupPDSlot_ret_t pdSlot = lookupPDSlot(vspace, vaddr);
         if (pdSlot.status == EXCEPTION_NONE &&
             ((pde_ptr_get_page_size(pdSlot.pdSlot) == pde_pde_large) &&
              pde_pde_large_ptr_get_present(pdSlot.pdSlot))) {
@@ -1562,7 +1552,7 @@ static readWordFromVSpace_ret_t readWordFromVSpace(vspace_root_t *vspace, word_t
             paddr = pde_pde_large_ptr_get_page_base_address(pdSlot.pdSlot);
             offset = vaddr & MASK(seL4_LargePageBits);
         } else {
-            ptSlot = lookupPTSlot(vspace, vaddr);
+            lookupPTSlot_ret_t ptSlot = lookupPTSlot(vspace, vaddr);
             if (ptSlot.status == EXCEPTION_NONE && pte_ptr_get_present(ptSlot.ptSlot)) {
                 paddr = pte_ptr_get_page_base_address(ptSlot.ptSlot);
                 offset = vaddr & MASK(seL4_PageBits);
@@ -1573,12 +1563,9 @@ static readWordFromVSpace_ret_t readWordFromVSpace(vspace_root_t *vspace, word_t
         }
     }
 
-
-    kernel_vaddr = (word_t)paddr_to_pptr(paddr);
-    value = (word_t *)(kernel_vaddr + offset);
-    ret.status = EXCEPTION_NONE;
-    ret.value = *value;
-    return ret;
+    pptr_t kernel_vaddr = (pptr_t)paddr_to_pptr(paddr);
+    word_t *pValue = (word_t *)(kernel_vaddr + offset);
+    return READ_WORD_FROM_VSPACE_RET(*pValue);
 }
 
 void Arch_userStackTrace(tcb_t *tptr)
