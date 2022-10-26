@@ -62,17 +62,17 @@ class ARMConfig(Config):
 
     def align_memory(self, regions: Set[Region]) -> List[Region]:
         ''' Arm wants physBase to be the physical load address of the kernel. '''
-        ret = sorted(regions)
+        regions = sorted(regions)
         extra_reserved = set()
 
-        new = ret[0].align_base(self.get_kernel_phys_align())
-        resv = Region(ret[0].base, new.base - ret[0].base)
+        new = regions[0].align_base(self.get_kernel_phys_align())
+        resv = Region(regions[0].base, new.base - regions[0].base)
         extra_reserved.add(resv)
-        ret[0] = new
+        regions[0] = new
 
-        physBase = ret[0].base
+        physBase = regions[0].base
 
-        return ret, extra_reserved, physBase
+        return regions, extra_reserved, physBase
 
 
 class RISCVConfig(Config):
@@ -92,17 +92,15 @@ class RISCVConfig(Config):
     def align_memory(self, regions: Set[Region]) -> List[Region]:
         ''' Currently the RISC-V port expects physBase to be the address that the
         bootloader is loaded at. To be generalised in the future. '''
-        ret = sorted(regions)
+        regions = sorted(regions)
         extra_reserved = set()
+        physBase = regions[0].base
 
-        physBase = ret[0].base
+        # reserve bootloader region
+        extra_reserved.add(
+            regions[0].cut_from_start(self.get_bootloader_reserve()))
 
-        resv = Region(ret[0].base, self.get_bootloader_reserve())
-        extra_reserved.add(resv)
-        ret[0].base += self.get_bootloader_reserve()
-        ret[0].size -= self.get_bootloader_reserve()
-
-        return ret, extra_reserved, physBase
+        return regions, extra_reserved, physBase
 
     def get_device_page_bits(self) -> int:
         ''' Get page size in bits for mapping devices for this arch '''
