@@ -11,7 +11,7 @@ declare_platform(imx8mq-evk KernelPlatformImx8mq-evk PLAT_IMX8MQ_EVK KernelArchA
 declare_platform(imx8mm-evk KernelPlatformImx8mm-evk PLAT_IMX8MM_EVK KernelArchARM)
 
 if(KernelPlatformImx8mq-evk OR KernelPlatformImx8mm-evk)
-    declare_seL4_arch("aarch64;aarch32")
+    declare_seL4_arch("aarch64" "aarch32")
     if(KernelPlatformImx8mq-evk)
         config_set(KernelPlatImx8mq PLAT_IMX8MQ ON)
     endif()

@@ -22,7 +22,7 @@ endforeach()
 
 if(KernelPlatformZynqmp)
     set(KernelHardwareDebugAPIUnsupported ON CACHE INTERNAL "")
-    declare_seL4_arch("aarch64;aarch32;arm_hyp")
+    declare_seL4_arch("aarch64" "aarch32" "arm_hyp")
     check_platform_and_fallback_to_default(KernelARMPlatform "zcu102")
 
     list(FIND plat_lists ${KernelARMPlatform} index)

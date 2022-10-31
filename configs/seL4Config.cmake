@@ -27,11 +27,11 @@ endmacro()
 # support. It takes a list and sets up the one selected by KernelSel4Arch. If
 # KernelSel4Arch is not set, the architecture specified by the first list
 # element is used.
-# Usage example: declare_seL4_arch("aarch64;aarch32")
-macro(declare_seL4_arch arch_list)
-    # Since this is a macro and not a function, the parameter "arch_list" is not
-    # a variable. A real list variable must be created to iterate over it.
-    set(_arch_list "${arch_list}")
+# Usage example: declare_seL4_arch("aarch64" "aarch32")
+macro(declare_seL4_arch)
+    # Since this is a macro and not a function, ARGV is not a real variable. One
+    # must be created to be able iterate over it.
+    set(_arch_list "${ARGV}")
     if(NOT KernelSel4Arch)
         # Use first architecture from list as default.
         list(GET _arch_list 0 _default_KernelSel4Arch)

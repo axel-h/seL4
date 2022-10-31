@@ -9,7 +9,7 @@ cmake_minimum_required(VERSION 3.7.2)
 declare_platform(hikey KernelPlatformHikey PLAT_HIKEY KernelArchARM)
 
 if(KernelPlatformHikey)
-    declare_seL4_arch("aarch32;aarch64")
+    declare_seL4_arch("aarch32" "aarch64")
     set(KernelArmCortexA53 ON)
     set(KernelArchArmV8a ON)
     config_set(KernelARMPlatform ARM_PLAT hikey)

@@ -9,7 +9,7 @@ cmake_minimum_required(VERSION 3.7.2)
 declare_platform(tk1 KernelPlatformTK1 PLAT_TK1 "KernelSel4ArchAarch32 OR KernelSel4ArchArmHyp")
 
 if(KernelPlatformTK1)
-    declare_seL4_arch("aarch32;arm_hyp")
+    declare_seL4_arch("aarch32" "arm_hyp")
     set(KernelArmCortexA15 ON)
     set(KernelArchArmV7a ON)
     set(KernelArchArmV7ve ON)

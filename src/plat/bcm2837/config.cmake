@@ -9,7 +9,7 @@ cmake_minimum_required(VERSION 3.7.2)
 declare_platform(bcm2837 KernelPlatformRpi3 PLAT_BCM2837 KernelArchARM)
 
 if(KernelPlatformRpi3)
-    declare_seL4_arch("aarch32;aarch64") # default to aarch32 for RasPi3
+    declare_seL4_arch("aarch32" "aarch64") # default to aarch32 for RasPi3
     set(KernelArmCortexA53 ON)
     set(KernelArchArmV8a ON)
     config_set(KernelARMPlatform ARM_PLAT rpi3)

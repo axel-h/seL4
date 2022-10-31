@@ -11,7 +11,7 @@ cmake_minimum_required(VERSION 3.7.2)
 declare_platform(spike KernelPlatformSpike PLAT_SPIKE KernelArchRiscV)
 
 if(KernelPlatformSpike)
-    declare_seL4_arch("riscv64;riscv32")
+    declare_seL4_arch("riscv64" "riscv32")
     config_set(KernelRiscVPlatform RISCV_PLAT "spike")
     config_set(KernelPlatformFirstHartID FIRST_HART_ID 0)
     config_set(KernelOpenSBIPlatform OPENSBI_PLATFORM "generic")

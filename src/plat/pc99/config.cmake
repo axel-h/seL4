@@ -9,7 +9,7 @@ cmake_minimum_required(VERSION 3.7.2)
 declare_platform(pc99 KernelPlatPC99 PLAT_PC99 KernelArchX86)
 
 if(KernelPlatPC99)
-    declare_seL4_arch("x86_64;ia32")
+    declare_seL4_arch("x86_64" "ia32")
 endif()
 
 add_sources(

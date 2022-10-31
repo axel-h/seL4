@@ -10,7 +10,7 @@ cmake_minimum_required(VERSION 3.7.2)
 declare_platform(bcm2711 KernelPlatformRpi4 PLAT_BCM2711 KernelArchARM)
 
 if(KernelPlatformRpi4)
-    declare_seL4_arch("aarch64;aarch32") # default to aarch64 for RasPi4
+    declare_seL4_arch("aarch64" "aarch32") # default to aarch64 for RasPi4
     set(KernelArmCortexA72 ON)
     set(KernelArchArmV8a ON)
     config_set(KernelARMPlatform ARM_PLAT rpi4)
