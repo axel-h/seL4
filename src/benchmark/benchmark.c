@@ -73,6 +73,20 @@ void trace_kernel_exit(void)
 #endif /* CONFIG_BENCHMARK_TRACK_UTILISATION */
 }
 
+void trace_syscall_start(word_t cptr, word_t msgInfo, word_t syscall,
+                         word_t isFastpath)
+{
+    seL4_MessageInfo_t info = messageInfoFromWord_raw(msgInfo);
+    lookupCapAndSlot_ret_t lu_ret = lookupCapAndSlot(NODE_STATE(ksCurThread), cptr);
+    ksKernelEntry = (kernel_entry_t) {
+        .path           = Entry_Syscall,
+        .syscall_no     = -syscall,
+        .cap_type       = cap_get_capType(lu_ret.cap),
+        .is_fastpath    = (0 != isFastpath),
+        .invocation_tag = seL4_MessageInfo_get_label(info),
+    };
+}
+
 #endif /* ENABLE_TRACE_KERNEL_ENTRY_EXIT */
 
 
