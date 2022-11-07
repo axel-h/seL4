@@ -5,9 +5,6 @@
  */
 
 #include <config.h>
-
-#ifdef CONFIG_ENABLE_BENCHMARKS
-
 #include <types.h>
 #include <mode/machine.h>
 #include <benchmark/benchmark.h>
@@ -21,6 +18,11 @@
 seL4_Word ksLogIndex = 0;
 paddr_t ksUserLogBuffer;
 #endif /* CONFIG_KERNEL_LOG_BUFFER */
+
+#if defined(CONFIG_DEBUG_BUILD) || defined(CONFIG_BENCHMARK_TRACK_KERNEL_ENTRIES)
+#include <sel4/benchmark_track_types.h>
+kernel_entry_t ksKernelEntry;
+#endif /* CONFIG_DEBUG_BUILD || CONFIG_BENCHMARK_TRACK_KERNEL_ENTRIES */
 
 #if defined(CONFIG_BENCHMARK_TRACK_KERNEL_ENTRIES) || defined(CONFIG_BENCHMARK_TRACK_UTILISATION)
 timestamp_t ksEnter;
@@ -96,6 +98,7 @@ void trace_point_stop(word_t id)
 
 #endif /* ENABLE_KERNEL_TRACEPOINTS */
 
+#ifdef CONFIG_ENABLE_BENCHMARKS
 
 exception_t handle_SysBenchmarkFlushCaches(void)
 {
