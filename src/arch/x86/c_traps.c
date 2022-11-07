@@ -157,10 +157,9 @@ void VISIBLE NORETURN c_handle_syscall(word_t cptr, word_t msgInfo, syscall_t sy
 
     c_entry_hook();
 
-#ifdef TRACK_KERNEL_ENTRIES
-    benchmark_debug_syscall_start(cptr, msgInfo, syscall);
-    ksKernelEntry.is_fastpath = 1;
-#endif /* TRACK_KERNEL_ENTRIES */
+#ifdef ENABLE_TRACE_KERNEL_ENTRY_EXIT
+    trace_syscall_start(cptr, msgInfo, syscall, 1);
+#endif
 
     if (config_set(CONFIG_SYSENTER)) {
         /* increment NextIP to skip sysenter */

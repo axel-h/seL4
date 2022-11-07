@@ -143,9 +143,8 @@ void VISIBLE c_handle_syscall(word_t cptr, word_t msgInfo, syscall_t syscall)
     NODE_LOCK_SYS;
 
     c_entry_hook();
-#ifdef TRACK_KERNEL_ENTRIES
-    benchmark_debug_syscall_start(cptr, msgInfo, syscall);
-    ksKernelEntry.is_fastpath = 0;
+#ifdef ENABLE_TRACE_KERNEL_ENTRY_EXIT
+    trace_syscall_start(cptr, msgInfo, syscall, 0);
 #endif /* DEBUG */
 
     slowpath(syscall);
@@ -159,9 +158,8 @@ void VISIBLE c_handle_fastpath_call(word_t cptr, word_t msgInfo)
     NODE_LOCK_SYS;
 
     c_entry_hook();
-#ifdef TRACK_KERNEL_ENTRIES
-    benchmark_debug_syscall_start(cptr, msgInfo, SysCall);
-    ksKernelEntry.is_fastpath = 1;
+#ifdef ENABLE_TRACE_KERNEL_ENTRY_EXIT
+    trace_syscall_start(cptr, msgInfo, SysCall, 1);
 #endif /* DEBUG */
 
     fastpath_call(cptr, msgInfo);
@@ -196,9 +194,8 @@ void VISIBLE c_handle_fastpath_reply_recv(word_t cptr, word_t msgInfo)
     NODE_LOCK_SYS;
 
     c_entry_hook();
-#ifdef TRACK_KERNEL_ENTRIES
-    benchmark_debug_syscall_start(cptr, msgInfo, SysReplyRecv);
-    ksKernelEntry.is_fastpath = 1;
+#ifdef ENABLE_TRACE_KERNEL_ENTRY_EXIT
+    trace_syscall_start(cptr, msgInfo, SysReplyRecv, 1);
 #endif /* DEBUG */
 
 #ifdef CONFIG_KERNEL_MCS

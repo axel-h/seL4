@@ -41,8 +41,16 @@ void trace_point_stop(word_t id);
 #endif /* [not] ENABLE_KERNEL_TRACEPOINTS */
 
 #ifdef ENABLE_TRACE_KERNEL_ENTRY_EXIT
+#include <sel4/benchmark_track_types.h>
+#include <kernel/cspace.h>
+#include <model/statedata.h>
+#include <mode/machine.h>
+
+extern kernel_entry_t ksKernelEntry;
 void trace_kernel_entry(void);
 void trace_kernel_exit(void);
+void trace_syscall_start(word_t cptr, word_t msgInfo, word_t syscall,
+                         word_t isFastpath);
 #endif /* ENABLE_TRACE_KERNEL_ENTRY_EXIT */
 
 #ifdef CONFIG_ENABLE_BENCHMARKS
