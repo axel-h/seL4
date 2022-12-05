@@ -52,7 +52,7 @@ BOOT_CODE cap_t create_mapped_it_frame_cap(cap_t pd_cap, pptr_t pptr, vptr_t vpt
               vptr                             /* capFMappedAddress    */
           );
 
-    map_it_frame_cap(pd_cap, cap);
+    map_it_frame_cap(pd_cap, cap, executable);
     return cap;
 }
 

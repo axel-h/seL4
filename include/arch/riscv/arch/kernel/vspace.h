@@ -13,7 +13,7 @@
 #include <object/structures.h>
 
 cap_t create_it_address_space(cap_t root_cnode_cap, v_region_t it_v_reg);
-void map_it_frame_cap(cap_t vspace_cap, cap_t frame_cap);
+void map_it_frame_cap(cap_t vspace_cap, cap_t frame_cap, bool_t executable);
 void map_kernel_window(void);
 void map_kernel_frame(paddr_t paddr, pptr_t vaddr, vm_rights_t vm_rights);
 void activate_kernel_vspace(void);
