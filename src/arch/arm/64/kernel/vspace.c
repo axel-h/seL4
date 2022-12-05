@@ -313,23 +313,16 @@ static BOOT_CODE void map_it_frame_cap(cap_t vspace_cap, cap_t frame_cap, bool_t
                                                           );
 }
 
-static BOOT_CODE cap_t create_it_frame_cap(pptr_t pptr, vptr_t vptr, asid_t asid, bool_t use_large)
+static BOOT_CODE cap_t create_it_frame_cap(pptr_t pptr, vptr_t vptr, asid_t asid)
 {
-    vm_page_size_t frame_size;
-    if (use_large) {
-        frame_size = ARMLargePage;
-    } else {
-        frame_size = ARMSmallPage;
-    }
-    return
-        cap_frame_cap_new(
-            asid,                          /* capFMappedASID */
-            pptr,                          /* capFBasePtr */
-            frame_size,                    /* capFSize */
-            vptr,                          /* capFMappedAddress */
-            wordFromVMRights(VMReadWrite), /* capFVMRights */
-            false                          /* capFIsDevice */
-        );
+    return cap_frame_cap_new(
+               asid,                          /* capFMappedASID */
+               pptr,                          /* capFBasePtr */
+               ARMSmallPage,                  /* capFSize */
+               vptr,                          /* capFMappedAddress */
+               wordFromVMRights(VMReadWrite), /* capFVMRights */
+               false                          /* capFIsDevice */
+           );
 }
 
 static BOOT_CODE void map_it_pt_cap(cap_t vspace_cap, cap_t pt_cap)
@@ -494,15 +487,15 @@ BOOT_CODE cap_t create_it_address_space(cap_t root_cnode_cap, v_region_t it_v_re
     return vspace_cap;
 }
 
-BOOT_CODE cap_t create_unmapped_it_frame_cap(pptr_t pptr, bool_t use_large)
+BOOT_CODE cap_t create_unmapped_it_frame_cap(pptr_t pptr)
 {
-    return create_it_frame_cap(pptr, 0, asidInvalid, use_large);
+    return create_it_frame_cap(pptr, 0, asidInvalid);
 }
 
-BOOT_CODE cap_t create_mapped_it_frame_cap(cap_t pd_cap, pptr_t pptr, vptr_t vptr, asid_t asid, bool_t use_large,
+BOOT_CODE cap_t create_mapped_it_frame_cap(cap_t pd_cap, pptr_t pptr, vptr_t vptr, asid_t asid,
                                            bool_t executable)
 {
-    cap_t cap = create_it_frame_cap(pptr, vptr, asid, use_large);
+    cap_t cap = create_it_frame_cap(pptr, vptr, asid);
     map_it_frame_cap(pd_cap, cap, executable);
     return cap;
 }

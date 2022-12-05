@@ -240,7 +240,7 @@ BOOT_CODE void map_it_frame_cap(cap_t vspace_cap, cap_t frame_cap, bool_t execut
     sfence();
 }
 
-BOOT_CODE cap_t create_unmapped_it_frame_cap(pptr_t pptr, bool_t use_large)
+BOOT_CODE cap_t create_unmapped_it_frame_cap(pptr_t pptr)
 {
     cap_t cap = cap_frame_cap_new(
                     asidInvalid,                     /* capFMappedASID       */
