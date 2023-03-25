@@ -18,7 +18,7 @@ set(KernelDTSList "")
 include(${KERNEL_ROOT_DIR}/tools/internal.cmake)
 include(${KERNEL_ROOT_DIR}/tools/helpers.cmake)
 
-# helper macro to unify messages printed output
+# helper macro to unify messages printed out
 # Usage example: print_message_multiple_options_helper("architectures" aarch32)
 macro(print_message_multiple_options_helper str_type default_str)
     message(STATUS "platform ${KernelPlatform} supports multiple ${str_type}, none was given")
@@ -31,8 +31,8 @@ endmacro()
 # element is used.
 # Usage example: declare_seL4_arch("aarch64" "aarch32")
 macro(declare_seL4_arch)
-    # Since this is a macro and not a function, ARGV is not a real variable. One
-    # must be created to be able iterate over it.
+    # Since this is a macro and not a function, ARGV is not a real variable. We
+    # have to create a variable explicitly to be able iterate over it.
     set(_arch_list "${ARGV}")
     if(NOT KernelSel4Arch)
         # Use first architecture from list as default.
@@ -116,11 +116,11 @@ macro(check_platform_and_fallback_to_default var_cmake_kernel_plat default_sub_p
     endif()
 endmacro()
 
-# CLK_SHIFT and CLK_MAGIC are generated from tools/reciprocal.py
-# based on the TIMER_CLK_HZ to simulate division.
-# This could be moved to a cmake function
-# in future to build the values on the first build. Note the calculation
-# can take a long time though.
+# CLK_SHIFT and CLK_MAGIC are generated from tools/reciprocal.py based on the
+# TIMER_CLK_HZ to avoid doing a 64-bit division on 32-bit platforms. The
+# calculation could happen automatically in a CMake function also, but the
+# python script also verifies the multiply-and-shift operation works for every
+# 32-bit integer, and this check takes a very long time.
 macro(declare_default_headers)
     cmake_parse_arguments(
         CONFIGURE
