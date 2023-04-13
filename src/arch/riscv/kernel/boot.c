@@ -241,8 +241,8 @@ static BOOT_CODE bool_t try_init_kernel(
         extra_bi_size += sizeof(seL4_BootInfoHeader) + dtb_size;
         /* Remember the memory region it uses. */
         dtb_p_reg = (p_region_t) {
-            .start = dtb_phys_addr,
-            .end   = dtb_phys_end
+            .start = ROUND_DOWN(dtb_phys_addr, PAGE_BITS),
+            .end   = ROUND_UP(dtb_phys_end, PAGE_BITS)
         };
 
         /* Reserve the DTB region. */
@@ -440,7 +440,7 @@ BOOT_CODE VISIBLE void init_kernel(
     paddr_t ui_p_reg_end,
     sword_t pv_offset,
     vptr_t  v_entry,
-    paddr_t dtb_addr_p,
+    paddr_t dtb_phys_addr,
     uint32_t dtb_size
 #ifdef ENABLE_SMP_SUPPORT
     ,
@@ -458,7 +458,7 @@ BOOT_CODE VISIBLE void init_kernel(
                                  ui_p_reg_end,
                                  pv_offset,
                                  v_entry,
-                                 dtb_addr_p,
+                                 dtb_phys_addr,
                                  dtb_size);
     } else {
         result = try_init_kernel_secondary_core(hart_id, core_id);
@@ -468,7 +468,7 @@ BOOT_CODE VISIBLE void init_kernel(
                              ui_p_reg_end,
                              pv_offset,
                              v_entry,
-                             dtb_addr_p,
+                             dtb_phys_addr,
                              dtb_size);
 #endif
     if (!result) {
