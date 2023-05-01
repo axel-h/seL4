@@ -31,8 +31,7 @@
 #define ICC_SGI1R_IRM_BIT              (40)
 #define ICC_SGI1R_CPUTARGETLIST_MASK   0xffff
 
-volatile struct gic_dist_map *const gic_dist = (volatile struct gic_dist_map *)(GICD_PPTR);
-volatile void *const gicr_base = (volatile uint8_t *)(GICR_PPTR);
+// volatile struct gic_dist_map *const gic_dist = (volatile struct gic_dist_map *)(GICD_PPTR);
 
 volatile struct gic_rdist_map *gic_rdist_map[CONFIG_MAX_NUM_NODES] = { 0 };
 volatile struct gic_rdist_sgi_ppi_map *gic_rdist_sgi_ppi_map[CONFIG_MAX_NUM_NODES] = { 0 };
@@ -53,71 +52,40 @@ volatile struct gic_rdist_sgi_ppi_map *gic_rdist_sgi_ppi_map[CONFIG_MAX_NUM_NODE
 
 static word_t mpidr_map[CONFIG_MAX_NUM_NODES];
 
-static inline word_t get_mpidr(word_t core_id)
-{
-    return mpidr_map[core_id];
-}
-
-static inline word_t get_current_mpidr(void)
-{
-    word_t core_id = CURRENT_CPU_INDEX();
-    return get_mpidr(core_id);
-}
-
 static inline uint64_t mpidr_to_gic_affinity(void)
 {
-    word_t mpidr = get_current_mpidr();
-    uint64_t affinity = 0;
-    affinity = (uint64_t)MPIDR_AFF3(mpidr) << 32 | MPIDR_AFF2(mpidr) << 16 |
-               MPIDR_AFF1(mpidr) << 8  | MPIDR_AFF0(mpidr);
-    return affinity;
+    word_t mpidr = mpidr_map[CURRENT_CPU_INDEX()];
+    return (uint64_t)MPIDR_AFF3(mpidr) << 32 | MPIDR_AFF2(mpidr) << 16 |
+           MPIDR_AFF1(mpidr) << 8  | MPIDR_AFF0(mpidr);
 }
 
-/* Wait for completion of a distributor change */
+/* Busy-Wait for completion of a distributor change */
 /** DONT_TRANSLATE */
-static uint32_t gicv3_do_wait_for_rwp(volatile uint32_t *ctlr_addr)
+static uint32_t gicv3_do_busy_wait_for_rwp(volatile uint32_t *ctlr_addr)
 {
-    uint32_t val;
-    bool_t waiting = true;
-    uint32_t ret = 0;
+    uint64_t gpt_cnt_ciel = GIC_DEADLINE_MS * TICKS_PER_MS;
+    bool_t do_init = true;
 
-    uint64_t gpt_cnt_tval = 0;
-    uint32_t deadline_ms =  GIC_DEADLINE_MS;
-    uint64_t gpt_cnt_ciel;
+    for (;;) {
 
-    /* Check the value before reading the generic timer */
-    val = *ctlr_addr;
-    if (!(val & GICD_CTLR_RWP)) {
-        return 0;
-    }
-    SYSTEM_READ_64(CNT_CT, gpt_cnt_tval);
-    gpt_cnt_ciel = gpt_cnt_tval + (deadline_ms * TICKS_PER_MS);
+        /* Check the value before reading the generic timer */
+        uint32_t val = *ctlr_addr;
+        if (!(val & GICD_CTLR_RWP)) {
+            return 0;
+        }
 
-    while (waiting) {
+        uint64_t gpt_cnt_tval = 0;
         SYSTEM_READ_64(CNT_CT, gpt_cnt_tval);
-        val = *ctlr_addr;
 
-        if (gpt_cnt_tval >= gpt_cnt_ciel) {
-            printf("GICV3 RWP Timeout after %u ms\n", deadline_ms);
-            ret = 1;
-            waiting = false;
-
-        } else if (!(val & GICD_CTLR_RWP)) {
-            ret = 0;
-            waiting = false;
+        if (do_init) {
+            gpt_cnt_ciel += gpt_cnt_tval;
+            do_init = false;
+        } else if (gpt_cnt_tval >= gpt_cnt_ciel) {
+            printf("GICV3 RWP Timeout after %u ms\n", GIC_DEADLINE_MS);
+            return 1;
         }
     }
-    return ret;
-}
-
-static void gicv3_dist_wait_for_rwp(void)
-{
-    gicv3_do_wait_for_rwp(&gic_dist->ctlr);
-}
-
-static void gicv3_redist_wait_for_rwp(void)
-{
-    gicv3_do_wait_for_rwp(&gic_rdist_map[CURRENT_CPU_INDEX()]->ctlr);
+    UNRECHABLE();
 }
 
 static void gicv3_enable_sre(void)
@@ -135,137 +103,117 @@ static void gicv3_enable_sre(void)
 
 BOOT_CODE static void dist_init(void)
 {
-    word_t i;
-    uint32_t type;
-    unsigned int nr_lines;
-    uint64_t affinity;
-    uint32_t priority;
-
     /* Disable GIC Distributor */
     gic_dist->ctlr = 0;
-    gicv3_dist_wait_for_rwp();
+    gicv3_do_busy_wait_for_rwp(&gic_dist->ctlr);
 
-    type = gic_dist->typer;
-
-    nr_lines = GIC_REG_WIDTH * ((type & GICD_TYPE_LINESNR) + 1);
+    uint32_t type = gic_dist->typer;
+    unsigned int nr_lines = GIC_REG_WIDTH * ((type & GICD_TYPE_LINESNR) + 1);
 
     /* Assume level-triggered */
-    for (i = SPI_START; i < nr_lines; i += 16) {
+    for (int i = SPI_START; i < nr_lines; i += 16) {
         gic_dist->icfgrn[(i / 16)] = 0;
     }
 
     /* Default priority for global interrupts */
-    priority = (GIC_PRI_IRQ << 24 | GIC_PRI_IRQ << 16 | GIC_PRI_IRQ << 8 |
-                GIC_PRI_IRQ);
-    for (i = SPI_START; i < nr_lines; i += 4) {
+    uint32_t priority = GIC_PRI_IRQ << 24 | GIC_PRI_IRQ << 16 |
+                        GIC_PRI_IRQ << 8 | GIC_PRI_IRQ;
+    for (int i = SPI_START; i < nr_lines; i += 4) {
         gic_dist->ipriorityrn[(i / 4)] = priority;
     }
     /* Disable and clear all global interrupts */
-    for (i = SPI_START; i < nr_lines; i += 32) {
+    for (int i = SPI_START; i < nr_lines; i += 32) {
         gic_dist->icenablern[(i / 32)] = IRQ_SET_ALL;
         gic_dist->icpendrn[(i / 32)] = IRQ_SET_ALL;
     }
 
     /* Turn on the distributor */
     gic_dist->ctlr = GICD_CTL_ENABLE | GICD_CTLR_ARE_NS | GICD_CTLR_ENABLE_G1NS | GICD_CTLR_ENABLE_G0;
-    gicv3_dist_wait_for_rwp();
+    gicv3_do_busy_wait_for_rwp(&gic_dist->ctlr);
 
     /* Route all global IRQs to this CPU */
-    affinity = mpidr_to_gic_affinity();
-    for (i = SPI_START; i < nr_lines; i++) {
+    uint64_t affinity = mpidr_to_gic_affinity();
+    for (int i = SPI_START; i < nr_lines; i++) {
         gic_dist->iroutern[i - SPI_START] = affinity;
     }
 }
 
-BOOT_CODE static void gicr_locate_interface(void)
+BOOT_CODE static void gicr_init(void)
 {
-    word_t offset;
+    /* Find redistributor for this core. */
+    volatile struct gic_rdist_sgi_ppi_map *map = NULL;
+
     int core_id = CURRENT_CPU_INDEX();
-    word_t mpidr = get_current_mpidr();
-    uint32_t val;
+    word_t mpidr = mpidr_map[core_id];
+    word_t mpidr_typer = (MPIDR_AFF3(mpidr) << 24) | (MPIDR_AFF2(mpidr) << 16) |
+                         (MPIDR_AFF1(mpidr) <<  8) | MPIDR_AFF0(mpidr);
 
     /*
      * Iterate through all redistributor interfaces looking for one that matches
      * our mpidr.
      */
-    for (offset = 0; offset < GICR_SIZE; offset += GICR_PER_CORE_SIZE) {
-
-        uint64_t typer = ((struct gic_rdist_map *)((word_t)gicr_base + offset))->typer;
-        if ((typer >> 32) == ((MPIDR_AFF3(mpidr) << 24) |
-                              (MPIDR_AFF2(mpidr) << 16) |
-                              (MPIDR_AFF1(mpidr) <<  8) |
-                              MPIDR_AFF0(mpidr))) {
-
-            word_t gicr = (word_t)gicr_base + offset;
-            if (gic_rdist_map[core_id] != NULL || gic_rdist_sgi_ppi_map[core_id] != NULL) {
-                printf("GICv3: %s[%d] %p is not null\n",
-                       gic_rdist_map[core_id] == NULL ? "gic_rdist_map" : "gic_rdist_sgi_ppi_map",
-                       core_id,
-                       gic_rdist_map[core_id] == NULL ? (void *)gic_rdist_map[core_id] : (void *)gic_rdist_sgi_ppi_map[core_id]);
-                halt();
-            }
-            gic_rdist_map[core_id] = (void *)gicr;
-            gic_rdist_sgi_ppi_map[core_id] = (void *)(gicr + RDIST_BANK_SZ);
-
-            /*
-             * GICR_WAKER should be Read-all-zeros in Non-secure world
-             * and we expect redistributors to be alread awoken by an earlier loader.
-             * However if we get a value back then something is probably wrong.
-             */
-            val = gic_rdist_map[core_id]->waker;
-            if (val & GICR_WAKER_ChildrenAsleep) {
-                printf("GICv3: GICR_WAKER returned non-zero %x\n", val);
-                halt();
-            }
-
-            break;
+    for (size_t offset = 0; offset < GICR_SIZE; offset += GICR_PER_CORE_SIZE) {
+        volatile struct gic_rdist_map *gicr = (void *)((uintptr_t)GICR_PPTR + offset);
+        if ((gicr->typer >> 32) != mpidr_typer) {
+            continue;
         }
+        if (gic_rdist_map[core_id] != NULL || gic_rdist_sgi_ppi_map[core_id] != NULL) {
+            printf("GICv3: %s[%d] %p is not null\n",
+                   gic_rdist_map[core_id] == NULL ? "gic_rdist_map" : "gic_rdist_sgi_ppi_map",
+                   core_id,
+                   gic_rdist_map[core_id] == NULL ? (void *)gic_rdist_map[core_id] : (void *)gic_rdist_sgi_ppi_map[core_id]);
+            halt();
+        }
+
+        /*
+         * GICR_WAKER should be Read-all-zeros in Non-secure world
+         * and we expect redistributors to be alread awoken by an earlier loader.
+         * However if we get a value back then something is probably wrong.
+         */
+        uint32_t val = gicr->waker;
+        if (val & GICR_WAKER_ChildrenAsleep) {
+            printf("GICv3: GICR_WAKER returned non-zero %x\n", val);
+            halt();
+        }
+
+        gic_rdist_map[core_id] = gicr;
+        map = (volatile struct gic_rdist_sgi_ppi_map *)((uintptr_t)gicr + RDIST_BANK_SZ);
+        gic_rdist_sgi_ppi_map[core_id] = map;
+        break;
     }
-    if (offset >= GICR_SIZE) {
+
+    if (!map) {
         printf("GICv3: GICR base for CPU %d %d %d %d (Logic ID %d) not found\n",
                (int)MPIDR_AFF3(mpidr), (int)MPIDR_AFF2(mpidr),
                (int)MPIDR_AFF1(mpidr), (int)MPIDR_AFF0(mpidr), core_id);
         halt();
     }
 
-
-}
-
-BOOT_CODE static void gicr_init(void)
-{
-    int i;
-    uint32_t priority;
-
-    /* Find redistributor for this core. */
-    gicr_locate_interface();
-
     /* Deactivate SGIs/PPIs */
-    gic_rdist_sgi_ppi_map[CURRENT_CPU_INDEX()]->icactiver0 = ~0;
+    map->icactiver0 = ~0;
 
     /* Set priority on PPI and SGI interrupts */
-    priority = (GIC_PRI_IRQ << 24 | GIC_PRI_IRQ << 16 | GIC_PRI_IRQ << 8 |
-                GIC_PRI_IRQ);
-    for (i = 0; i < SPI_START; i += 4) {
-        gic_rdist_sgi_ppi_map[CURRENT_CPU_INDEX()]->ipriorityrn[i / 4] = priority;
+    uint32_t priority = GIC_PRI_IRQ << 24 | GIC_PRI_IRQ << 16 |
+                        GIC_PRI_IRQ << 8 | GIC_PRI_IRQ;
+    for (int i = 0; i < SPI_START; i += 4) {
+        map->ipriorityrn[i / 4] = priority;
     }
 
     /*
      * Disable all PPI interrupts, ensure all SGI interrupts are
      * enabled.
      */
-    gic_rdist_sgi_ppi_map[CURRENT_CPU_INDEX()]->icenabler0 = 0xffff0000;
-    gic_rdist_sgi_ppi_map[CURRENT_CPU_INDEX()]->isenabler0 = 0x0000ffff;
+    map->icenabler0 = 0xffff0000;
+    map->isenabler0 = 0x0000ffff;
 
     /* Set ICFGR1 for PPIs as level-triggered */
-    gic_rdist_sgi_ppi_map[CURRENT_CPU_INDEX()]->icfgr1 = 0x0;
+    map->icfgr1 = 0x0;
 
-    gicv3_redist_wait_for_rwp();
+    gicv3_do_busy_wait_for_rwp(&gic_rdist_map[CURRENT_CPU_INDEX()]->ctlr);
 }
 
 BOOT_CODE static void cpu_iface_init(void)
 {
-    uint32_t icc_ctlr = 0;
-
     /* Enable system registers */
     gicv3_enable_sre();
 
@@ -276,6 +224,7 @@ BOOT_CODE static void cpu_iface_init(void)
     SYSTEM_WRITE_WORD(ICC_PMR_EL1, DEFAULT_PMR_VALUE);
 
     /* EOI drops priority and deactivates the interrupt: ICC_CTLR_EL1 */
+    uint32_t icc_ctlr = 0;
     SYSTEM_READ_WORD(ICC_CTLR_EL1, icc_ctlr);
     icc_ctlr &= ~GICC_CTLR_EL1_EOImode_drop;
     SYSTEM_WRITE_WORD(ICC_CTLR_EL1, icc_ctlr);
@@ -289,39 +238,28 @@ BOOT_CODE static void cpu_iface_init(void)
 
 void setIRQTrigger(irq_t irq, bool_t trigger)
 {
-
-    /* GICv3 has read-only GICR_ICFG0 for SGI with
-     * default value 0xaaaaaaaa, and read-write GICR_ICFG1
-     * for PPI with default 0x00000000.*/
+    /* GICv3 has read-only GICR_ICFG0 for SGI with default value 0xaaaaaaaa,
+     * and read-write GICR_ICFG1 for PPI with default 0x00000000.
+     */
     word_t hw_irq = IRQT_TO_IRQ(irq);
-    word_t core = IRQT_TO_CORE(irq);
     if (HW_IRQ_IS_SGI(hw_irq)) {
         return;
     }
-    int word = hw_irq >> 4;
-    int bit = ((hw_irq & 0xf) * 2);
-    uint32_t icfgr = 0;
-    if (HW_IRQ_IS_PPI(hw_irq)) {
-        icfgr = gic_rdist_sgi_ppi_map[core]->icfgr1;
-    } else {
-        icfgr = gic_dist->icfgrn[word];
-    }
 
+    /* Update GICD_ICFGR<n>. Note that the interrupt should be disabled before
+     * changing the field. This function assumes the caller has disabled the
+     * interrupt.
+     */
+    volatile uint32_t *reg = HW_IRQ_IS_PPI(hw_irq) ? &(gic_rdist_sgi_ppi_map[IRQT_TO_CORE(irq)]->icfgr1)
+                             : &(gic_dist->icfgrn[hw_irq >> 4]);
+    int bit = ((hw_irq & 0xf) * 2);
+    uint32_t icfgr = *reg;
     if (trigger) {
         icfgr |= (2 << bit);
     } else {
         icfgr &= ~(3 << bit);
     }
-
-    if (HW_IRQ_IS_PPI(hw_irq)) {
-        gic_rdist_sgi_ppi_map[core]->icfgr1 = icfgr;
-    } else {
-        /* Update GICD_ICFGR<n>. Note that the interrupt should
-         * be disabled before changing the field, and this function
-         * assumes the caller has disabled the interrupt. */
-        gic_dist->icfgrn[word] = icfgr;
-    }
-
+    *reg = icfgr;
     return;
 }
 
