@@ -13,10 +13,6 @@
 #include <arch/machine.h>
 #include <arch/smp/ipi.h>
 
-#ifndef CONFIG_KERNEL_MCS
-#define RESET_CYCLES ((TIMER_CLOCK_HZ / MS_IN_S) * CONFIG_TIMER_TICK_MS)
-#endif /* !CONFIG_KERNEL_MCS */
-
 #define IS_IRQ_VALID(X) (((X)) <= maxIRQ && (X) != irqInvalid)
 
 word_t PURE getRestartPC(tcb_t *thread)
@@ -225,10 +221,13 @@ static inline void ackInterrupt(irq_t irq)
 void resetTimer(void)
 {
     uint64_t target;
+    // ToDo: On ARM we have TICKS_PER_MS defined TIMER_CLOCK_HZ / MS_IN_S,
+    //       could also define this for RISC-V
+    uint64_t delta = (TIMER_CLOCK_HZ / MS_IN_S) * CONFIG_TIMER_TICK_MS;
     // repeatedly try and set the timer in a loop as otherwise there is a race and we
     // may set a timeout in the past, resulting in it never getting triggered
     do {
-        target = riscv_read_time() + RESET_CYCLES;
+        target = riscv_read_time() + delta;
         sbi_set_timer(target);
     } while (riscv_read_time() > target);
 }
