@@ -220,8 +220,8 @@ static inline void ackInterrupt(irq_t irq)
 #ifndef CONFIG_KERNEL_MCS
 void resetTimer(void)
 {
-#if defined(CONFIG_PLAT_QEMU_RISCV_VIRT) || defined(CONFIG_PLAT_SPIKE)
-    word_t retry_cnt = 3;
+#ifdef CONFIG_PLAT_QEMU_RISCV_VIRT
+    word_t retry_cnt = 2;
     while (retry_cnt-- > 0)
     {
 #endif
@@ -236,7 +236,7 @@ void resetTimer(void)
             return;
         }
         printf("Timer reset failed, %"PRIu64" (now) >= %"PRIu64"\n", now, target);
-#if defined(CONFIG_PLAT_QEMU_RISCV_VIRT) || defined(CONFIG_PLAT_SPIKE)
+#ifdef CONFIG_PLAT_QEMU_RISCV_VIRT
     }
 #endif
     fail("Timer reset failed");
