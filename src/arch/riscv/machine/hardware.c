@@ -220,13 +220,27 @@ static inline void ackInterrupt(irq_t irq)
 #ifndef CONFIG_KERNEL_MCS
 void resetTimer(void)
 {
-    uint64_t target;
-    // repeatedly try and set the timer in a loop as otherwise there is a race and we
-    // may set a timeout in the past, resulting in it never getting triggered
-    do {
-        target = riscv_read_time() + ((TIMER_CLOCK_HZ / MS_IN_S) * CONFIG_TIMER_TICK_MS);
+#if defined(CONFIG_PLAT_QEMU_RISCV_VIRT) || defined(CONFIG_PLAT_SPIKE)
+    word_t retry_cnt = 3;
+    while (retry_cnt-- > 0)
+    {
+#endif
+        uint64_t target = riscv_read_time() + ((TIMER_CLOCK_HZ / MS_IN_S) * CONFIG_TIMER_TICK_MS);
         sbi_set_timer(target);
-    } while (riscv_read_time() > target);
+        /* Perform a sanity check that the margin is big enough that we end up
+         * with a timestamp in the future. Seems it happened in QEMU that the
+         * simulation was too slow.
+         */
+        uint64_t now = riscv_read_time();
+        if (likely(now < target)) {
+            return;
+        }
+        printf("Timer reset failed, %"PRIu64" (now) >= %"PRIu64"\n", now, target);
+#if defined(CONFIG_PLAT_QEMU_RISCV_VIRT) || defined(CONFIG_PLAT_SPIKE)
+    }
+#endif
+    fail("Timer reset failed");
+    UNREACHABLE();
 }
 
 /**
