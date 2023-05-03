@@ -113,3 +113,26 @@ class Region:
             base += chunksz
             size -= chunksz
         return ret
+
+    def cut_from_start(self, size: int) -> Region:
+        ''' Cut off a region from the start and return it, no owner is set.
+        Adjust the original region's size.'''
+        if size <= self.size:
+            raise ValueError(
+                'can''t cut off {} from start, region size is only {}'.format(
+                    self.size, size))
+        cut_reg = Region(self.base, size)
+        self.base += size
+        self.size -= size
+        return cut_reg
+
+    def cut_from_end(self, size: int) -> Region:
+        ''' Cut off a region from the end and return it, no owner is set.
+        Adjust the original region's start and size.'''
+        if size <= self.size:
+            raise ValueError(
+                'can''t cut off {} from end, region size is only {}'.format(
+                    self.size, size))
+        cut_reg = Region(self.base + self.size - size, size)
+        self.size -= size
+        return cut_reg

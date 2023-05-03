@@ -60,12 +60,10 @@ class ARMConfig(Config):
         regions = sorted(regions)
         extra_reserved = set()
 
-        new = regions[0].align_base(self.get_kernel_phys_align())
-        resv = Region(regions[0].base, new.base - regions[0].base)
-        extra_reserved.add(resv)
-        regions[0] = new
-
-        physBase = regions[0].base
+        physBase = hardware.utils.align_up(region[0].base, align_bits)
+        diff = physBase - region[0].base;
+        if diff > 0:
+            extra_reserved.add(region[0].cut_from_start(diff))
 
         return regions, extra_reserved, physBase
 
@@ -91,12 +89,10 @@ class RISCVConfig(Config):
         extra_reserved = set()
 
         physBase = regions[0].base
-
         # reserve bootloader region
-        resv = Region(regions[0].base, self.get_bootloader_reserve())
-        extra_reserved.add(resv)
-        regions[0].base += self.get_bootloader_reserve()
-        regions[0].size -= self.get_bootloader_reserve()
+        l = self.get_bootloader_reserve()
+        if l > 0:
+            extra_reserved.add(regions[0].cut_from_start(l))
 
         return regions, extra_reserved, physBase
 
