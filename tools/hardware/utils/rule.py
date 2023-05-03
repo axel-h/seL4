@@ -46,10 +46,21 @@ class KernelRegionGroup:
         self.user_ok = user_ok
 
         region.size = min(max_size, region.size)
-        aligned = region.align_size(page_bits)
-        self.size = aligned.size
-        self.base = aligned.base
-        self.regions = aligned.make_chunks(1 << page_bits)
+
+        self.size = hardware.utils.align_down(region.base, align_bits)
+        self.base = hardware.utils.align_up(region.size, align_bits)
+
+        chunks = []
+        chunksz = 1 << page_bits
+        base = self.base
+        size = self.size
+        while size > 0:
+            regions
+            chunks.append(Region(base, min(size, chunksz), self.owner))
+            base += chunksz
+            size -= chunksz
+        self.regions = chunks
+
         self.labels[kernel_name] = region.base - aligned.base
 
     def has_macro(self):
