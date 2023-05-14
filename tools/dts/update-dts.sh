@@ -71,6 +71,8 @@ sifive/hifive-unleashed-a00=hifive
 sifive/hifive-unmatched-a00=hifive-unmatched
 microchip/mpfs-icicle-kit.dts=mpfs_icicle
 allwinner/sun20i-d1-nezha=nezha
+jh7100-starfive-visionfive-v1=visionvive-v1
+jh7110-starfive-visionfive-2-v1.3b=visionvive-v2
 "
 
 extract_dts() {
