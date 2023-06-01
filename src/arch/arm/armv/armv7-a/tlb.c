@@ -4,51 +4,42 @@
  * SPDX-License-Identifier: GPL-2.0-only
  */
 
+#include <config.h>
 #include <arch/machine/hardware.h>
 
-#if defined(CONFIG_ARM_CORTEX_A15) || defined(CONFIG_ARM_CORTEX_A7)
-/* The hardware does not support tlb locking */
 void lockTLBEntry(vptr_t vaddr)
 {
-
-}
-
-#else
-
-void lockTLBEntry(vptr_t vaddr)
-{
-    int n = tlbLockCount;
-    int x, y;
-
-    tlbLockCount ++;
-    /* Compute two values, x and y, to write to the lockdown register. */
 
 #if defined(CONFIG_ARM_CORTEX_A8)
 
+    /* Compute two values, x and y, to write to the lockdown register. */
+    static word_t tlbLockCount = 0;
     /* Before lockdown, base = victim = num_locked_tlb_entries. */
-    x = 1 | (n << 22) | (n << 27);
-    n ++;
+    word_t x = 1 | (tlbLockCount << 22) | (tlbLockCount << 27);
+    tlbLockCount++;
     /* After lockdown, base = victim = num_locked_tlb_entries + 1. */
-    y = (n << 22) | (n << 27);
+    word_t y = (tlbLockCount << 22) | (tlbLockCount << 27);
+    lockTLBEntryCritical(vaddr, x, y);
 
 #elif defined(CONFIG_ARM_CORTEX_A9)
 
+    /* Compute two values, x and y, to write to the lockdown register. */
+    static word_t tlbLockCount = 0;
     /* Before lockdown, victim = num_locked_tlb_entries. */
-    x = 1 | (n << 28);
-    n ++;
+    word_t x = 1 | (tlbLockCount << 28);
+    tlbLockCount++;
     /* After lockdown, victim = num_locked_tlb_entries + 1. */
-    y = (n << 28);
+    word_t y = (tlbLockCount << 28);
+    lockTLBEntryCritical(vaddr, x, y);
+
+#elif defined(CONFIG_ARM_CORTEX_A15) || defined(CONFIG_ARM_CORTEX_A7)
+
+    /* The hardware does not support tlb locking */
 
 #else
 
-    userError("Undefined CPU for TLB lockdown.\n");
-    halt();
+#error "Undefined CPU for TLB lockdown"
 
 #endif /* A8/A9 */
 
-    lockTLBEntryCritical(vaddr, x, y);
 }
-
-#endif /* A15/A7 */
-
-

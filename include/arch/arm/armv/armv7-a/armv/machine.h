@@ -34,7 +34,7 @@ static inline void isb(void)
     asm volatile("isb" ::: "memory");
 }
 
-void lockTLBEntryCritical(unsigned int addr, unsigned int x, unsigned int y);
+void lockTLBEntryCritical(word_t addr, word_t x, word_t y);
 
 #define MRC(cpreg, v)  asm volatile("mrc  " cpreg :  "=r"(v))
 #define MRRC(cpreg, v) asm volatile("mrrc " cpreg :  "=r"(v))

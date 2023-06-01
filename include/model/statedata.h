@@ -122,7 +122,6 @@ extern ticks_t ksDomainTime;
 #else
 extern word_t ksDomainTime;
 #endif
-extern word_t tlbLockCount VISIBLE;
 
 extern char ksIdleThreadTCB[CONFIG_MAX_NUM_NODES][BIT(seL4_TCBBits)];
 
