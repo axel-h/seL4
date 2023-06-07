@@ -93,32 +93,25 @@ class Region:
                                              self.base + self.size, self.owner))
         return ret
 
-    def align_base(self, align_bits: int) -> Region:
-        ''' align this region up to a given number of bits '''
-        new_base = hardware.utils.align_up(self.base, align_bits)
-        diff = new_base - self.base
-        if self.size < diff:
+    def cut_from_start(self, size: int) -> Region:
+        ''' Cut off a region from the start and return it, no owner is set.
+        Adjust the original region's size.'''
+        if size <= self.size:
             raise ValueError(
-                'can''t align region base to {} bits, {} too small'.format(
-                    align_bits, self))
-        # This could become an empty region now. We don't care, the caller has
-        # to check if this region still fits its needs.
-        return Region(new_base, self.size - diff, self.owner)
+                'can''t cut off {} from start, region size is only {}'.format(
+                    self.size, size))
+        cut_reg = Region(self.base, size)
+        self.base += size
+        self.size -= size
+        return cut_reg
 
-    def align_size(self, align_bits: int) -> Region:
-        ''' align this region's size to a given number of bits.
-         will move the base address down and the region's size
-         up '''
-        new_base = hardware.utils.align_down(self.base, align_bits)
-        new_size = hardware.utils.align_up(self.size, align_bits)
-        return Region(new_base, new_size, self.owner)
-
-    def make_chunks(self, chunksz: int) -> List[Region]:
-        base = self.base
-        size = self.size
-        ret = []
-        while size > 0:
-            ret.append(Region(base, min(size, chunksz), self.owner))
-            base += chunksz
-            size -= chunksz
-        return ret
+    def cut_from_end(self, size: int) -> Region:
+        ''' Cut off a region from the end and return it, no owner is set.
+        Adjust the original region's start and size.'''
+        if size <= self.size:
+            raise ValueError(
+                'can''t cut off {} from end, region size is only {}'.format(
+                    self.size, size))
+        cut_reg = Region(self.base + self.size - size, size)
+        self.size -= size
+        return cut_reg
