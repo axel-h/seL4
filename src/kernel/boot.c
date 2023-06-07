@@ -660,9 +660,6 @@ BOOT_CODE static bool_t provide_untyped_cap(
     seL4_SlotPos first_untyped_slot
 )
 {
-    bool_t ret;
-    cap_t ut_cap;
-
     /* Since we are in boot code, we can do extensive error checking and
        return failure if anything unexpected happens. */
 
@@ -695,21 +692,27 @@ BOOT_CODE static bool_t provide_untyped_cap(
     }
 
     word_t i = ndks_boot.slot_pos_cur - first_untyped_slot;
-    if (i < CONFIG_MAX_NUM_BOOTINFO_UNTYPED_CAPS) {
-        ndks_boot.bi_frame->untypedList[i] = (seL4_UntypedDesc) {
-            .paddr    = pptr_to_paddr((void *)pptr),
-            .sizeBits = size_bits,
-            .isDevice = device_memory,
-            .padding  = {0}
-        };
-        ut_cap = cap_untyped_cap_new(MAX_FREE_INDEX(size_bits),
-                                     device_memory, size_bits, pptr);
-        ret = provide_cap(root_cnode_cap, ut_cap);
-    } else {
+    if (i >= CONFIG_MAX_NUM_BOOTINFO_UNTYPED_CAPS) {
         printf("Kernel init: Too many untyped regions for boot info\n");
-        ret = true;
+        /* This is no failure, the memory is just not available. */
+        return true;
     }
-    return ret;
+
+    ndks_boot.bi_frame->untypedList[i] = (seL4_UntypedDesc) {
+        .paddr    = pptr_to_paddr((void *)pptr),
+        .sizeBits = size_bits,
+        .isDevice = device_memory,
+        .padding  = {0}
+    };
+    cap_t ut_cap = cap_untyped_cap_new(MAX_FREE_INDEX(size_bits),
+                                       device_memory, size_bits, pptr);
+    if (!provide_cap(root_cnode_cap, ut_cap)) {
+        /* Seem the root c-node is too small. */
+        printf("Kernel init: Could not provide untyped cap for boot info slot %"SEL4_PRIu_word"\n", i);
+        return false;
+    }
+
+    return true;
 }
 
 /**
