@@ -139,6 +139,7 @@ BOOT_CODE static bool_t init_cpu(void)
 #ifdef CONFIG_ARCH_AARCH64
     if (config_set(CONFIG_ARM_HYPERVISOR_SUPPORT)) {
         if (!checkTCR_EL2()) {
+            printf("ERROR: TCR_EL2 check failed\n");
             return false;
         }
     }

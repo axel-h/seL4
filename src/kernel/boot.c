@@ -123,11 +123,15 @@ BOOT_CODE static bool_t is_reserved_slot_used(word_t idx)
 
 BOOT_CODE bool_t reserve_region(p_region_t reg)
 {
+    printf("reserve region [%"SEL4_PRIx_word"..%"SEL4_PRIx_word"]\n",
+           reg.start, reg.end - 1);
+
     /* Sanity check: region must be sane. */
     assert(reg.start <= reg.end);
 
     /* if it is empty there is nothing to do. */
     if (is_p_reg_empty(reg)) {
+        printf("  nothing to do for empty regions\n");
         return true;
     }
 
@@ -141,12 +145,16 @@ BOOT_CODE bool_t reserve_region(p_region_t reg)
     for (i = 0; is_reserved_slot_used(i); i++) {
         p_region_t *cur_reg = &reg_reserved[i];
 
+        printf("  %d  [%"SEL4_PRIx_word"..%"SEL4_PRIx_word"]\n",
+               (int)i, cur_reg->start, cur_reg->end - 1);
+
         if (reg.start > cur_reg->end) {
             /* Non-Overlapping case: ...|--cur_reg--|...|--reg--|...
              * The list or properly ordered, there is no impact on the current
              * region if new region is after it. Continue the loop with the next
              * reserved region.
              */
+            printf("    skip\n");
             continue;
         }
 
@@ -155,6 +163,7 @@ BOOT_CODE bool_t reserve_region(p_region_t reg)
              * The list or properly ordered, if the new element is before the
              * current element then we have to make space and insert it.
              */
+            printf("    insert before\n");
             word_t max = ARRAY_SIZE(reg_reserved);
             if (i == max - 1) {
                 printf("ERROR: array is full with %d entries, can't insert "
@@ -170,6 +179,8 @@ BOOT_CODE bool_t reserve_region(p_region_t reg)
                 if (is_p_reg_empty(tmp_reg)) {
                     break;
                 }
+                printf("    move %d -> %d [%"SEL4_PRIx_word"..%"SEL4_PRIx_word"]\n",
+                       (int)i, (int)(i + 1), tmp_reg.start, tmp_reg.end - 1);
                 saved_reg = tmp_reg;
             }
 
@@ -191,6 +202,9 @@ BOOT_CODE bool_t reserve_region(p_region_t reg)
          * Case 3b requires no work:    |--reg--|
          *                            |--cur_reg--|
          */
+
+        printf("    merge\n");
+
         if (reg.start < cur_reg->start) {
             /* Case 1a-c: Adjust the region start. */
             cur_reg->start = reg.start;
@@ -210,6 +224,8 @@ BOOT_CODE bool_t reserve_region(p_region_t reg)
                 if (cur_reg->end < next_reg->start) {
                     break;
                 }
+                printf("    merge %d  [%"SEL4_PRIx_word"..%"SEL4_PRIx_word"]\n",
+                       (int)j, next_reg->start, next_reg->end - 1);
                 /* new region reached into next region, merge them. */
                 if (next_reg->end > reg.end) {
                     cur_reg->end = next_reg->end;
@@ -219,10 +235,14 @@ BOOT_CODE bool_t reserve_region(p_region_t reg)
             if (j > i) {
                 /* Move regions to close the gap. */
                 for (/*nothing */; is_reserved_slot_used(j); i++, j++) {
+                    printf("    move %d -> %d  "
+                           "[%"SEL4_PRIx_word"..%"SEL4_PRIx_word"]\n",
+                           (int)j, (int)i, cur_reg->start, cur_reg->end  - 1);
                     reg_reserved[i] = reg_reserved[j];
                 }
                 /* Mark remaining regions as empty. */
                 for (/*nothing */; is_reserved_slot_used(i); i++) {
+                    printf("    clear %d\n", (int)i);
                     reg_reserved[i] = P_REG_EMPTY;
                 }
             }
@@ -234,8 +254,13 @@ BOOT_CODE bool_t reserve_region(p_region_t reg)
     /* If we arrive here, the new region is after the existing region. Append it
      * at the end if there is still space. */
     if (i >= ARRAY_SIZE(reg_reserved)) {
+        printf("ERROR: can't reserve [%"SEL4_PRIx_word"..%"SEL4_PRIx_word"] "
+               "as it execeeds MAX_NUM_RESV_REG (%d)\n",
+               reg.start, reg.end - 1, (int)MAX_NUM_RESV_REG);
         return false;
     }
+
+    printf("    put at %d\n", (int)i);
 
     /* Sanity check: the slot must be empty. */
     assert(is_p_reg_empty(reg_reserved[i]));
@@ -816,6 +841,9 @@ BOOT_CODE static bool_t create_untypeds_for_phys_region(
      * kernel's mapping window.
      */
     if ((p_reg.start > PADDR_TOP) || (p_reg.end <= PADDR_BASE)) {
+        printf("Can't create untypes, region [%p..%p] not in range [%p..%p]\n",
+               (void *)p_reg.start, (void *)p_reg.start,
+               (void *)PADDR_BASE, (void *)PADDR_TOP);
         return true;
     }
 
@@ -823,6 +851,25 @@ BOOT_CODE static bool_t create_untypeds_for_phys_region(
         .start = MAX(p_reg.start, PADDR_BASE),
         .end   = MIN(p_reg.end, PADDR_TOP)
     };
+
+    /* The region end address can be inclusive or exclusive, this must be taken
+     * into account when calculating the region size. An end address is assumed
+     * to be inclusive if the LSB is 1.
+     */
+    word_t reg_size = usable_p_reg.end - usable_p_reg.start;
+    if (usable_p_reg.end & 1) {
+        reg_size++; /* Increment length by 1 for inclusive end addresses. */
+        assert(reg_size > 0); /* Overflows are not expected. */
+    }
+
+    if (0 == reg_size) {
+        printf("Create %s untypeds for zero-length region at %p\n",
+               is_device_memory ? "device" : "memory", (void *)start);
+    } else {
+        printf("Create %s untypeds for [%p..%p]\n",
+               is_device_memory ? "device" : "memory",
+               (void *)usable_p_reg.start, (void *)usable_p_reg.end);
+    }
 
     region_t reg = paddr_to_pptr_reg(usable_p_reg);
 
@@ -840,6 +887,8 @@ BOOT_CODE static bool_t create_untypeds_for_phys_region(
         unsigned int size_bits = seL4_WordBits - 1 - clzl(reg.end - reg.start);
         /* The size can't exceed the largest possible untyped size. */
         if (size_bits > seL4_MaxUntypedBits) {
+            // printf("  cap 2^%d chunk to 2^%d\n",
+            //        (int)size_bits, (int)seL4_MaxUntypedBits);
             size_bits = seL4_MaxUntypedBits;
         }
         /* The start address 0 satisfies any alignment needs, otherwise ensure
@@ -857,9 +906,20 @@ BOOT_CODE static bool_t create_untypeds_for_phys_region(
          */
         if (size_bits >= seL4_MinUntypedBits) {
             printf("untyped: %p / %d\n", (void *)reg.start, size_bits);
+            // printf("  list[%d] = 2^%d chunk [%p..%p]\n",
+            //        (int)i, (int)size_bits, (void *)start,
+            //        (void *)(start + BIT(size_bits) - 1));
             if (!provide_untyped_cap(root_cnode_cap, device_memory, reg.start, size_bits, first_untyped_slot)) {
                 return false;
             }
+
+            /* The cap way provided successfully and ndks_boot.slot_pos_cur was
+             * updated.
+             */
+        } else {
+            printf("WARNING: region too small: "
+                   "[%"SEL4_PRIx_word" - %"SEL4_PRIx_word"]\n",
+                   start, start + BIT(size_bits) - 1);
         }
         reg.start += BIT(size_bits);
     }
@@ -968,6 +1028,9 @@ BOOT_CODE static word_t check_available_memory(word_t n_available,
     for (word_t i = 0; i < n_available; i++) {
         const p_region_t *r = &available[i];
         printf("  [%"SEL4_PRIx_word"..%"SEL4_PRIx_word"]\n", r->start, r->end);
+
+        printf("    [%"SEL4_PRIx_word"..%"SEL4_PRIx_word"]\n",
+               r->start, r->end - 1);
 
         /* Available regions must be sane */
         if (r->start > r->end) {
@@ -1208,6 +1271,27 @@ BOOT_CODE cap_t init_freemem(word_t n_available, const p_region_t *available,
     /* Sanity check: idx_f can't exceed the number of array elements. */
     assert(idx_f <= ARRAY_SIZE(reg_freemem));
 
+    printf("free mem setup done\n");
+
+    printf("  reserved regions\n");
+    for (word_t i = 0; is_reserved_slot_used(i); i++) {
+        p_region_t *r = &reg_reserved[i];
+        printf("    [%"SEL4_PRIx_word"..%"SEL4_PRIx_word"]\n",
+               r->start, r->end - 1);
+        assert(r->start < r->end);
+    }
+    printf("  free mem:\n");
+    for (word_t i = 0; i < ARRAY_SIZE(reg_freemem); i++) {
+        p_region_t *r = &reg_freemem[i];
+        if (r->start != r->end) {
+            printf("    [%"SEL4_PRIx_word"..%"SEL4_PRIx_word"]\n",
+                   r->start, r->end - 1);
+        } else {
+            printf("    [%"SEL4_PRIx_word"]\n", r->start);
+        }
+        assert(r->start <= r->end);
+    }
+
     /* There must be at least one free memory region after carving out the
      * reserved regions. Without any memory we cannot even setup the root
      * server. */
@@ -1222,6 +1306,7 @@ BOOT_CODE cap_t init_freemem(word_t n_available, const p_region_t *available,
      * region, if this is not possible try the next lower regions. Split the
      * region in the space before the carved out memory and the space after it.
      */
+    printf("Setting up rootserver objects...\n");
     word_t i = ARRAY_SIZE(reg_freemem) - 1;
     if (0 != reg_freemem[i].end) {
         printf("ERROR: Insufficient MAX_NUM_FREEMEM_REG (currently %d)\n",
