@@ -144,7 +144,7 @@ BOOT_CODE static void init_plat(void)
 
 
 #ifdef ENABLE_SMP_SUPPORT
-BOOT_CODE static bool_t try_init_kernel_secondary_core(word_t hart_id, word_t core_id)
+BOOT_CODE static bool_t try_init_kernel_secondary_core()
 {
     while (!node_boot_lock);
 
@@ -477,7 +477,7 @@ BOOT_CODE VISIBLE void init_kernel(
                                  dtb_phys_addr,
                                  dtb_size);
     } else {
-        result = try_init_kernel_secondary_core(hart_id, core_id);
+        result = try_init_kernel_secondary_core();
     }
 #else
     result = try_init_kernel(ui_phys_start,
