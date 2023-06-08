@@ -708,7 +708,7 @@ BOOT_CODE static bool_t provide_untyped_cap(
 }
 
 /**
- * Create untyped caps for a region of kernel-virtual memory.
+ * Create untyped caps for a region of physical memory.
  *
  * Takes care of alignement, size and potentially wrapping memory regions. It is fine to provide a
  * region with end < start if the memory is device memory.
@@ -718,17 +718,31 @@ BOOT_CODE static bool_t provide_untyped_cap(
  *
  * @param root_cnode_cap Cap to the CNode to store the untypeds in.
  * @param device_memory  Whether the region is device memory.
- * @param reg Region of kernel-virtual memory. May wrap around.
+ * @param p_reg Region of physical memory.
  * @param first_untyped_slot First available untyped boot info slot.
  * @return true on success, false on failure.
  */
-BOOT_CODE static bool_t create_untypeds_for_region(
+BOOT_CODE static bool_t create_untypeds_for_phys_region(
     cap_t      root_cnode_cap,
     bool_t     device_memory,
-    region_t   reg,
+    p_region_t p_reg,
     seL4_SlotPos first_untyped_slot
 )
 {
+    /* We can only create untypeds for physical memory that fits into the
+     * kernel's mapping window.
+     */
+    if ((p_reg.start > PADDR_TOP) || (p_reg.end <= PADDR_BASE)) {
+        return true;
+    }
+
+    p_region_t usable_p_reg = {
+        .start = MAX(p_reg.start, PADDR_BASE),
+        .end   = MIN(p_reg.end, PADDR_TOP)
+    };
+
+    region_t reg = paddr_to_pptr_reg(usable_p_reg);
+
     /* This code works with regions that wrap (where end < start), because the loop cuts up the
        region into size-aligned chunks, one for each cap. Memory chunks that are size-aligned cannot
        themselves overflow, so they satisfy alignment, size, and overflow conditions. The region
@@ -776,11 +790,11 @@ BOOT_CODE bool_t create_untypeds(cap_t root_cnode_cap)
     for (word_t i = 0; i < ndks_boot.resv_count; i++) {
         paddr_t reg_start = ndks_boot.reserved[i].start;
         if (start < reg_start) {
-            region_t reg = paddr_to_pptr_reg((p_region_t) {
+            p_region_t reg = {
                 .start = start,
                 .end = reg_start
-            });
-            if (!create_untypeds_for_region(root_cnode_cap, true, reg, first_untyped_slot)) {
+            };
+            if (!create_untypeds_for_phys_region(root_cnode_cap, true, reg, first_untyped_slot)) {
                 printf("ERROR: creation of untypeds for device region #%u at"
                        " [%"SEL4_PRIx_word"..%"SEL4_PRIx_word"] failed\n",
                        (unsigned int)i, reg.start, reg.end);
@@ -792,12 +806,11 @@ BOOT_CODE bool_t create_untypeds(cap_t root_cnode_cap)
     }
 
     if (start < CONFIG_PADDR_USER_DEVICE_TOP) {
-        region_t reg = paddr_to_pptr_reg((p_region_t) {
+        p_region_t reg = {
             .start = start,
             .end = CONFIG_PADDR_USER_DEVICE_TOP
-        });
-
-        if (!create_untypeds_for_region(root_cnode_cap, true, reg, first_untyped_slot)) {
+        };
+        if (!create_untypeds_for_phys_region(root_cnode_cap, true, reg, first_untyped_slot)) {
             printf("ERROR: creation of untypeds for top device region"
                    " [%"SEL4_PRIx_word"..%"SEL4_PRIx_word"] failed\n",
                    reg.start, reg.end);
@@ -809,8 +822,10 @@ BOOT_CODE bool_t create_untypeds(cap_t root_cnode_cap)
      * boot process. We can create UT objects for these frames, so the memory
      * can be reused.
      */
-    region_t boot_mem_reuse_reg = paddr_to_pptr_reg(get_p_reg_kernel_img_boot());
-    if (!create_untypeds_for_region(root_cnode_cap, false, boot_mem_reuse_reg, first_untyped_slot)) {
+    p_region_t boot_mem_reuse_reg = get_p_reg_kernel_img_boot();
+    if (!create_untypeds_for_phys_region(root_cnode_cap, false,
+                                         boot_mem_reuse_reg,
+                                         first_untyped_slot)) {
         printf("ERROR: creation of untypeds for recycled boot memory"
                " [%"SEL4_PRIx_word"..%"SEL4_PRIx_word"] failed\n",
                boot_mem_reuse_reg.start, boot_mem_reuse_reg.end);
@@ -819,9 +834,9 @@ BOOT_CODE bool_t create_untypeds(cap_t root_cnode_cap)
 
     /* convert remaining freemem into UT objects and provide the caps */
     for (word_t i = 0; i < ARRAY_SIZE(ndks_boot.freemem); i++) {
-        region_t reg = paddr_to_pptr_reg(ndks_boot.freemem[i]);
+        p_region_t reg = ndks_boot.freemem[i];
         ndks_boot.freemem[i] = P_REG_EMPTY;
-        if (!create_untypeds_for_region(root_cnode_cap, false, reg, first_untyped_slot)) {
+        if (!create_untypeds_for_phys_region(root_cnode_cap, false, reg, first_untyped_slot)) {
             printf("ERROR: creation of untypeds for free memory region #%u at"
                    " [%"SEL4_PRIx_word"..%"SEL4_PRIx_word"] failed\n",
                    (unsigned int)i, reg.start, reg.end);
