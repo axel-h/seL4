@@ -650,7 +650,7 @@ BOOT_CODE static bool_t pptr_in_kernel_window(pptr_t pptr)
 BOOT_CODE static bool_t provide_untyped_cap(
     cap_t      root_cnode_cap,
     bool_t     device_memory,
-    pptr_t     pptr,
+    paddr_t    paddr,
     word_t     size_bits,
     seL4_SlotPos first_untyped_slot
 )
@@ -668,6 +668,7 @@ BOOT_CODE static bool_t provide_untyped_cap(
     }
 
     /* All cap ptrs must be aligned to object size */
+    pptr_t pptr = (pptr_t)paddr_to_pptr(paddr);
     if (!IS_ALIGNED(pptr, size_bits)) {
         printf("Kernel init: Unaligned untyped pptr %p (alignment %"SEL4_PRIu_word")\n", (void *)pptr, size_bits);
         return false;
@@ -692,7 +693,7 @@ BOOT_CODE static bool_t provide_untyped_cap(
     word_t i = ndks_boot.slot_pos_cur - first_untyped_slot;
     if (i < CONFIG_MAX_NUM_BOOTINFO_UNTYPED_CAPS) {
         ndks_boot.bi_frame->untypedList[i] = (seL4_UntypedDesc) {
-            .paddr    = pptr_to_paddr((void *)pptr),
+            .paddr    = paddr,
             .sizeBits = size_bits,
             .isDevice = device_memory,
             .padding  = {0}
@@ -736,23 +737,13 @@ BOOT_CODE static bool_t create_untypeds_for_phys_region(
         return true;
     }
 
-    p_region_t usable_p_reg = {
+    p_region_t reg = {
         .start = MAX(p_reg.start, PADDR_BASE),
         .end   = MIN(p_reg.end, PADDR_TOP)
     };
 
-    region_t reg = paddr_to_pptr_reg(usable_p_reg);
-
-    /* This code works with regions that wrap (where end < start), because the
-     * loop cuts up the region into size-aligned chunks, one for each cap.
-     * Memory chunks that are size-aligned cannot themselves overflow, so they
-     * satisfy alignment, size, and overflow conditions. The region [0..end)
-     * is not necessarily part of the kernel window (depending on the value of
-     * PPTR_BASE). This is fine for device untypeds. For normal untypeds, the
-     * region is assumed to be fully in the kernel window. This is not checked
-     * here.
-     */
-    while (!is_reg_empty(reg)) {
+    while (reg.start != reg.end) {
+        assert(reg.start < reg.end);
 
         /* Calculate the bit size of the region. This is also correct for end < start: it will
            return the correct size of the set [start..-1] union [0..end). This will then be too
