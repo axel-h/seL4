@@ -328,18 +328,17 @@ static BOOT_CODE bool_t try_init_kernel(
             /* An integer overflow happened in DTB end address calculation, the
              * location or size passed seems invalid.
              */
-            printf("ERROR: DTB location at %"SEL4_PRIx_word
-                   " len %"SEL4_PRIu_word" invalid\n",
-                   dtb_phys_addr, dtb_size);
+            printf("ERROR: DTB location at %p, len %"SEL4_PRIu_word" invalid\n",
+                   (void *)dtb_phys_addr, dtb_size);
             return false;
         }
         /* If the DTB is located in physical memory that is not mapped in the
          * kernel window we cannot access it.
          */
         if (dtb_phys_end >= PADDR_TOP) {
-            printf("ERROR: DTB at [%"SEL4_PRIx_word"..%"SEL4_PRIx_word"] "
-                   "exceeds PADDR_TOP (%"SEL4_PRIx_word")\n",
-                   dtb_phys_addr, dtb_phys_end, PADDR_TOP);
+            printf("ERROR: DTB at [%p..%p] exceeds PADDR_TOP (%p)\n",
+                   (void *)dtb_phys_addr, (void *)dtb_phys_end,
+                   (void *)PADDR_TOP);
             return false;
         }
         /* DTB seems valid and accessible, pass it on in bootinfo. */
@@ -368,9 +367,8 @@ static BOOT_CODE bool_t try_init_kernel(
          * work properly. Unfortunately, the definition of USER_TOP differs
          * between platforms (int, long), so we have to cast here to play safe.
          */
-        printf("ERROR: userland image virt [%"SEL4_PRIx_word"..%"SEL4_PRIx_word"]"
-               "exceeds USER_TOP (%"SEL4_PRIx_word")\n",
-               it_v_reg.start, it_v_reg.end, (word_t)USER_TOP);
+        printf("ERROR: userland image virt [%p..%p] exceeds USER_TOP (%p)\n",
+               (void *)it_v_reg.start, (void *)it_v_reg.end, (void *)USER_TOP);
         return false;
     }
 
