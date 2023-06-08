@@ -584,35 +584,29 @@ BOOT_CODE VISIBLE void init_kernel(
     word_t dtb_size
 )
 {
-    bool_t result;
-
 #ifdef ENABLE_SMP_SUPPORT
-    /* we assume there exists a cpu with id 0 and will use it for bootstrapping */
+    /* The core with the ID 0 will do the bootstrapping, all other cores will
+     * just do a lightweight initialization afterwards.
+     */
     if (getCurrentCPUIndex() == 0) {
-        result = try_init_kernel(ui_phys_start,
-                                 ui_phys_end,
-                                 ui_pv_offset,
-                                 ui_virt_entry,
-                                 dtb_phys_addr,
-                                 dtb_size);
-    } else {
-        result = try_init_kernel_secondary_core();
-    }
-
-#else
-    result = try_init_kernel(ui_phys_start,
+#endif /* ENABLE_SMP_SUPPORT */
+        if (!try_init_kernel(ui_phys_start,
                              ui_phys_end,
                              ui_pv_offset,
                              ui_virt_entry,
                              dtb_phys_addr,
-                             dtb_size);
-
-#endif /* ENABLE_SMP_SUPPORT */
-
-    if (!result) {
-        fail("ERROR: kernel init failed");
-        UNREACHABLE();
+                             dtb_size)) {
+            fail("ERROR: kernel init failed");
+            UNREACHABLE();
+        }
+#ifdef ENABLE_SMP_SUPPORT
+    } else {
+        if (!try_init_kernel_secondary_core()) {
+            fail("ERROR: kernel init on secondary core failed");
+            UNREACHABLE();
+        }
     }
+#endif /* ENABLE_SMP_SUPPORT */
 
 #ifdef CONFIG_KERNEL_MCS
     NODE_STATE(ksCurTime) = getCurrentTime();
