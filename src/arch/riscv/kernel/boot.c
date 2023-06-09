@@ -195,11 +195,6 @@ static BOOT_CODE bool_t try_init_kernel(
     cap_t it_pd_cap;
     cap_t it_ap_cap;
     cap_t ipcbuf_cap;
-    word_t extra_bi_size = 0;
-    pptr_t extra_bi_offset = 0;
-    vptr_t extra_bi_frame_vptr;
-    vptr_t bi_frame_vptr;
-    vptr_t ipcbuf_vptr;
     create_frames_of_region_ret_t create_frames_ret;
     create_frames_of_region_ret_t extra_bi_ret;
 
@@ -224,14 +219,12 @@ static BOOT_CODE bool_t try_init_kernel(
      * If 0x40000000 is a signed integer, the result is likely the same, but the
      * whole operation is completely undefined by C rules.
      */
-    v_region_t ui_v_reg = {
-        .start = ui_p_reg_start - pv_offset,
-        .end   = ui_p_reg_end   - pv_offset
-    };
-
-    ipcbuf_vptr = ui_v_reg.end;
-    bi_frame_vptr = ipcbuf_vptr + BIT(PAGE_BITS);
-    extra_bi_frame_vptr = bi_frame_vptr + BIT(seL4_BootInfoFrameBits);
+    vptr_t ui_virt_start = ui_phys_start - pv_offset
+    word_t ui_phys_size = ui_phys_end - ui_phys_start;
+    vptr_t ipcbuf_vptr = ui_virt_start + ui_phys_size;
+    vptr_t bi_frame_vptr = ipcbuf_vptr + BIT(PAGE_BITS);
+    vptr_t extra_bi_frame_vptr = bi_frame_vptr + BIT(seL4_BootInfoFrameBits);
+    word_t extra_bi_size = 0;
 
     map_kernel_window();
 
@@ -309,13 +302,13 @@ static BOOT_CODE bool_t try_init_kernel(
         .start = ui_v_reg.start,
         .end   = extra_bi_frame_vptr + BIT(extra_bi_size_bits)
     };
-    if (it_v_reg.end >= USER_TOP) {
+    if ((it_v_reg.end <= it_v_reg.start) || (it_v_reg.end >= USER_TOP)) {
         /* Variable arguments for printf() require well defined integer types
          * to work properly. Unfortunately, the definition of USER_TOP differs
          * between platforms (int, long), so we have to cast here to play safe.
          */
-        printf("ERROR: userland image virt [%p..%p] exceeds USER_TOP (%p)\n",
-               (void *)it_v_reg.start, (void *)it_v_reg.end, (void *)USER_TOP);
+        printf("ERROR: initial thread virt [%p..%p] is invalid or exceeds USER_TOP (%p)\n",
+               (void *)ui_virt_start, (void *)ui_virt_end);
         return false;
     }
 

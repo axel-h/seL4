@@ -281,28 +281,41 @@ BOOT_CODE static void release_secondary_cpus(void)
 
 /* Main kernel initialisation function. */
 static BOOT_CODE bool_t try_init_kernel(
-    paddr_t ui_p_reg_start,
-    paddr_t ui_p_reg_end,
-    word_t  pv_offset,
-    vptr_t  v_entry,
-    paddr_t dtb_phys_addr,
-    word_t  dtb_size
+    word_t ui_phys_start,
+    word_t ui_phys_end,
+    word_t ui_pv_offset,
+    word_t ui_virt_entry,
+    word_t dtb_phys_start,
+    word_t dtb_size
 )
 {
     cap_t root_cnode_cap;
     cap_t it_ap_cap;
     cap_t it_pd_cap;
     cap_t ipcbuf_cap;
-    word_t extra_bi_size = 0;
-    pptr_t extra_bi_offset = 0;
-    vptr_t extra_bi_frame_vptr;
-    vptr_t bi_frame_vptr;
-    vptr_t ipcbuf_vptr;
     create_frames_of_region_ret_t create_frames_ret;
     create_frames_of_region_ret_t extra_bi_ret;
 
-    /* Convert from physical addresses to userland vptrs with the parameter
-     * pv_offset, which is defined as:
+
+    /* process the user image */
+    if (ui_phys_end <= ui_phys_start) {
+        fail("ERROR: invalid user image");
+        UNREACHABLE();
+    }
+
+    p_region_t ui_p_reg = {
+        .start = ui_phys_start,
+        .end   = ui_phys_end
+    };
+
+    /* The region of the initial thread is:
+     * - physical user image
+     * - IPC buffer
+     * - boot information
+     * - extra boot information
+     *
+     * Convert from physical addresses to userland vptrs with the parameter
+     * pv_offset, which is define as:
      *     virt_address + pv_offset = phys_address
      * The offset is usually a positive value, because the virtual address of
      * the user image is a low value and the actually physical address is much
@@ -322,14 +335,12 @@ static BOOT_CODE bool_t try_init_kernel(
      * If 0x40000000 is a signed integer, the result is likely the same, but the
      * whole operation is completely undefined by C rules.
      */
-    v_region_t ui_v_reg = {
-        .start = ui_p_reg_start - pv_offset,
-        .end   = ui_p_reg_end   - pv_offset
-    };
-
-    ipcbuf_vptr = ui_v_reg.end;
-    bi_frame_vptr = ipcbuf_vptr + BIT(PAGE_BITS);
-    extra_bi_frame_vptr = bi_frame_vptr + BIT(seL4_BootInfoFrameBits);
+    vptr_t ui_virt_start = ui_phys_start - pv_offset
+    word_t ui_phys_size = ui_phys_end - ui_phys_start;
+    vptr_t ipcbuf_vptr = ui_virt_start + ui_phys_size;
+    vptr_t bi_frame_vptr = ipcbuf_vptr + BIT(PAGE_BITS);
+    vptr_t extra_bi_frame_vptr = bi_frame_vptr + BIT(seL4_BootInfoFrameBits);
+    word_t extra_bi_size = 0;
 
     /* setup virtual memory for the kernel */
     map_kernel_window();
@@ -415,13 +426,13 @@ static BOOT_CODE bool_t try_init_kernel(
         .start = ui_v_reg.start,
         .end   = extra_bi_frame_vptr + BIT(extra_bi_size_bits)
     };
-    if (it_v_reg.end >= USER_TOP) {
+    if ((it_v_reg.end <= it_v_reg.start) || (it_v_reg.end >= USER_TOP)) {
         /* Variable arguments for printf() require well defined integer types to
          * work properly. Unfortunately, the definition of USER_TOP differs
          * between platforms (int, long), so we have to cast here to play safe.
          */
-        printf("ERROR: userland image virt [%p..%p] exceeds USER_TOP (%p)\n",
-               (void *)it_v_reg.start, (void *)it_v_reg.end, (void *)USER_TOP);
+        printf("ERROR: initial thread virt [%p..%p] is invalid or exceeds USER_TOP (%p)\n",
+               (void *)ui_virt_start, (void *)ui_virt_end);
         return false;
     }
 
