@@ -223,7 +223,10 @@ BOOT_CODE static bool_t try_init_kernel_secondary_core(void)
     while (!node_boot_lock);
 
     /* Perform cpu init */
-    init_cpu();
+    if (!init_cpu()) {
+        printf("ERROR: CPU init failed\n");
+        return false;
+    }
 
     for (unsigned int i = 0; i < NUM_PPI; i++) {
         maskInterrupt(true, CORE_IRQ_TO_IRQT(getCurrentCPUIndex(), i));
