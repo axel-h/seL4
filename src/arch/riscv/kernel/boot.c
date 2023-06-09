@@ -195,6 +195,16 @@ static BOOT_CODE bool_t try_init_kernel(
     cap_t it_ap_cap;
     cap_t ipcbuf_cap;
 
+    map_kernel_window();
+
+    /* initialise the CPU */
+    init_cpu();
+
+    printf("Bootstrapping kernel\n");
+
+    /* initialize the platform */
+    init_plat();
+
     /* Convert from physical addresses to userland vptrs with the parameter
      * pv_offset, which is defined as:
      *     virt_address + pv_offset = phys_address
@@ -222,16 +232,6 @@ static BOOT_CODE bool_t try_init_kernel(
     vptr_t bi_frame_vptr = ipcbuf_vptr + BIT(PAGE_BITS);
     vptr_t extra_bi_frame_vptr = bi_frame_vptr + BIT(seL4_BootInfoFrameBits);
     word_t extra_bi_size = 0;
-
-    map_kernel_window();
-
-    /* initialise the CPU */
-    init_cpu();
-
-    printf("Bootstrapping kernel\n");
-
-    /* initialize the platform */
-    init_plat();
 
     /* Reserve the kernel image region. */
     if (!reserve_region(get_p_reg_kernel_img())) {
