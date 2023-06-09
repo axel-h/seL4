@@ -24,11 +24,19 @@ static inline ticks_t getCurrentTime(void)
 /** DONT_TRANSLATE **/
 static inline void setDeadline(ticks_t deadline)
 {
+    /* The timer interrupt condition is met when the counter is greater than or
+     * equal to the compare value written here. Thus, writing a values that is
+     * in the past is fine.
+     */
     SYSTEM_WRITE_64(CNT_CVAL, deadline);
 }
 
 static inline void ackDeadlineIRQ(void)
 {
+    /* Setting the new value to the maximum practically disables it. It remains
+     * unclear why we don't disable it, maybe that is too much overhead given a
+     * new timer value is set by the scheduler on kernel exit. The only
+     */
     ticks_t deadline = UINT64_MAX;
     setDeadline(deadline);
     /* Ensure that the timer deasserts the IRQ before GIC EOIR/DIR.
