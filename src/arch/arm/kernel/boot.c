@@ -313,9 +313,7 @@ static BOOT_CODE bool_t try_init_kernel(
 #ifdef CONFIG_ARCH_AARCH32
 
     /* Reserve the HW ASID region*/
-    assert(1 == MODE_RESERVED);
-    p_region_t hw_asid_p_reg = pptr_to_paddr_reg(mode_reserved_region[0]);
-    if (!reserve_region(hw_asid_p_reg)) {
+    if (!reserve_region(pptr_to_paddr_reg(hw_asid_region))) {
         printf("ERROR: can't add reserved region for HW ASIDs\n");
         return false;
     }

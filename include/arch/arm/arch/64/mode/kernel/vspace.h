@@ -11,8 +11,6 @@
 #include <api/failures.h>
 #include <object/structures.h>
 
-#define MODE_RESERVED 0
-
 /* ==================== BOOT CODE FINISHES HERE ==================== */
 
 bool_t CONST isVTableRoot(cap_t cap);

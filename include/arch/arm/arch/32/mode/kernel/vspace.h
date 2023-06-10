@@ -11,9 +11,6 @@
 #include <api/failures.h>
 #include <object/structures.h>
 
-/* PD slot reserved for storing the PD's allocated hardware ASID */
-#define PD_ASID_SLOT (0xff000000 >> (PT_INDEX_BITS + PAGE_BITS))
-
 enum pde_pte_tag {
     ME_PDE,
     ME_PTE
@@ -62,12 +59,12 @@ void invalidateTLBByASID(asid_t asid);
 
 bool_t CONST isIOSpaceFrameCap(cap_t cap);
 
-/* Reserved memory ranges */
-static const region_t BOOT_RODATA mode_reserved_region[] = {
-    {
-        (PD_ASID_SLOT + 0) << ARMSectionBits,
-                           (PD_ASID_SLOT + 1) << ARMSectionBits
-    }
-};
-#define MODE_RESERVED ARRAY_SIZE(mode_reserved_region)
+/* Reserve a memory for ASID handling. Kernel device passing use 2 MiByte each,
+ * as this curresponts to the section size in the pages tables.
+ */
+#define PD_ASID_SLOT 0xff000000
 
+static const region_t BOOT_RODATA hw_asid_region = {
+    .start = PD_ASID_SLOT,
+    .end   = PD_ASID_SLOT + BIT(ARMSectionBits)
+};
