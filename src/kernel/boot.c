@@ -251,7 +251,7 @@ BOOT_CODE static pptr_t alloc_rootserver_obj(word_t size_bits, word_t n)
     rootserver_mem.start += (n * BIT(size_bits));
     /* we must not have run out of memory */
     assert(rootserver_mem.start <= rootserver_mem.end);
-    memzero((void *) allocated, n * BIT(size_bits));
+    memzero((void *)allocated, n * BIT(size_bits));
     return allocated;
 }
 
