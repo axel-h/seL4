@@ -771,7 +771,8 @@ BOOT_CODE bool_t create_untypeds(cap_t root_cnode_cap)
     for (word_t i = 0; i < ndks_boot.resv_count; i++) {
         if (start < ndks_boot.reserved[i].start) {
             region_t reg = paddr_to_pptr_reg((p_region_t) {
-                start, ndks_boot.reserved[i].start
+                .start = start,
+                .endd = ndks_boot.reserved[i].start
             });
             if (!create_untypeds_for_region(root_cnode_cap, true, reg, first_untyped_slot)) {
                 printf("ERROR: creation of untypeds for device region #%u at"
@@ -786,7 +787,8 @@ BOOT_CODE bool_t create_untypeds(cap_t root_cnode_cap)
 
     if (start < CONFIG_PADDR_USER_DEVICE_TOP) {
         region_t reg = paddr_to_pptr_reg((p_region_t) {
-            start, CONFIG_PADDR_USER_DEVICE_TOP
+            .start = start,
+            .end = CONFIG_PADDR_USER_DEVICE_TOP
         });
 
         if (!create_untypeds_for_region(root_cnode_cap, true, reg, first_untyped_slot)) {
