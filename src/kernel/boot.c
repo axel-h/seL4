@@ -364,8 +364,7 @@ compile_assert(root_cnode_size_valid,
                BIT(CONFIG_ROOT_CNODE_SIZE_BITS) >= seL4_NumInitialCaps &&
                CONFIG_ROOT_CNODE_SIZE_BITS >= (seL4_PageBits - seL4_SlotBits))
 
-BOOT_CODE cap_t
-create_root_cnode(void)
+BOOT_CODE cap_t create_root_cnode(void)
 {
     cap_t cap = cap_cnode_cap_new(
                     CONFIG_ROOT_CNODE_SIZE_BITS, /* radix */
@@ -385,8 +384,7 @@ compile_assert(num_domains_valid,
 compile_assert(num_priorities_valid,
                CONFIG_NUM_PRIORITIES >= 1 && CONFIG_NUM_PRIORITIES <= 256)
 
-BOOT_CODE void
-create_domain_cap(cap_t root_cnode_cap)
+BOOT_CODE void create_domain_cap(cap_t root_cnode_cap)
 {
     /* Check domain scheduler assumptions. */
     assert(ksDomScheduleLength > 0);
