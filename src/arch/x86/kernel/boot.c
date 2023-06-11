@@ -150,7 +150,6 @@ BOOT_CODE bool_t init_sys_state(
     seL4_X86_BootInfo_fb_t *fb_info
 )
 {
-    cap_t         root_cnode_cap;
     vptr_t        extra_bi_frame_vptr;
     vptr_t        bi_frame_vptr;
     vptr_t        ipcbuf_vptr;
@@ -199,27 +198,21 @@ BOOT_CODE bool_t init_sys_state(
     }
 #endif /* CONFIG_IOMMU */
 
-    /* make the free memory available to alloc_region() */
-    if (!init_freemem(mem_p_regs->count, mem_p_regs->list, it_v_reg,
-                      extra_bi_size_bits)) {
-        printf("ERROR: free memory initn faiuled\n");
+    /* Make the free memory available to alloc_region(), create the rootserver
+     * objects and the root c-node.
+     */
+     cap_t root_cnode_cap = init_freemem(mem_p_regs->count, mem_p_regs->list,
+                                         it_v_reg, extra_bi_size_bits);
+    if (cap_get_capType(root_cnode_cap) == cap_null_cap) {
+        printf("ERROR: memory management initialization failed\n");
         return false;
     }
-
-    /* create the root cnode */
-    root_cnode_cap = create_root_cnode();
 
     /* create the IO port cap */
     write_slot(
         SLOT_PTR(pptr_of_cap(root_cnode_cap), seL4_CapIOPortControl),
         cap_io_port_control_cap_new()
     );
-
-    /* create the cap for managing thread domains */
-    create_domain_cap(root_cnode_cap);
-
-    /* initialise the IRQ states and provide the IRQ control cap */
-    init_irqs(root_cnode_cap);
 
     tsc_freq = tsc_init();
 

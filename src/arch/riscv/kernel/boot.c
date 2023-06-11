@@ -191,7 +191,6 @@ static BOOT_CODE bool_t try_init_kernel(
     word_t  dtb_size
 )
 {
-    cap_t root_cnode_cap;
     cap_t it_pd_cap;
     cap_t it_ap_cap;
     cap_t ipcbuf_cap;
@@ -312,27 +311,16 @@ static BOOT_CODE bool_t try_init_kernel(
         return false;
     }
 
-    /* make the free memory available to alloc_region(), avail_p_regs comes from
-     * the auto-generated code.
+    /* Make the free memory available to alloc_region(), create the rootserver
+     * objects and the root c-node.
      */
-    if (!init_freemem(ARRAY_SIZE(avail_p_regs), avail_p_regs, it_v_reg,
-                      extra_bi_size_bits)) {
-        printf("ERROR: free memory initn faiuled\n");
-        return false;
-    }
-
-    /* create the root cnode */
-    root_cnode_cap = create_root_cnode();
+    cap_t root_cnode_cap = init_freemem(get_num_avail_p_regs(),
+                                        get_avail_p_regs(),
+                                        it_v_reg, extra_bi_size_bits);
     if (cap_get_capType(root_cnode_cap) == cap_null_cap) {
-        printf("ERROR: root c-node creation failed\n");
+        printf("ERROR: memory management initialization failed\n");
         return false;
     }
-
-    /* create the cap for managing thread domains */
-    create_domain_cap(root_cnode_cap);
-
-    /* initialise the IRQ states and provide the IRQ control cap */
-    init_irqs(root_cnode_cap);
 
     /* create the bootinfo frame */
     populate_bi_frame(0, CONFIG_MAX_NUM_NODES, ipcbuf_vptr, extra_bi_size);
