@@ -769,10 +769,11 @@ BOOT_CODE bool_t create_untypeds(cap_t root_cnode_cap)
 
     paddr_t start = 0;
     for (word_t i = 0; i < ndks_boot.resv_count; i++) {
-        if (start < ndks_boot.reserved[i].start) {
+        paddr_t reg_start = ndks_boot.reserved[i].start;
+        if (start < reg_start) {
             region_t reg = paddr_to_pptr_reg((p_region_t) {
                 .start = start,
-                .endd = ndks_boot.reserved[i].start
+                .end = reg_start
             });
             if (!create_untypeds_for_region(root_cnode_cap, true, reg, first_untyped_slot)) {
                 printf("ERROR: creation of untypeds for device region #%u at"
