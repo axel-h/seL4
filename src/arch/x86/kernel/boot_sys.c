@@ -340,8 +340,6 @@ static BOOT_CODE bool_t try_boot_sys(void)
     p_region_t ui_p_regs;
     paddr_t load_paddr;
 
-    boot_state.ki_p_reg = get_p_reg_kernel_img();
-
     if (!x86_cpuid_initialize()) {
         printf("Warning: Your x86 CPU has an unsupported vendor, '%s'.\n"
                "\tYour setup may not be able to competently run seL4 as "
@@ -391,10 +389,11 @@ static BOOT_CODE bool_t try_boot_sys(void)
     mode_init_tls(0);
 #endif /* ENABLE_SMP_SUPPORT */
 
+    p_region_t ki_p_reg = get_p_reg_kernel_img();
     printf("Kernel loaded to: start=0x%lx end=0x%lx size=0x%lx entry=0x%lx\n",
-           boot_state.ki_p_reg.start,
-           boot_state.ki_p_reg.end,
-           boot_state.ki_p_reg.end - boot_state.ki_p_reg.start,
+           ki_p_reg.start,
+           ki_p_reg.end,
+           ki_p_reg.end - ki_p_reg.start,
            (paddr_t)_start
           );
 
@@ -449,7 +448,7 @@ static BOOT_CODE bool_t try_boot_sys(void)
     }
 
     mods_end_paddr = ROUND_UP(mods_end_paddr, PAGE_BITS);
-    assert(mods_end_paddr > boot_state.ki_p_reg.end);
+    assert(mods_end_paddr > ki_p_reg.end);
 
     printf("ELF-loading userland images from boot modules:\n");
     load_paddr = mods_end_paddr;
@@ -460,7 +459,7 @@ static BOOT_CODE bool_t try_boot_sys(void)
     }
 
     /* calculate final location of userland images */
-    ui_p_regs.start = boot_state.ki_p_reg.end;
+    ui_p_regs.start = ki_p_reg.end;
     ui_p_regs.end = ui_p_regs.start + load_paddr - mods_end_paddr;
 
     printf(
