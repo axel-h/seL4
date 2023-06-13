@@ -391,11 +391,11 @@ static BOOT_CODE bool_t try_boot_sys(void)
     mode_init_tls(0);
 #endif /* ENABLE_SMP_SUPPORT */
 
-    printf("Kernel loaded to: start=0x%lx end=0x%lx size=0x%lx entry=0x%lx\n",
-           boot_state.ki_p_reg.start,
-           boot_state.ki_p_reg.end,
-           boot_state.ki_p_reg.end - boot_state.ki_p_reg.start,
-           (paddr_t)_start
+    printf("Kernel loaded to: start=%p end=%p size=0x%zu entry=%p\n",
+           (void *)boot_state.ki_p_reg.start,
+           (void *)boot_state.ki_p_reg.end,
+           (size_t)(boot_state.ki_p_reg.end - boot_state.ki_p_reg.start),
+           (void *)_start
           );
 
     /* remapping legacy IRQs to their correct vectors */
