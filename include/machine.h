@@ -31,7 +31,7 @@ static inline paddr_t CONST addrFromPPtr(const void *pptr)
 static inline paddr_t CONST addrFromKPPtr(const void *pptr)
 {
     assert((paddr_t)pptr >= KERNEL_ELF_BASE);
-    assert((paddr_t)pptr <= KERNEL_ELF_TOP);
+    assert((paddr_t)pptr <= (paddr_t)ki_end);
     return (paddr_t)pptr - KERNEL_ELF_BASE_OFFSET;
 }
 
