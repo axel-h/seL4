@@ -55,34 +55,6 @@ BOOT_CODE cap_t create_mapped_it_frame_cap(cap_t pd_cap, pptr_t pptr, vptr_t vpt
     return cap;
 }
 
-BOOT_CODE static bool_t arch_init_freemem(p_region_t ui_p_reg,
-                                          p_region_t dtb_p_reg,
-                                          v_region_t it_v_reg,
-                                          word_t extra_bi_size_bits)
-{
-    /* reserve the kernel image region */
-    if (!reserve_region(get_p_reg_kernel_img())) {
-        printf("ERROR: can't add reserved region for kernel image\n");
-        return false;
-    }
-
-    /* Reserve the user image region. */
-    if (!reserve_region(ui_p_reg)) {
-        printf("ERROR: can't add reserved region for user image\n");
-        return false;
-    }
-
-    /* Reserve the DTB region, it's ignored if the size is zero. */
-    if (!reserve_region(dtb_p_reg)) {
-        printf("ERROR: can't add reserved region for DTB\n");
-        return false;
-    }
-
-    /* avail_p_regs comes from the auto-generated code */
-    return init_freemem(ARRAY_SIZE(avail_p_regs), avail_p_regs,
-                        it_v_reg, extra_bi_size_bits);
-}
-
 BOOT_CODE static void init_irqs(cap_t root_cnode_cap)
 {
     irq_t i;
@@ -193,7 +165,6 @@ static BOOT_CODE bool_t try_init_kernel(
     cap_t it_pd_cap;
     cap_t it_ap_cap;
     cap_t ipcbuf_cap;
-    p_region_t ui_p_reg = { .start = ui_p_reg_start, .end = ui_p_reg_end };
     word_t extra_bi_size = 0;
     pptr_t extra_bi_offset = 0;
     vptr_t extra_bi_frame_vptr;
@@ -221,6 +192,22 @@ static BOOT_CODE bool_t try_init_kernel(
 
     /* initialize the platform */
     init_plat();
+
+    /* Reserve the kernel image region. */
+    if (!reserve_region(get_p_reg_kernel_img())) {
+        printf("ERROR: can't add reserved region for kernel image\n");
+        return false;
+    }
+
+    /* Reserve the user image region. */
+    p_region_t ui_p_reg = {
+        .start = ui_p_reg_start,
+        .end = ui_p_reg_end
+    };
+    if (!reserve_region(ui_p_reg)) {
+        printf("ERROR: can't add reserved region for user image\n");
+        return false;
+    }
 
     /* If a DTB was provided, pass the data on as extra bootinfo */
     p_region_t dtb_p_reg = P_REG_EMPTY;
@@ -258,6 +245,12 @@ static BOOT_CODE bool_t try_init_kernel(
             .start = dtb_phys_addr,
             .end   = dtb_phys_end
         };
+
+        /* Reserve the DTB region. */
+        if (!reserve_region(dtb_p_reg)) {
+            printf("ERROR: can't add reserved region for DTB\n");
+            return false;
+        }
     }
 
     /* The region of the initial thread is the user image + ipcbuf + boot info + extra */
@@ -277,9 +270,12 @@ static BOOT_CODE bool_t try_init_kernel(
         return false;
     }
 
-    /* make the free memory available to alloc_region() */
-    if (!arch_init_freemem(ui_p_reg, dtb_p_reg, it_v_reg, extra_bi_size_bits)) {
-        printf("ERROR: free memory management initialization failed\n");
+    /* make the free memory available to alloc_region(), avail_p_regs comes from
+     * the auto-generated code.
+     */
+    if (!init_freemem(ARRAY_SIZE(avail_p_regs), avail_p_regs, it_v_reg,
+                      extra_bi_size_bits)) {
+        printf("ERROR: free memory initn faiuled\n");
         return false;
     }
 
