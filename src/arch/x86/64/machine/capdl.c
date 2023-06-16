@@ -479,26 +479,4 @@ void obj_vtable_print_slots(tcb_t *tcb)
 
 #endif /* CONFIG_PRINTING */
 
-void debug_capDL(void)
-{
-    printf("arch x86_64\n");
-    printf("objects {\n");
-#ifdef CONFIG_PRINTING
-    print_objects();
-#endif
-    printf("}\n");
-
-    printf("caps {\n");
-
-    /* reset the seen list */
-    reset_seen_list();
-
-#ifdef CONFIG_PRINTING
-    print_caps();
-    printf("}\n");
-
-    obj_irq_print_maps();
-#endif
-}
-
 #endif /* CONFIG_DEBUG_BUILD */

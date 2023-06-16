@@ -367,6 +367,8 @@ void obj_irq_print_slots(cap_t irq_cap)
 
 void print_objects(void)
 {
+    printf("objects {\n");
+
     for (tcb_t *curr = NODE_STATE(ksDebugTCBs); curr != NULL; curr = TCB_PTR_DEBUG_PTR(curr)->tcbDebugNext) {
         if (root_or_idle_tcb(curr)) {
             continue;
@@ -389,10 +391,14 @@ void print_objects(void)
             obj_tcb_print_cnodes(TCB_PTR_CTE_PTR(curr, tcbCTable)->cap, curr);
         }
     }
+
+    printf("}\n");
 }
 
 void print_caps(void)
 {
+    printf("caps {\n");
+
     for (tcb_t *curr = NODE_STATE(ksDebugTCBs); curr != NULL; curr = TCB_PTR_DEBUG_PTR(curr)->tcbDebugNext) {
         if (root_or_idle_tcb(curr)) {
             continue;
@@ -401,6 +407,8 @@ void print_caps(void)
         obj_vtable_print_slots(curr);
         obj_tcb_print_slots(curr);
     }
+
+    printf("}\n");
 }
 
 void print_cap(cap_t cap)
@@ -514,5 +522,22 @@ void print_object(cap_t cap)
 }
 
 #endif /* CONFIG_PRINTING */
+
+void debug_capDL(void)
+{
+    /* Dumping requires some output channel. Currently, only printing to the
+     * kernel log is supported. One day, this might also go to a custom buffer,
+     * so enabling printing is no long a requirement
+     */
+#ifdef CONFIG_PRINTING
+    printf("arch %s\n", STRINGIFY(CONFIG_SEL4_ARCH));
+    print_objects();
+#endif /* CONFIG_PRINTING */
+    reset_seen_list();
+#ifdef CONFIG_PRINTING
+    print_caps();
+    obj_irq_print_maps();
+#endif /* CONFIG_PRINTING */
+}
 
 #endif /* CONFIG_DEBUG_BUILD */

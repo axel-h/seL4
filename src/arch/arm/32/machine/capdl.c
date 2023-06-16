@@ -502,27 +502,4 @@ void obj_tcb_print_vtable(tcb_t *tcb)
 
 #endif /* CONFIG_PRINTING */
 
-void debug_capDL(void)
-{
-    printf("arch aarch32\n");
-    printf("objects {\n");
-#ifdef CONFIG_PRINTING
-    print_objects();
-#endif
-    printf("}\n");
-
-    printf("caps {\n");
-
-    /* reset the seen list */
-    reset_seen_list();
-
-#ifdef CONFIG_PRINTING
-    print_caps();
-    printf("}\n");
-
-    obj_irq_print_maps();
-#endif /* CONFIG_PRINTING */
-}
-
-
 #endif /* CONFIG_DEBUG_BUILD */
