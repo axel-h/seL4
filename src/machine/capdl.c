@@ -17,34 +17,36 @@
 #include <kernel/sporadic.h>
 #endif
 
-#define SEEN_SZ 256
-
-/* seen list - check this array before we print cnode and vspace */
-/* TBD: This is to avoid traversing the same cnode. It should be applied to object
+/* seen list - check this array before we print cnode and vspace.
+ * TBD: This is to avoid traversing the same cnode. It should be applied to object
  * as well since the extractor might comes across multiple caps to the same object.
  */
-cap_t seen_list[SEEN_SZ];
-int watermark = 0;
+static struct {
+    cap_t list[256];
+    unsigned int watermark;
+} seen_caps = {}; /* init with zeros */
 
 void add_to_seen(cap_t c)
 {
-    /* Won't work well if there're more than SEEN_SZ cnode */
-    if (watermark <= SEEN_SZ) {
-        seen_list[watermark] = c;
-        watermark++;
+    if (seen_caps.watermark > ARRAY_SIZE(seen_caps.list)) {
+        printf("can't add cap to seen list, no more slots left\n");
+        return;
     }
+
+    seen_caps.list[seen_caps.watermark] = c;
+    seen_caps.watermark++;
 }
 
 void reset_seen_list(void)
 {
-    memset(seen_list, 0, SEEN_SZ * sizeof(seen_list[0]));
-    watermark = 0;
+    memset(seen_caps.list, 0, sizeof(seen_caps.list));
+    seen_caps.watermark = 0;
 }
 
 bool_t seen(cap_t c)
 {
-    for (int i = 0; i < watermark; i++) {
-        if (same_cap(seen_list[i], c)) {
+    for (int i = 0; i < seen_caps.watermark; i++) {
+        if (same_cap(seen_caps.list[i], c)) {
             return true;
         }
     }
