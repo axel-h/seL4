@@ -335,14 +335,8 @@ void obj_irq_print_maps(void)
             if (isIRQActive(irq)) {
                 cap_t cap = intStateIRQNode[IRQT_TO_IDX(irq)].cap;
                 if (cap_get_capType(cap) != cap_null_cap) {
-                    printf("%d: 0x%lx_%lu_irq\n",
-                           i,
-#if defined(ENABLE_SMP_SUPPORT) && defined(CONFIG_ARCH_ARM)
-                           (long unsigned int)irq.irq,
-#else
-                           (long unsigned int)irq,
-#endif
-                           (long unsigned int)target);
+                    printf("%d: 0x%"SEL4_PRIx_word"_%"SEL4_PRIu_word"_irq\n",
+                           i, (word_t)IRQT_TO_IDX(irq), target);
                 }
             }
         }
@@ -354,13 +348,8 @@ void obj_irq_print_slots(cap_t irq_cap)
 {
     irq_t irq = IDX_TO_IRQT(cap_irq_handler_cap_get_capIRQ(irq_cap));
     if (isIRQActive(irq)) {
-        printf("0x%lx_%lu_irq {\n",
-#if defined(ENABLE_SMP_SUPPORT) && defined(CONFIG_ARCH_ARM)
-               (long unsigned int)irq.irq,
-#else
-               (long unsigned int)irq,
-#endif
-               (long unsigned int)IRQT_TO_CORE(irq));
+        printf("0x%"SEL4_PRIx_word"_%"SEL4_PRIu_word"_irq {\n",
+               (word_t)IRQT_TO_IDX(irq), (word_t)IRQT_TO_CORE(irq));
         cap_t ntfn_cap = intStateIRQNode[IRQT_TO_IDX(irq)].cap;
         if (cap_get_capType(ntfn_cap) != cap_null_cap) {
             printf("0x0: ");
