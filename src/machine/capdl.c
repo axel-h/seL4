@@ -329,13 +329,13 @@ void obj_irq_print_maps(void)
 {
     printf("irq maps {\n");
 
-    for (seL4_Word target = 0; target < CONFIG_MAX_NUM_NODES; target++) {
-        for (unsigned i = 0; i <= maxIRQ; i++) {
+    for (int target = 0; target < CONFIG_MAX_NUM_NODES; target++) {
+        for (int i = 0; i <= maxIRQ; i++) {
             irq_t irq = CORE_IRQ_TO_IRQT(target, i);
             if (isIRQActive(irq)) {
                 cap_t cap = intStateIRQNode[IRQT_TO_IDX(irq)].cap;
                 if (cap_get_capType(cap) != cap_null_cap) {
-                    printf("%d: 0x%"SEL4_PRIx_word"_%"SEL4_PRIu_word"_irq\n",
+                    printf("%d: 0x%"SEL4_PRIx_word"_%d_irq\n",
                            i, (word_t)IRQT_TO_IDX(irq), target);
                 }
             }
