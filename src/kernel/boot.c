@@ -1135,6 +1135,7 @@ BOOT_CODE bool_t finalize_init_kernel()
 #ifdef ENABLE_SMP_CLOCK_SYNC_TEST_ON_BOOT
     clock_sync_test_evaluation();
 #endif
+    debug_capDL();
     printf("Booting all finished, dropped to user space\n");
     return run_kernel();
 }
