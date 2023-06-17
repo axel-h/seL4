@@ -1108,6 +1108,13 @@ BOOT_CODE bool_t init_freemem(word_t n_available, const p_region_t *available,
 static BOOT_CODE bool_t run_kernel(void)
 {
 #ifdef CONFIG_KERNEL_MCS
+
+    assert(0 == NODE_STATE(ksConsumed));
+    uint64_t timestamp = getCurrentTime();
+    if (timestamp > NODE_STATE(ksCurTime)) {
+        fail("timestamp delta %"PRIu64"\n", timestamp);
+    }
+
     /* Ensure the most recent timestamp is used. */
     NODE_STATE(ksCurTime) = getCurrentTime();
 #endif
