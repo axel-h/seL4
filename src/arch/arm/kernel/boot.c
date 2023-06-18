@@ -618,30 +618,21 @@ BOOT_CODE VISIBLE void init_kernel(
     uint32_t dtb_size
 )
 {
-    bool_t result;
-
 #ifdef ENABLE_SMP_SUPPORT
     /* we assume there exists a cpu with id 0 and will use it for bootstrapping */
-    if (getCurrentCPUIndex() == 0) {
-        result = try_init_kernel(ui_p_reg_start,
-                                 ui_p_reg_end,
-                                 pv_offset,
-                                 v_entry,
-                                 dtb_addr_p, dtb_size);
-    } else {
-        result = try_init_kernel_secondary_core();
+    word_t core_idx = getCurrentCPUIndex();
+    if (core_idx != 0) {
+        if (!try_init_kernel_secondary_core()) {
+            fail("ERROR: kernel init failed in secondary core %"SEL4_PRIx_word,
+                 core_idx);
+            UNREACHABLE();
+        }
+        return;
     }
+#endif
 
-#else
-    result = try_init_kernel(ui_p_reg_start,
-                             ui_p_reg_end,
-                             pv_offset,
-                             v_entry,
-                             dtb_addr_p, dtb_size);
-
-#endif /* ENABLE_SMP_SUPPORT */
-
-    if (!result) {
+    if (!try_init_kernel(ui_p_reg_start, ui_p_reg_end, pv_offset, v_entry,
+                        dtb_addr_p, dtb_size)) {
         fail("ERROR: kernel init failed");
         UNREACHABLE();
     }

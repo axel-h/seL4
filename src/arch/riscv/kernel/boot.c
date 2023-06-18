@@ -456,29 +456,19 @@ BOOT_CODE VISIBLE void init_kernel(
 #endif
 )
 {
-    bool_t result;
-
 #ifdef ENABLE_SMP_SUPPORT
     add_hart_to_core_map(hart_id, core_id);
-    if (core_id == 0) {
-        result = try_init_kernel(ui_p_reg_start,
-                                 ui_p_reg_end,
-                                 pv_offset,
-                                 v_entry,
-                                 dtb_addr_p,
-                                 dtb_size);
-    } else {
-        result = try_init_kernel_secondary_core(hart_id, core_id);
+    if (core_id != 0) {
+        if (!try_init_kernel_secondary_core(hart_id, core_id)) {
+            fail("ERROR: kernel init for secondary hart failed");
+            UNREACHABLE();
+        }
+        return;
     }
-#else
-    result = try_init_kernel(ui_p_reg_start,
-                             ui_p_reg_end,
-                             pv_offset,
-                             v_entry,
-                             dtb_addr_p,
-                             dtb_size);
 #endif
-    if (!result) {
+
+    if (!try_init_kernel(ui_p_reg_start, ui_p_reg_end, pv_offset, v_entry,
+                         dtb_addr_p, dtb_size)) {
         fail("ERROR: kernel init failed");
         UNREACHABLE();
     }
