@@ -139,52 +139,6 @@ BOOT_CODE static paddr_t load_boot_module(word_t boot_module_start, paddr_t load
     return load_paddr;
 }
 
-static BOOT_CODE bool_t try_boot_sys_node(cpu_id_t cpu_id)
-{
-    if (!map_kernel_window(
-            boot_state.num_ioapic,
-            boot_state.ioapic_paddr,
-            boot_state.num_drhu,
-            boot_state.drhu_list
-        )) {
-        return false;
-    }
-    setCurrentVSpaceRoot(kpptr_to_paddr(X86_KERNEL_VSPACE_ROOT), 0);
-    /* Sync up the compilers view of the world here to force the PD to actually
-     * be set *right now* instead of delayed */
-    asm volatile("" ::: "memory");
-
-#ifdef CONFIG_KERNEL_SKIM_WINDOW
-    if (!map_skim_window((vptr_t)ki_skim_start, (vptr_t)ki_skim_end)) {
-        return false;
-    }
-#endif
-
-    /* initialise the CPU */
-    if (!init_cpu(config_set(CONFIG_IRQ_IOAPIC) ? 1 : 0)) {
-        return false;
-    }
-
-    /* initialise NDKS and kernel heap */
-    if (!init_sys_state(
-            cpu_id,
-            &boot_state.mem_p_regs,
-            boot_state.ui_info,
-            /* parameters below not modelled in abstract specification */
-            boot_state.num_drhu,
-            boot_state.drhu_list,
-            &boot_state.rmrr_list,
-            &boot_state.acpi_rsdp,
-            &boot_state.vbe_info,
-            &boot_state.mb_mmap_info,
-            &boot_state.fb_info
-        )) {
-        return false;
-    }
-
-    return true;
-}
-
 static BOOT_CODE bool_t add_mem_p_regs(p_region_t reg)
 {
     if (reg.start == reg.end) {
@@ -482,9 +436,48 @@ static BOOT_CODE bool_t try_boot_sys(void)
 
     /* Total number of cores we intend to boot */
     ksNumCPUs = boot_state.num_cpus;
+    cpu_id_t boot_cpu_id = boot_state.cpus[0];
 
-    printf("Starting node #0 with APIC ID %lu\n", boot_state.cpus[0]);
-    if (!try_boot_sys_node(boot_state.cpus[0])) {
+    printf("Starting node #0 with APIC ID %lu\n", boot_cpu_id);
+
+    if (!map_kernel_window(
+            boot_state.num_ioapic,
+            boot_state.ioapic_paddr,
+            boot_state.num_drhu,
+            boot_state.drhu_list
+        )) {
+        return false;
+    }
+    setCurrentVSpaceRoot(kpptr_to_paddr(X86_KERNEL_VSPACE_ROOT), 0);
+    /* Sync up the compilers view of the world here to force the PD to actually
+     * be set *right now* instead of delayed */
+    asm volatile("" ::: "memory");
+
+#ifdef CONFIG_KERNEL_SKIM_WINDOW
+    if (!map_skim_window((vptr_t)ki_skim_start, (vptr_t)ki_skim_end)) {
+        return false;
+    }
+#endif
+
+    /* initialise the CPU */
+    if (!init_cpu(config_set(CONFIG_IRQ_IOAPIC) ? 1 : 0)) {
+        return false;
+    }
+
+    /* initialise NDKS and kernel heap */
+    if (!init_sys_state(
+            boot_cpu_id,
+            &boot_state.mem_p_regs,
+            boot_state.ui_info,
+            /* parameters below not modelled in abstract specification */
+            boot_state.num_drhu,
+            boot_state.drhu_list,
+            &boot_state.rmrr_list,
+            &boot_state.acpi_rsdp,
+            &boot_state.vbe_info,
+            &boot_state.mb_mmap_info,
+            &boot_state.fb_info
+        )) {
         return false;
     }
 
