@@ -13,16 +13,12 @@
 
 #ifdef ENABLE_SMP_SUPPORT
 
-/* Index of next AP to boot, BSP has index zero */
-BOOT_DATA VISIBLE
-volatile word_t smp_aps_index = 1;
-
 #ifdef CONFIG_USE_LOGICAL_IDS
 BOOT_CODE static void update_logical_id_mappings(void)
 {
     cpu_mapping.index_to_logical_id[getCurrentCPUIndex()] = apic_get_logical_id();
 
-    for (int i = 0; i < smp_aps_index; i++) {
+    for (int i = 0; i < ksNumCPUs; i++) {
         if (apic_get_cluster(cpu_mapping.index_to_logical_id[getCurrentCPUIndex()]) ==
             apic_get_cluster(cpu_mapping.index_to_logical_id[i])) {
 
@@ -52,8 +48,8 @@ BOOT_CODE void start_boot_aps(void)
 #endif /* CONFIG_USE_LOGICAL_IDS */
 
     /* startup APs one at a time as we use shared kernel boot stack */
-    while (smp_aps_index < boot_state.num_cpus) {
-        word_t current_ap_index = smp_aps_index;
+    while (ksNumCPUs < boot_state.num_cpus) {
+        word_t current_ap_index = ksNumCPUs;
 
         printf("Starting node #%lu with APIC ID %lu \n",
                current_ap_index, boot_state.cpus[current_ap_index]);
@@ -65,10 +61,12 @@ BOOT_CODE void start_boot_aps(void)
         start_cpu(boot_state.cpus[current_ap_index], BOOT_NODE_PADDR);
 
         /* wait for current AP to boot up */
-        while (smp_aps_index == current_ap_index) {
+        while (ksNumCPUs == current_ap_index) {
 #ifdef ENABLE_SMP_CLOCK_SYNC_TEST_ON_BOOT
             NODE_STATE(ksCurTime) = getCurrentTime();
             __atomic_thread_fence(__ATOMIC_ACQ_REL);
+#else
+            __atomic_thread_fence(__ATOMIC_RELEASE);
 #endif
         }
     }
@@ -125,7 +123,7 @@ VISIBLE void boot_node(void)
 {
     bool_t result;
 
-    mode_init_tls(smp_aps_index);
+    mode_init_tls(ksNumCPUs);
     result = try_boot_node();
 
     if (!result) {
@@ -133,7 +131,9 @@ VISIBLE void boot_node(void)
     }
 
     clock_sync_test();
-    smp_aps_index++;
+
+    ksNumCPUs++;
+    __atomic_thread_fence(__ATOMIC_RELEASE);
 
     /* grab BKL before leaving the kernel */
     NODE_LOCK_SYS;
