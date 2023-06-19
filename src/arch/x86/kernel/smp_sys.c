@@ -39,7 +39,7 @@ BOOT_CODE static void start_cpu(cpu_id_t cpu_id, paddr_t boot_fun_paddr)
     apic_send_startup_ipi(cpu_id, boot_fun_paddr);
 }
 
-BOOT_CODE void start_boot_aps(void)
+BOOT_CODE void release_secondary_cores(void)
 {
     /* update cpu mapping for BSP, cpus[0] is always assumed to be BSP */
     cpu_mapping.index_to_cpu_id[getCurrentCPUIndex()] = boot_state.cpus[0];
@@ -67,11 +67,6 @@ BOOT_CODE void start_boot_aps(void)
             SMP_CLOCK_SYNC_TEST_UPDATE_TIME();
         }
     }
-
-#ifdef ENABLE_SMP_CLOCK_SYNC_TEST_ON_BOOT
-    clock_sync_test_evaluation();
-#endif
-
 }
 
 BOOT_CODE bool_t copy_boot_code_aps(uint32_t mem_lower)
@@ -100,24 +95,6 @@ BOOT_CODE bool_t copy_boot_code_aps(uint32_t mem_lower)
     return true;
 }
 
-static BOOT_CODE bool_t try_boot_node(void)
-{
-    setCurrentVSpaceRoot(kpptr_to_paddr(X86_KERNEL_VSPACE_ROOT), 0);
-    /* Sync up the compilers view of the world here to force the PD to actually
-     * be set *right now* instead of delayed */
-    x86_mfence();
-
-    /* initialise the CPU, make sure legacy interrupts are disabled */
-    if (!init_cpu(1)) {
-        return false;
-    }
-
-#ifdef CONFIG_USE_LOGICAL_IDS
-    update_logical_id_mappings();
-#endif /* CONFIG_USE_LOGICAL_IDS */
-    return true;
-}
-
 /* This is the entry function for APs. However, it is not a BOOT_CODE as
  * there is a race between exiting this function and root task running on
  * node #0 to possibly reallocate this memory */
@@ -125,21 +102,23 @@ VISIBLE void boot_node(void)
 {
     mode_init_tls(ksNumCPUs);
 
-    if (!try_boot_node()) {
-        fail("boot_node failed for some reason :(\n");
+    setCurrentVSpaceRoot(kpptr_to_paddr(X86_KERNEL_VSPACE_ROOT), 0);
+    /* Sync up the compilers view of the world here to force the PD to actually
+     * be set *right now* instead of delayed */
+    x86_mfence();
+
+    /* initialise the CPU, make sure legacy interrupts are disabled */
+    if (!init_cpu(1)) {
+        fail("init_cpu failed\n");
     }
 
-    clock_sync_test();
+#ifdef CONFIG_USE_LOGICAL_IDS
+    update_logical_id_mappings();
+#endif /* CONFIG_USE_LOGICAL_IDS */
 
-    ksNumCPUs++;
-    __atomic_thread_fence(__ATOMIC_RELEASE);
-
-    /* grab BKL before leaving the kernel */
-    NODE_LOCK_SYS;
-
-    init_core_state(SchedulerAction_ChooseNewThread);
-    schedule();
-    activateThread();
+    if (!finalize_init_kernel_on_secondary_core()) {
+        fail("finalize_init_kernel_on_secondary_core failed for some reason :(\n");
+    }
 }
 
 #endif /* ENABLE_SMP_SUPPORT */

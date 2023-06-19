@@ -164,19 +164,12 @@ BOOT_CODE static bool_t try_init_kernel_secondary_core(word_t hart_id, word_t co
     fence_r_rw();
 
     init_cpu();
-    NODE_LOCK_SYS;
 
-    clock_sync_test();
-    ksNumCPUs++;
-    init_core_state(SchedulerAction_ResumeCurrentThread);
-    ifence_local();
-    return true;
+    return finalize_init_kernel_on_secondary_core();
 }
 
-BOOT_CODE static void release_secondary_cores(void)
+BOOT_CODE void release_secondary_cores(void)
 {
-    SMP_CLOCK_SYNC_TEST_UPDATE_TIME();
-
     assert(0 == node_boot_lock); /* Sanity check for a proper lock state. */
     node_boot_lock = 1;
     /* At this point in time the primary core (executing this code) already uses
@@ -192,10 +185,6 @@ BOOT_CODE static void release_secondary_cores(void)
         /* perform a memory acquire to get new values of ksNumCPUs */
         __atomic_thread_fence(__ATOMIC_ACQUIRE);
     }
-
-#ifdef ENABLE_SMP_CLOCK_SYNC_TEST_ON_BOOT
-    clock_sync_test_evaluation();
-#endif
 }
 #endif /* ENABLE_SMP_SUPPORT */
 
@@ -450,18 +439,7 @@ static BOOT_CODE bool_t try_init_kernel(
 
     ksNumCPUs = 1;
 
-    SMP_COND_STATEMENT(clh_lock_init());
-    SMP_COND_STATEMENT(release_secondary_cores());
-
-    /* All cores are up now, so there can be concurrency. The kernel booting is
-     * supposed to be finished before the secondary cores are released, all the
-     * primary has to do now is schedule the initial thread. Currently there is
-     * nothing that touches any global data structures, nevertheless we grab the
-     * BKL here to play safe. It is released when the kernel is left. */
-    NODE_LOCK_SYS;
-
-    printf("Booting all finished, dropped to user space\n");
-    return true;
+    return finalize_init_kernel();
 }
 
 BOOT_CODE VISIBLE void init_kernel(
@@ -504,12 +482,4 @@ BOOT_CODE VISIBLE void init_kernel(
         fail("ERROR: kernel init failed");
         UNREACHABLE();
     }
-
-#ifdef CONFIG_KERNEL_MCS
-    NODE_STATE(ksCurTime) = getCurrentTime();
-    NODE_STATE(ksConsumed) = 0;
-#endif
-
-    schedule();
-    activateThread();
 }

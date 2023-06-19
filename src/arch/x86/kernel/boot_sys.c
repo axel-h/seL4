@@ -492,16 +492,7 @@ static BOOT_CODE bool_t try_boot_sys(void)
         ioapic_init(1, boot_state.cpus, boot_state.num_ioapic);
     }
 
-    /* initialize BKL before booting up APs */
-    SMP_COND_STATEMENT(clh_lock_init());
-    SMP_COND_STATEMENT(start_boot_aps());
-
-    /* grab BKL before leaving the kernel */
-    NODE_LOCK_SYS;
-
-    printf("Booting all finished, dropped to user space\n");
-
-    return true;
+    return finalize_init_kernel();
 }
 
 static BOOT_CODE bool_t try_boot_sys_mbi1(
@@ -702,7 +693,7 @@ BOOT_CODE VISIBLE void boot_sys(
     unsigned long multiboot_magic,
     void *mbi)
 {
-    switch(multiboot_magic) {
+    switch (multiboot_magic) {
     case MULTIBOOT_MAGIC:
         if (!try_boot_sys_mbi1(mbi)) {
             fail("try_boot_sys_mbi1 failed\n");
@@ -718,15 +709,8 @@ BOOT_CODE VISIBLE void boot_sys(
         break;
     }
 
-    if (!try_boot_sys())
+    if (!try_boot_sys()) {
         fail("boot_sys failed for some reason :(\n");
+        UNREACHABLE();
     }
-
-#ifdef CONFIG_KERNEL_MCS
-    NODE_STATE(ksCurTime) = getCurrentTime();
-    NODE_STATE(ksConsumed) = 0;
-#endif
-
-    schedule();
-    activateThread();
 }

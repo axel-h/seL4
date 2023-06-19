@@ -139,6 +139,13 @@ static inline BOOT_CODE pptr_t it_alloc_paging(void)
 /* return the amount of paging structures required to cover v_reg */
 word_t arch_get_n_paging(v_region_t it_veg);
 
+bool_t finalize_init_kernel(void);
+
+#ifdef ENABLE_SMP_SUPPORT
+void release_secondary_cores(void);
+bool_t finalize_init_kernel_on_secondary_core(void);
+#endif
+
 #if defined(CONFIG_DEBUG_BUILD) && defined(ENABLE_SMP_SUPPORT) && defined(CONFIG_KERNEL_MCS)
 /* Test whether clocks are synchronised across nodes */
 #define ENABLE_SMP_CLOCK_SYNC_TEST_ON_BOOT
@@ -146,14 +153,11 @@ word_t arch_get_n_paging(v_region_t it_veg);
 
 #ifdef ENABLE_SMP_CLOCK_SYNC_TEST_ON_BOOT
 /* Test whether clocks are synchronised across nodes */
-void clock_sync_test(void);
-void clock_sync_test_evaluation(void);
 #define SMP_CLOCK_SYNC_TEST_UPDATE_TIME() \
     do { \
         NODE_STATE(ksCurTime) = getCurrentTime(); \
         __atomic_thread_fence(__ATOMIC_RELEASE); \
     } while(0)
 #else
-#define clock_sync_test()
 #define SMP_CLOCK_SYNC_TEST_UPDATE_TIME()   ((void)0)
 #endif

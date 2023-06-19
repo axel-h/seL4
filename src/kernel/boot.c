@@ -575,7 +575,7 @@ struct {
     time_t t_primary;
 } clock_sync_info[CONFIG_MAX_NUM_NODES - 1];
 
-BOOT_CODE void clock_sync_test(void)
+BOOT_CODE static void clock_sync_test(void)
 {
     /* This must be called on secondary cores only. */
     word_t core_idx = getCurrentCPUIndex();
@@ -595,7 +595,7 @@ BOOT_CODE void clock_sync_test(void)
     clock_sync_info[core_idx - 1].t_primary = t_primary;
 }
 
-BOOT_CODE void clock_sync_test_evaluation(void)
+BOOT_CODE static void clock_sync_test_evaluation(void)
 {
     bool_t clock_sync_test_passed = true;
     ticks_t margin = usToTicks(1) + getTimerPrecision();
@@ -1104,3 +1104,68 @@ BOOT_CODE bool_t init_freemem(word_t n_available, const p_region_t *available,
            "objects, need size/alignment of 2^%"SEL4_PRIu_word"\n", max);
     return false;
 }
+
+static BOOT_CODE bool_t run_kernel(void)
+{
+#ifdef CONFIG_KERNEL_MCS
+    /* Ensure the most recent timestamp is used. */
+    NODE_STATE(ksCurTime) = getCurrentTime();
+#endif
+    schedule();
+    activateThread();
+    return true;
+}
+
+BOOT_CODE bool_t finalize_init_kernel()
+{
+    SMP_COND_STATEMENT(clh_lock_init());
+    /* grab the BKL before releasing the secondary cores, so they cannot
+     * overtake the primary core
+     */
+    NODE_LOCK_SYS;
+    SMP_CLOCK_SYNC_TEST_UPDATE_TIME();
+    SMP_COND_STATEMENT(release_secondary_cores());
+#ifdef ENABLE_SMP_CLOCK_SYNC_TEST_ON_BOOT
+    clock_sync_test_evaluation();
+#endif
+    printf("Booting all finished, dropped to user space\n");
+    return run_kernel();
+}
+
+#ifdef ENABLE_SMP_SUPPORT
+
+BOOT_CODE bool_t finalize_init_kernel_on_secondary_core(void)
+{
+
+#ifdef ENABLE_SMP_CLOCK_SYNC_TEST_ON_BOOT
+    clock_sync_test();
+#endif
+
+    /* The primary core spins waiting for this value to increase. Ensure the
+     * values is also visible in the primary core. */
+    ksNumCPUs++;
+    __atomic_thread_fence(__ATOMIC_RELEASE);
+
+    /* Now there can be concurrency, as other secondary cores are also starting
+     * up. Everything that affects global data should only be done with the
+     * BLK held.
+     */
+
+    init_core_state(SchedulerAction_ResumeCurrentThread);
+
+
+#ifdef CONFIG_ARCH_RISCV
+    /* ToDo: Is this really needed? Should this be generic? */
+    ifence_local();
+#endif
+    /* The primary core holds the BKL until is has finished booting, Grabbing
+     * the BKL here ensure secondary cores will not drop to userland before
+     * the primary core did this. However, there is a change that userland my
+     * issues a kernel call that grabs the BLK again before a secondary cores
+     * finished booting.
+     */
+    NODE_LOCK_SYS;
+    return run_kernel();
+}
+
+#endif /* ENABLE_SMP_SUPPORT */
