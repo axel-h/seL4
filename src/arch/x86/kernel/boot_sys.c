@@ -48,13 +48,11 @@ extern char _start[1];
 
 #define HIGHMEM_PADDR 0x100000
 
-BOOT_BSS
-boot_state_t boot_state;
+BOOT_BSS boot_state_t boot_state;
 
 /* global variables (not covered by abstract specification) */
 
-BOOT_BSS
-cmdline_opt_t cmdline_opt;
+BOOT_BSS cmdline_opt_t cmdline_opt;
 
 /* functions not modeled in abstract specification */
 
