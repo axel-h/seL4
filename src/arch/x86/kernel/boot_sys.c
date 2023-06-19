@@ -702,21 +702,23 @@ BOOT_CODE VISIBLE void boot_sys(
     unsigned long multiboot_magic,
     void *mbi)
 {
-    bool_t result = false;
-
-    if (multiboot_magic == MULTIBOOT_MAGIC) {
-        result = try_boot_sys_mbi1(mbi);
-    } else if (multiboot_magic == MULTIBOOT2_MAGIC) {
-        result = try_boot_sys_mbi2(mbi);
-    } else {
+    switch(multiboot_magic) {
+    case MULTIBOOT_MAGIC:
+        if (!try_boot_sys_mbi1(mbi)) {
+            fail("try_boot_sys_mbi1 failed\n");
+        }
+        break;
+    case MULTIBOOT2_MAGIC:
+        if (!try_boot_sys_mbi2(mbi)) {
+            fail("try_boot_sys_mbi2 failed\n");
+        }
+        break;
+    default:
         printf("Boot loader is not multiboot 1 or 2 compliant %lx\n", multiboot_magic);
+        break;
     }
 
-    if (result) {
-        result = try_boot_sys();
-    }
-
-    if (!result) {
+    if (!try_boot_sys())
         fail("boot_sys failed for some reason :(\n");
     }
 

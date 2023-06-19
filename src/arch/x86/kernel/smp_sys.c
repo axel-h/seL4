@@ -122,12 +122,9 @@ static BOOT_CODE bool_t try_boot_node(void)
  * node #0 to possibly reallocate this memory */
 VISIBLE void boot_node(void)
 {
-    bool_t result;
-
     mode_init_tls(ksNumCPUs);
-    result = try_boot_node();
 
-    if (!result) {
+    if (!try_boot_node()) {
         fail("boot_node failed for some reason :(\n");
     }
 
