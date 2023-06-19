@@ -39,6 +39,10 @@ static uint32_t ioredtbl_state[IOAPIC_IRQ_LINES * MAX(1, CONFIG_MAX_NUM_IOAPIC)]
 /* Number of IOAPICs in the system */
 static uint32_t num_ioapics = 0;
 
+/* The target is usually the primary core */
+static cpu_id_t ioapic_target_cpu = 0;
+
+
 static void ioapic_write(uint32_t ioapic, word_t reg, uint32_t value)
 {
     *(volatile uint32_t *)((word_t)(PPTR_IOAPIC_START + ioapic * BIT(PAGE_BITS)) + reg) = value;
@@ -69,7 +73,6 @@ static void single_ioapic_init(word_t ioapic, cpu_id_t delivery_cpu)
     }
 }
 
-static  cpu_id_t ioapic_target_cpu = 0;
 void ioapic_init(uint32_t num_nodes, cpu_id_t *cpu_list, uint32_t num_ioapic)
 {
     num_ioapics = num_ioapic;
