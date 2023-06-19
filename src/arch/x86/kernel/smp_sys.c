@@ -16,17 +16,17 @@
 #ifdef CONFIG_USE_LOGICAL_IDS
 BOOT_CODE static void update_logical_id_mappings(void)
 {
-    cpu_mapping.index_to_logical_id[getCurrentCPUIndex()] = apic_get_logical_id();
+    cpu_id_t idx = getCurrentCPUIndex();
+    logical_id_t id = apic_get_logical_id();
+
+    cpu_mapping.index_to_logical_id[idx] = id;
 
     for (int i = 0; i < ksNumCPUs; i++) {
-        if (apic_get_cluster(cpu_mapping.index_to_logical_id[getCurrentCPUIndex()]) ==
-            apic_get_cluster(cpu_mapping.index_to_logical_id[i])) {
-
-            cpu_mapping.other_indexes_in_cluster[getCurrentCPUIndex()] |= BIT(i);
-            cpu_mapping.other_indexes_in_cluster[i] |= BIT(getCurrentCPUIndex());
+        if (id == apic_get_cluster(cpu_mapping.index_to_logical_id[i])) {
+            cpu_mapping.other_indexes_in_cluster[idx] |= BIT(i);
+            cpu_mapping.other_indexes_in_cluster[i] |= BIT(idx);
         }
-    }
-}
+    }}
 #endif /* CONFIG_USE_LOGICAL_IDS */
 
 BOOT_CODE static void start_cpu(cpu_id_t cpu_id, paddr_t boot_fun_paddr)
@@ -50,16 +50,17 @@ BOOT_CODE void start_boot_aps(void)
     /* startup APs one at a time as we use shared kernel boot stack */
     while (ksNumCPUs < boot_state.num_cpus) {
         word_t current_ap_index = ksNumCPUs;
+        cpu_id_t id = boot_state.cpus[current_ap_index]
 
         printf("Starting node #%lu with APIC ID %lu \n",
-               current_ap_index, boot_state.cpus[current_ap_index]);
+               current_ap_index, id);
 
         /* update cpu mapping for APs, store APIC ID of the next booting AP
          * as APIC ID are not continoius e.g. 0,2,1,3 for 4 cores with hyperthreading
          * we need to store a mapping to translate the index to real APIC ID */
-        cpu_mapping.index_to_cpu_id[current_ap_index] = boot_state.cpus[current_ap_index];
+        cpu_mapping.index_to_cpu_id[current_ap_index] = id;
         SMP_CLOCK_SYNC_TEST_UPDATE_TIME();
-        start_cpu(boot_state.cpus[current_ap_index], BOOT_NODE_PADDR);
+        start_cpu(id, BOOT_NODE_PADDR);
 
         /* wait for current AP to boot up */
         while (smp_aps_index == current_ap_index) {
