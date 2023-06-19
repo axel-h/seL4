@@ -177,15 +177,20 @@ void obj_tcb_print_cnodes(cap_t cnode, tcb_t *tcb)
 
     for (word_t i = 0; i < (1 << radix); i++) {
         lookupCapAndSlot_ret_t c = lookupCapAndSlot(tcb, i);
-        if (cap_get_capType(c.cap) == cap_untyped_cap) {
+        switch (cap_get_capType(c.cap)) {
+        case cap_untyped_cap:
             /* we need `cte_t *` to print out the slots of an untyped object */
             obj_ut_print_attrs(c.slot, tcb);
-
-        } else if (cap_get_capType(c.cap) == cap_cnode_cap) {
+            break;
+        case cap_cnode_cap:
             /* TBD: deal with nested cnodes */
-
-        } else if (cap_get_capType(c.cap) != cap_null_cap) {
+            break;
+        case cap_null_cap:
+            /* nothing to be done */
+            break;
+        default:
             print_object(c.cap);
+            break;
         }
     }
 }
