@@ -104,7 +104,7 @@ static BOOT_CODE bool_t try_boot_node(void)
     setCurrentVSpaceRoot(kpptr_to_paddr(X86_KERNEL_VSPACE_ROOT), 0);
     /* Sync up the compilers view of the world here to force the PD to actually
      * be set *right now* instead of delayed */
-    asm volatile("" ::: "memory");
+    x86_mfence();
 
     /* initialise the CPU, make sure legacy interrupts are disabled */
     if (!init_cpu(1)) {
