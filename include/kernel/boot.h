@@ -98,6 +98,7 @@ create_initial_thread(
 );
 
 void init_core_state(tcb_t *scheduler_action);
+void arch_init_core_state(void);
 
 /* state tracking the memory allocated for root server objects */
 typedef struct {

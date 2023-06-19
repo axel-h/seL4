@@ -140,9 +140,6 @@ VISIBLE void boot_node(void)
     NODE_LOCK_SYS;
 
     init_core_state(SchedulerAction_ChooseNewThread);
-    ARCH_NODE_STATE(x86KScurInterrupt) = int_invalid;
-    ARCH_NODE_STATE(x86KSPendingInterrupt) = int_invalid;
-
     schedule();
     activateThread();
 }

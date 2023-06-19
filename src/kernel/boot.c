@@ -637,8 +637,10 @@ BOOT_CODE void init_core_state(tcb_t *scheduler_action)
     }
     tcbDebugAppend(NODE_STATE(ksIdleThread));
 #endif
+
     NODE_STATE(ksSchedulerAction) = scheduler_action;
     NODE_STATE(ksCurThread) = NODE_STATE(ksIdleThread);
+
 #ifdef CONFIG_KERNEL_MCS
     NODE_STATE(ksCurSC) = NODE_STATE(ksCurThread->tcbSchedContext);
     NODE_STATE(ksConsumed) = 0;
@@ -646,6 +648,8 @@ BOOT_CODE void init_core_state(tcb_t *scheduler_action)
     NODE_STATE(ksReleaseHead) = NULL;
     NODE_STATE(ksCurTime) = getCurrentTime();
 #endif
+
+    arch_init_core_state();
 }
 
 

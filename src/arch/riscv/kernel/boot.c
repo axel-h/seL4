@@ -93,6 +93,12 @@ BOOT_CODE static bool_t arch_init_freemem(region_t ui_reg,
                         it_v_reg, extra_bi_size_bits);
 }
 
+/* This is called from init_core_state() */
+BOOT_CODE void arch_init_core_state()
+{
+    /* Nothing to be done */
+}
+
 BOOT_CODE static void init_irqs(cap_t root_cnode_cap)
 {
     irq_t i;
