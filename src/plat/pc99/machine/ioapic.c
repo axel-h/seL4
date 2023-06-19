@@ -51,13 +51,11 @@ static uint32_t ioapic_read(uint32_t ioapic, word_t reg)
 
 static void single_ioapic_init(word_t ioapic, cpu_id_t delivery_cpu)
 {
-    uint32_t i;
-
     /* Mask all the IRQs. In doing so we happen to set
      * the vector to 0, which we can assert against in
      * mask_interrupt to ensure a vector is assigned
      * before we unmask */
-    for (i = 0; i < IOAPIC_IRQ_LINES; i++) {
+    for (int i = 0; i < IOAPIC_IRQ_LINES; i++) {
         /* Send to desired cpu */
         ioapic_write(ioapic, IOAPIC_REGSEL, IOREDTBL_HIGH(i));
         ioapic_write(ioapic, IOAPIC_WINDOW, (ioapic_read(ioapic,
@@ -74,11 +72,10 @@ static void single_ioapic_init(word_t ioapic, cpu_id_t delivery_cpu)
 static  cpu_id_t ioapic_target_cpu = 0;
 void ioapic_init(uint32_t num_nodes, cpu_id_t *cpu_list, uint32_t num_ioapic)
 {
-    uint32_t ioapic;
     num_ioapics = num_ioapic;
     ioapic_target_cpu = cpu_list[0];
 
-    for (ioapic = 0; ioapic < num_ioapic; ioapic++) {
+    for (int ioapic = 0; ioapic < num_ioapic; ioapic++) {
         /* Init this ioapic */
         single_ioapic_init(ioapic, cpu_list[0]);
     }
