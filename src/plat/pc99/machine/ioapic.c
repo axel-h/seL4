@@ -53,34 +53,33 @@ static uint32_t ioapic_read(uint32_t ioapic, word_t reg)
     return *(volatile uint32_t *)((word_t)(PPTR_IOAPIC_START + ioapic * BIT(PAGE_BITS)) + reg);
 }
 
-static void single_ioapic_init(word_t ioapic, cpu_id_t delivery_cpu)
-{
-    /* Mask all the IRQs. In doing so we happen to set
-     * the vector to 0, which we can assert against in
-     * mask_interrupt to ensure a vector is assigned
-     * before we unmask */
-    for (int i = 0; i < IOAPIC_IRQ_LINES; i++) {
-        /* Send to desired cpu */
-        ioapic_write(ioapic, IOAPIC_REGSEL, IOREDTBL_HIGH(i));
-        ioapic_write(ioapic, IOAPIC_WINDOW, (ioapic_read(ioapic,
-                                                         IOAPIC_WINDOW) & MASK(IOREDTBL_HIGH_RESERVED_BITS)) | (delivery_cpu << IOREDTBL_HIGH_RESERVED_BITS));
-        /* mask and set 0 vector */
-        ioredtbl_state[i] = IOREDTBL_LOW_INTERRUPT_MASK;
-        ioapic_write(ioapic, IOAPIC_REGSEL, IOREDTBL_LOW(i));
-        /* The upper 16 bits are reserved, so we make sure to preserve them */
-        ioredtbl_state[i] |= ioapic_read(ioapic, IOAPIC_WINDOW) & ~MASK(16);
-        ioapic_write(ioapic, IOAPIC_WINDOW, ioredtbl_state[i]);
-    }
-}
-
 void ioapic_init(uint32_t num_nodes, cpu_id_t *cpu_list, uint32_t num_ioapic)
 {
     num_ioapics = num_ioapic;
-    ioapic_target_cpu = cpu_list[0];
+
+    cpu_id_t target_cpu = cpu_list[0];
+    ioapic_target_cpu = target_cpu;
 
     for (int ioapic = 0; ioapic < num_ioapic; ioapic++) {
-        /* Init this ioapic */
-        single_ioapic_init(ioapic, cpu_list[0]);
+        /* Mask all the IRQs. In doing so we happen to set the vector to 0,
+         * which we can assert against in mask_interrupt to ensure a vector is
+         * assigned before we unmask
+         */
+        for (int i = 0; i < IOAPIC_IRQ_LINES; i++) {
+            /* Send to desired cpu */
+            ioapic_write(ioapic, IOAPIC_REGSEL, IOREDTBL_HIGH(i));
+
+            uint32_t window = ioapic_read(ioapic, IOAPIC_WINDOW) & MASK(IOREDTBL_HIGH_RESERVED_BITS)) | \
+                              (target_cpu << IOREDTBL_HIGH_RESERVED_BITS));
+            ioapic_write(ioapic, IOAPIC_WINDOW, window);
+            /* mask and set 0 vector */
+            ioapic_write(ioapic, IOAPIC_REGSEL, IOREDTBL_LOW(i));
+            /* The upper 16 bits are reserved, so we make sure to preserve them */
+            window = ioapic_read(ioapic, IOAPIC_WINDOW) & ~MASK(16);
+            uint32_t state = IOREDTBL_LOW_INTERRUPT_MASK | window;
+            ioredtbl_state[i] = state;
+            ioapic_write(ioapic, IOAPIC_WINDOW, state);
+        }
     }
 }
 
