@@ -175,7 +175,7 @@ void obj_tcb_print_cnodes(cap_t cnode, tcb_t *tcb)
     obj_cnode_print_attrs(cnode);
     word_t radix = cap_cnode_cap_get_capCNodeRadix(cnode);
 
-    for (uint32_t i = 0; i < (1 << radix); i++) {
+    for (word_t i = 0; i < (1 << radix); i++) {
         lookupCapAndSlot_ret_t c = lookupCapAndSlot(tcb, i);
         if (cap_get_capType(c.cap) == cap_untyped_cap) {
             /* we need `cte_t *` to print out the slots of an untyped object */
