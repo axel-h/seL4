@@ -515,7 +515,7 @@ static exception_t decodeSetAffinity(cap_t cap, word_t length, word_t *buffer)
     setThreadState(NODE_STATE(ksCurThread), ThreadState_Restart);
     return invokeTCB_SetAffinity(tcb, affinity);
 }
-#endif
+#endif /* CONFIG_KERNEL_MCS */
 #endif /* ENABLE_SMP_SUPPORT */
 
 #ifdef CONFIG_HARDWARE_DEBUG_API
