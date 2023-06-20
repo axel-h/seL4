@@ -812,6 +812,13 @@ BOOT_CODE bool_t create_untypeds(cap_t root_cnode_cap)
     /* There is a part of the kernel (code/data) that is only needed for the
      * boot process. We can create UT objects for these frames, so the memory
      * can be reused.
+     * ToDo: Actually, the region returned by get_p_reg_kernel_img_boot() could
+     *       be made part of ndks_boot.freemem[] also, then no special handling
+     *       is needed at all. Currently, this is non-trivial, because the
+     *       regions in this array are expected to be be properly ordered and
+     *       mutually non-overlapping. Furthermore, this can only be added to
+     *       ndks_boot.freemem[] after the rootserver object have been created
+     *       in there, otherwise this could overwrite boot code.
      */
     p_region_t boot_mem_reuse_reg = get_p_reg_kernel_img_boot();
     if (!create_untypeds_for_phys_region(root_cnode_cap, false,
