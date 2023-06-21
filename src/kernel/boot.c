@@ -571,22 +571,30 @@ BOOT_CODE tcb_t *create_initial_thread(cap_t root_cnode_cap, cap_t it_pd_cap, vp
 #ifdef ENABLE_SMP_CLOCK_SYNC_TEST_ON_BOOT
 BOOT_CODE void clock_sync_test(void)
 {
-    ticks_t t, t0;
+    /* This must be called on secondary cores only. */
+    word_t core_idx = getCurrentCPUIndex();
+    assert(core_idx != 0);
+
+    /* Loop until the primary core's timestamp changes*/
+    __atomic_thread_fence(__ATOMIC_ACQUIRE);
+    ticks_t t0_primary = NODE_STATE_ON_CORE(ksCurTime, 0);
+    ticks_t t_primary;
+    do {
+        __atomic_thread_fence(__ATOMIC_ACQUIRE);
+        t_primary = NODE_STATE_ON_CORE(ksCurTime, 0);
+    } while (t_primary != t0_primary);
+
+    ticks_t t_local = getCurrentTime();
+    ticks_t delta = t_local - t_primary;
     ticks_t margin = usToTicks(1) + getTimerPrecision();
 
-    assert(getCurrentCPUIndex() != 0);
-    t = NODE_STATE_ON_CORE(ksCurTime, 0);
-    do {
-        /* perform a memory acquire to get new values of ksCurTime */
-        __atomic_thread_fence(__ATOMIC_ACQUIRE);
-        t0 = NODE_STATE_ON_CORE(ksCurTime, 0);
-    } while (t0 == t);
-    t = getCurrentTime();
-    printf("clock_sync_test[%d]: t0 = %"PRIu64", t = %"PRIu64", td = %"PRIi64"\n",
-           (int)getCurrentCPUIndex(), t0, t, t - t0);
-    assert(t0 <= margin + t && t <= t0 + margin);
+    printf("clock_sync_test[%d]: delta = %"PRIi64", margin = %"PRIi64
+           ", local = %"PRIu64", primary = %"PRIu64"\n",
+           (int)core_idx, delta, margin, t_local, t_primary);
+
+    assert(((delta < 0) ? -delta : delta) <= margin);
 }
-#endif
+#endif /* ENABLE_SMP_CLOCK_SYNC_TEST_ON_BOOT */
 
 BOOT_CODE void init_core_state(tcb_t *scheduler_action)
 {
