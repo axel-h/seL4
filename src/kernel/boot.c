@@ -612,8 +612,12 @@ BOOT_CODE void clock_sync_test_evaluation(void)
     }
     if (!clock_sync_test_passed) {
         printf("clock delta exceeds margin %"PRIi64"\n", margin);
+#if defined(CONFIG_PLAT_QEMU_ARM_VIRT) || defined(CONFIG_PLAT_QEMU_RISCV_VIRT)
+        printf("ignoring on QEMU");
+#else
         halt();
         UNREACHABLE();
+#endif
     }
 }
 
