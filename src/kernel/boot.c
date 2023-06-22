@@ -569,6 +569,12 @@ BOOT_CODE tcb_t *create_initial_thread(cap_t root_cnode_cap, cap_t it_pd_cap, vp
 }
 
 #ifdef ENABLE_SMP_CLOCK_SYNC_TEST_ON_BOOT
+
+struct {
+    time_t t_local;
+    time_t t_primary;
+} clock_sync_info[CONFIG_MAX_NUM_NODES - 1];
+
 BOOT_CODE void clock_sync_test(void)
 {
     /* This must be called on secondary cores only. */
@@ -584,16 +590,33 @@ BOOT_CODE void clock_sync_test(void)
         t_primary = NODE_STATE_ON_CORE(ksCurTime, 0);
     } while (t_primary != t0_primary);
 
-    ticks_t t_local = getCurrentTime();
-    ticks_t delta = t_local - t_primary;
-    ticks_t margin = usToTicks(1) + getTimerPrecision();
-
-    printf("clock_sync_test[%d]: delta = %"PRIi64", margin = %"PRIi64
-           ", local = %"PRIu64", primary = %"PRIu64"\n",
-           (int)core_idx, delta, margin, t_local, t_primary);
-
-    assert(((delta < 0) ? -delta : delta) <= margin);
+    assert(core_idx <= ARRAY_SIZE(clock_sync_info));
+    clock_sync_info[core_idx - 1].t_local = getCurrentTime();
+    clock_sync_info[core_idx - 1].t_primary = t_primary;
 }
+
+BOOT_CODE void clock_sync_test_evaluation(void)
+{
+    bool_t clock_sync_test_passed = true;
+    ticks_t margin = usToTicks(1) + getTimerPrecision();
+    for(int i = 0; i < ARRAY_SIZE(clock_sync_info); i++) {
+        time_t t_local = clock_sync_info[i].t_local;
+        time_t t_primary = clock_sync_info[i].t_primary;
+        ticks_t delta = t_local - t_primary;
+        printf("clock_sync_test on node %d: delta = %"PRIi64
+               ", local = %"PRIu64", primary = %"PRIu64"\n",
+               i+1, delta, t_local, t_primary);
+        if (((delta < 0) ? -delta : delta) > margin) {
+            clock_sync_test_passed = false;
+        }
+    }
+    if (!clock_sync_test_passed) {
+        printf("clock delta exceeds margin %"PRIi64"\n", margin);
+        halt();
+        UNREACHABLE();
+    }
+}
+
 #endif /* ENABLE_SMP_CLOCK_SYNC_TEST_ON_BOOT */
 
 BOOT_CODE void init_core_state(tcb_t *scheduler_action)
@@ -620,6 +643,7 @@ BOOT_CODE void init_core_state(tcb_t *scheduler_action)
     NODE_STATE(ksCurTime) = getCurrentTime();
 #endif
 }
+
 
 /**
  * Sanity check if a kernel-virtual pointer is in the kernel window that maps

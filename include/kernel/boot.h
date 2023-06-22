@@ -146,6 +146,7 @@ word_t arch_get_n_paging(v_region_t it_veg);
 #ifdef ENABLE_SMP_CLOCK_SYNC_TEST_ON_BOOT
 /* Test whether clocks are synchronised across nodes */
 void clock_sync_test(void);
+void clock_sync_test_evaluation(void);
 #define SMP_CLOCK_SYNC_TEST_UPDATE_TIME() \
     do { \
         NODE_STATE(ksCurTime) = getCurrentTime(); \

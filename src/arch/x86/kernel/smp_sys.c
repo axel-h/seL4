@@ -70,6 +70,11 @@ BOOT_CODE void start_boot_aps(void)
             SMP_CLOCK_SYNC_TEST_UPDATE_TIME();
         }
     }
+
+#ifdef ENABLE_SMP_CLOCK_SYNC_TEST_ON_BOOT
+    clock_sync_test_evaluation();
+#endif
+
 }
 
 BOOT_CODE bool_t copy_boot_code_aps(uint32_t mem_lower)

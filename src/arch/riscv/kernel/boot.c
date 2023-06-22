@@ -186,6 +186,10 @@ BOOT_CODE static void release_secondary_cores(void)
         /* perform a memory acquire to get new values of ksNumCPUs */
         __atomic_thread_fence(__ATOMIC_ACQUIRE);
     }
+
+#ifdef ENABLE_SMP_CLOCK_SYNC_TEST_ON_BOOT
+    clock_sync_test_evaluation();
+#endif
 }
 #endif /* ENABLE_SMP_SUPPORT */
 
