@@ -316,9 +316,9 @@ BOOT_CODE static void release_secondary_cpus(void)
     /* Wait until all the secondary cores are done initialising */
     while (ksNumCPUs != CONFIG_MAX_NUM_NODES) {
 #ifdef ENABLE_SMP_CLOCK_SYNC_TEST_ON_BOOT
-        NODE_STATE(ksCurTime) = getCurrentTime();
+        NODE_STATE(ksCurTicks) = getCurrentTime();
 #endif
-        /* perform a memory acquire to get new values of ksNumCPUs, release for ksCurTime */
+        /* perform a memory acquire to get new values of ksNumCPUs, release for ksCurTicks */
         __atomic_thread_fence(__ATOMIC_ACQ_REL);
     }
 }
@@ -554,7 +554,7 @@ static BOOT_CODE bool_t try_init_kernel(
     write_it_asid_pool(it_ap_cap, it_pd_cap);
 
 #ifdef CONFIG_KERNEL_MCS
-    NODE_STATE(ksCurTime) = getCurrentTime();
+    NODE_STATE(ksCurTicks) = getCurrentTime();
 #endif
 
     /* create the idle thread */
@@ -664,7 +664,7 @@ BOOT_CODE VISIBLE void init_kernel(
     }
 
 #ifdef CONFIG_KERNEL_MCS
-    NODE_STATE(ksCurTime) = getCurrentTime();
+    NODE_STATE(ksCurTicks) = getCurrentTime();
     NODE_STATE(ksConsumed) = 0;
 #endif
     schedule();

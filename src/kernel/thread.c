@@ -574,11 +574,11 @@ void postpone(sched_context_t *sc)
 
 void setNextInterrupt(void)
 {
-    ticks_t next_interrupt = NODE_STATE(ksCurTime) +
+    ticks_t next_interrupt = NODE_STATE(ksCurTicks) +
                              refill_head(NODE_STATE(ksCurThread)->tcbSchedContext)->rAmount;
 
     if (numDomains > 1) {
-        next_interrupt = MIN(next_interrupt, NODE_STATE(ksCurTime) + ksDomainTime);
+        next_interrupt = MIN(next_interrupt, NODE_STATE(ksCurTicks) + ksDomainTime);
     }
 
     if (NODE_STATE(ksReleaseHead) != NULL) {

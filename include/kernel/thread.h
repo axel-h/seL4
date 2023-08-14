@@ -231,7 +231,7 @@ void chargeBudget(ticks_t consumed, bool_t canTimeoutFault);
  */
 static inline void updateTimestamp(void)
 {
-    ticks_t prev = NODE_STATE(ksCurTime);
+    ticks_t prev = NODE_STATE(ksCurTicks);
     ticks_t now = getCurrentTime();
     /* The timestamp must be lower than max absolute values, which should never
      * be a practical problem with 64-bit values. The timestamps must be sane,
@@ -245,7 +245,7 @@ static inline void updateTimestamp(void)
      * there is not gain here to check if consumed is zero and avoid the memory
      * accesses in this case.
      */
-    NODE_STATE(ksCurTime) = now;
+    NODE_STATE(ksCurTicks) = now;
     NODE_STATE(ksConsumed) += consumed;
 
     if (numDomains > 1) {

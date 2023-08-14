@@ -590,11 +590,11 @@ BOOT_CODE void clock_sync_test(void)
     ticks_t margin = usToTicks(1) + getTimerPrecision();
 
     assert(getCurrentCPUIndex() != 0);
-    t = NODE_STATE_ON_CORE(ksCurTime, 0);
+    t = NODE_STATE_ON_CORE(ksCurTicks, 0);
     do {
-        /* perform a memory acquire to get new values of ksCurTime */
+        /* perform a memory acquire to get new values of ksCurTicks */
         __atomic_thread_fence(__ATOMIC_ACQUIRE);
-        t0 = NODE_STATE_ON_CORE(ksCurTime, 0);
+        t0 = NODE_STATE_ON_CORE(ksCurTicks, 0);
     } while (t0 == t);
     t = getCurrentTime();
     printf("clock_sync_test[%d]: t0 = %"PRIu64", t = %"PRIu64", td = %"PRIi64"\n",
@@ -624,7 +624,7 @@ BOOT_CODE void init_core_state(tcb_t *scheduler_action)
     NODE_STATE(ksConsumed) = 0;
     NODE_STATE(ksReprogram) = true;
     NODE_STATE(ksReleaseHead) = NULL;
-    NODE_STATE(ksCurTime) = getCurrentTime();
+    NODE_STATE(ksCurTicks) = getCurrentTime();
 #endif
 }
 
