@@ -157,7 +157,7 @@ Upcoming release: BREAKING
 * Added check to make sure that the current thread will not yield to multiple threads.
 * Added check to account for an inactive scheduling context at preemption.
 * Deferred charging time budget in a preempted invocation.
-* Added code to update `ksDomainTime` in `updateTimestamp`.
+* Added code to update `ksDomainTicks` in `updateTimestamp`.
 * Added call to `updateTimestamp` in a preemption point.
 * Added code to clear ksConsume when charging time to a revoked scheduling context.
 * Added code to cancel IPC when finalising reply caps.

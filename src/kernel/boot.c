@@ -558,11 +558,11 @@ BOOT_CODE tcb_t *create_initial_thread(cap_t root_cnode_cap, cap_t it_pd_cap, vp
 
     ksCurDomain = ksDomSchedule[ksDomScheduleIdx].domain;
 #ifdef CONFIG_KERNEL_MCS
-    ksDomainTime = usToTicks(ksDomSchedule[ksDomScheduleIdx].length * US_IN_MS);
+    ksDomainTicks = usToTicks(ksDomSchedule[ksDomScheduleIdx].length * US_IN_MS);
 #else
-    ksDomainTime = ksDomSchedule[ksDomScheduleIdx].length;
+    ksDomainTicks = ksDomSchedule[ksDomScheduleIdx].length;
 #endif
-    assert(ksCurDomain < CONFIG_NUM_DOMAINS && ksDomainTime > 0);
+    assert(ksCurDomain < CONFIG_NUM_DOMAINS && ksDomainTicks > 0);
 
 #ifndef CONFIG_KERNEL_MCS
     SMP_COND_STATEMENT(tcb->tcbAffinity = 0);

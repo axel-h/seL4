@@ -311,9 +311,9 @@ static void nextDomain(void)
     ksWorkUnitsCompleted = 0;
     ksCurDomain = ksDomSchedule[ksDomScheduleIdx].domain;
 #ifdef CONFIG_KERNEL_MCS
-    ksDomainTime = usToTicks(ksDomSchedule[ksDomScheduleIdx].length * US_IN_MS);
+    ksDomainTicks = usToTicks(ksDomSchedule[ksDomScheduleIdx].length * US_IN_MS);
 #else
-    ksDomainTime = ksDomSchedule[ksDomScheduleIdx].length;
+    ksDomainTicks = ksDomSchedule[ksDomScheduleIdx].length;
 #endif
 }
 
@@ -342,7 +342,7 @@ static void switchSchedContext(void)
 
 static void scheduleChooseNewThread(void)
 {
-    if (ksDomainTime == 0) {
+    if (ksDomainTicks == 0) {
         nextDomain();
     }
     chooseThread();
@@ -578,7 +578,7 @@ void setNextInterrupt(void)
                              refill_head(NODE_STATE(ksCurThread)->tcbSchedContext)->rAmount;
 
     if (numDomains > 1) {
-        next_interrupt = MIN(next_interrupt, NODE_STATE(ksCurTicks) + ksDomainTime);
+        next_interrupt = MIN(next_interrupt, NODE_STATE(ksCurTicks) + ksDomainTicks);
     }
 
     if (NODE_STATE(ksReleaseHead) != NULL) {
@@ -653,8 +653,8 @@ void timerTick(void)
     }
 
     if (numDomains > 1) {
-        ksDomainTime--;
-        if (ksDomainTime == 0) {
+        ksDomainTicks--;
+        if (ksDomainTicks == 0) {
             rescheduleRequired();
         }
     }

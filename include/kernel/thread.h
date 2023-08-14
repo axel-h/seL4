@@ -118,7 +118,7 @@ static inline bool_t PURE isRoundRobin(sched_context_t *sc)
 static inline bool_t isCurDomainExpired(void)
 {
     return numDomains > 1 &&
-           ksDomainTime == 0;
+           ksDomainTicks == 0;
 }
 
 static inline void commitTime(void)
@@ -253,10 +253,10 @@ static inline void updateTimestamp(void)
          * condition here when modifying ksDomainTime. Otherwise this requires
          * holding the BKL.
          */
-        if ((consumed + MIN_BUDGET_TICKS) >= ksDomainTime) {
-            ksDomainTime = 0;
+        if ((consumed + MIN_BUDGET_TICKS) >= ksDomainTicks) {
+            ksDomainTicks = 0;
         } else {
-            ksDomainTime -= consumed;
+            ksDomainTicks -= consumed;
         }
     }
 }

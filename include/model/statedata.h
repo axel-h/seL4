@@ -108,9 +108,9 @@ extern const word_t ksDomScheduleLength;
 extern word_t ksDomScheduleIdx;
 extern dom_t ksCurDomain;
 #ifdef CONFIG_KERNEL_MCS
-extern ticks_t ksDomainTime;
+extern ticks_t ksDomainTicks;
 #else
-extern word_t ksDomainTime;
+extern word_t ksDomainTicks;
 #endif
 extern word_t tlbLockCount VISIBLE;
 
