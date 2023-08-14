@@ -42,13 +42,11 @@ enum control {
 };
 
 /** DONT_TRANSLATE */
-static inline ticks_t getCurrentTime(void)
+static inline ticks_t getCurrentTicks(void)
 {
-    uint32_t upper, upper2, lower;
-
-    upper = globalTimer->countUpper;
-    lower = globalTimer->countLower;
-    upper2 = globalTimer->countUpper;
+    uint32_t upper = globalTimer->countUpper;
+    uint32_t lower = globalTimer->countLower;
+    uint32_t upper2 = globalTimer->countUpper;
 
     /* account for race: upper could have increased while we
      * read lower */
@@ -56,7 +54,8 @@ static inline ticks_t getCurrentTime(void)
         lower = globalTimer->countLower;
     }
 
-    return (((ticks_t) upper2 << 32llu) + (ticks_t) lower);
+    uint64_t val = ((uint64_t)upper2 << 32) + lower;
+    return (ticks_t)val;
 }
 
 /** DONT_TRANSLATE */
@@ -73,7 +72,7 @@ static inline void setDeadline(ticks_t deadline)
     /* Assert that either the deadline is in the future or that the IRQ has already been raised.
        This should be guaranteed by hardware from r2p0 on of the Cortex-A9 MPCore Technical
        Reference Manual (r2p0 published in 2009) */
-    assert(getCurrentTime() < deadline || globalTimer->isr == 1u);
+    assert(getCurrentTicks() < deadline || globalTimer->isr == 1u);
 }
 
 /** DONT_TRANSLATE */

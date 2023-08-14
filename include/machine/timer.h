@@ -13,9 +13,9 @@
 #include <types.h>
 #include <arch/linker.h>
 
-/* Read the current time from the timer. */
+/* Read the current ticks from the timer. */
 /** MODIFIES: [*] */
-static inline ticks_t getCurrentTime(void);
+static inline ticks_t getCurrentTicks(void);
 /* Set the next deadline irq - deadline is absolute and may be slightly in
    the past. If it is set in the past, we expect an interrupt to be raised
    immediately after we leave the kernel. */

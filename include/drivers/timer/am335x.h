@@ -41,10 +41,11 @@ extern timer_t *timer;
 extern uint32_t high_bits;
 
 /* Read the current time from the timer. */
-static inline ticks_t getCurrentTime(void)
+static inline ticks_t getCurrentTicks(void)
 {
     bool_t overflow = !!(timer->tisr & TISR_OVF_FLAG);
-    return ((((uint64_t) high_bits + overflow) << 32llu) + timer->tcrr);
+    uint64_t val = (((uint64_t)high_bits + overflow) << 32) + timer->tcrr;
+    return (ticks_t)val;
 }
 
 #define HIGH_BYTES 0xffffffff00000000

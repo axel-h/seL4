@@ -402,7 +402,7 @@ static BOOT_CODE bool_t try_init_kernel(
     write_it_asid_pool(it_ap_cap, it_pd_cap);
 
 #ifdef CONFIG_KERNEL_MCS
-    NODE_STATE(ksCurTicks) = getCurrentTime();
+    NODE_STATE(ksCurTicks) = getCurrentTicks();
 #endif
 
     /* create the idle thread */
@@ -495,7 +495,7 @@ BOOT_CODE VISIBLE void init_kernel(
     }
 
 #ifdef CONFIG_KERNEL_MCS
-    NODE_STATE(ksCurTicks) = getCurrentTime();
+    NODE_STATE(ksCurTicks) = getCurrentTicks();
     NODE_STATE(ksConsumed) = 0;
 #endif
 

@@ -14,11 +14,11 @@
 #include <model/statedata.h>
 #include <api/types.h>
 /** DONT_TRANSLATE **/
-static inline ticks_t getCurrentTime(void)
+static inline ticks_t getCurrentTicks(void)
 {
-    ticks_t time;
-    SYSTEM_READ_64(CNT_CT, time);
-    return time;
+    uint64_t ticks;
+    SYSTEM_READ_64(CNT_CT, ticks);
+    return (ticks_t)ticks;
 }
 
 /** DONT_TRANSLATE **/

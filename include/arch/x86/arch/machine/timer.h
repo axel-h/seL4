@@ -42,7 +42,7 @@ static inline void ackDeadlineIRQ(void)
 {
 }
 
-static inline ticks_t getCurrentTime(void)
+static inline ticks_t getCurrentTicks(void)
 {
     return x86_rdtsc();
 }
@@ -66,7 +66,7 @@ static inline void setDeadline(ticks_t deadline)
         x86_wrmsr(IA32_TSC_DEADLINE_MSR, deadline);
     } else {
         /* Must not underflow */
-        deadline -= MIN(deadline, getCurrentTime());
+        deadline -= MIN(deadline, getCurrentTicks());
         /* Convert deadline from tscKhz to apic khz. Must be at least 1 tick. */
         apic_write_reg(APIC_TIMER_COUNT, MAX(1, div64(deadline, x86KSapicRatio)));
     }

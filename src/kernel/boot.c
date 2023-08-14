@@ -624,7 +624,7 @@ BOOT_CODE void init_core_state(tcb_t *scheduler_action)
     NODE_STATE(ksConsumed) = 0;
     NODE_STATE(ksReprogram) = true;
     NODE_STATE(ksReleaseHead) = NULL;
-    NODE_STATE(ksCurTicks) = getCurrentTime();
+    NODE_STATE(ksCurTicks) = getCurrentTicks();
 #endif
 }
 

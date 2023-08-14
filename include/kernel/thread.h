@@ -232,7 +232,7 @@ void chargeBudget(ticks_t consumed, bool_t canTimeoutFault);
 static inline void updateTimestamp(void)
 {
     ticks_t prev = NODE_STATE(ksCurTicks);
-    ticks_t now = getCurrentTime();
+    ticks_t now = getCurrentTicks();
     /* The timestamp must be lower than max absolute values, which should never
      * be a practical problem with 64-bit values. The timestamps must be sane,
      * and there must not have been a roll-over.
