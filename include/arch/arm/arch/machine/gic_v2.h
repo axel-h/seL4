@@ -141,20 +141,9 @@ static inline void dist_enable_set(word_t irq)
     gic_dist->enable_set[word] = BIT(bit);
 }
 
-static inline irq_t getActiveIRQ(void)
+static inline irq_t get_gic_pending_interrupt(void)
 {
-    irq_t irq;
-    if (!IS_IRQ_VALID(active_irq[CURRENT_CPU_INDEX()])) {
-        active_irq[CURRENT_CPU_INDEX()] = gic_cpuiface->int_ack;
-    }
-
-    if (IS_IRQ_VALID(active_irq[CURRENT_CPU_INDEX()])) {
-        irq = CORE_IRQ_TO_IRQT(CURRENT_CPU_INDEX(), active_irq[CURRENT_CPU_INDEX()] & IRQ_MASK);
-    } else {
-        irq = irqInvalid;
-    }
-
-    return irq;
+    return gic_cpuiface->int_ack;
 }
 
 /*
@@ -179,13 +168,9 @@ static inline void maskInterrupt(bool_t disable, irq_t irq)
     }
 }
 
-static inline void ackInterrupt(irq_t irq)
+static inline void gic_ack_interrupt(irq_t irq)
 {
-    assert(IS_IRQ_VALID(active_irq[CURRENT_CPU_INDEX()])
-           && (active_irq[CURRENT_CPU_INDEX()] & IRQ_MASK) == IRQT_TO_IRQ(irq));
-    gic_cpuiface->eoi = active_irq[CURRENT_CPU_INDEX()];
-    active_irq[CURRENT_CPU_INDEX()] = IRQ_NONE;
-
+    gic_cpuiface->eoi = irq;
 }
 
 

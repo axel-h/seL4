@@ -72,6 +72,49 @@ irq_t irqInvalid = (uint16_t) -1;
  */
 extern word_t active_irq[CONFIG_MAX_NUM_NODES];
 
+static inline irq_t getActiveIRQ(void)
+{
+    word_t cur_core = CURRENT_CPU_INDEX();
+    word_t *active_irq_slot = &active_irq[cur_core];
+
+    irq_t irq = *active_irq_slot;
+    if (!IS_IRQ_VALID(irq)) {
+        /* Our slot is empty, check hardware if a new interrupt is pending. */
+        irq = get_gic_pending_interrupt();
+        if (!IS_IRQ_VALID(irq)) {
+            /* There is no interrupt pending, */
+            return irqInvalid;
+        }
+        /* Put the new interrupt into our slot. */
+        *active_irq_slot = irq;
+    }
+    return CORE_IRQ_TO_IRQT(cur_core, irq & IRQ_MASK);
+}
+
+static inline void ackInterrupt(irq_t irq)
+{
+    word_t cur_core = CURRENT_CPU_INDEX();
+    word_t *active_irq_slot = &active_irq[cur_core];
+
+    irq_t irq = *active_irq_slot;
+    if (!IS_IRQ_VALID(irq)) {
+        /* This is not supposed to happen. */
+        printf("WARNING: can't ack invalid IRQ %d\n", irq);
+        return;
+    }
+
+    word_t hw_irq = IRQT_TO_IRQ(irq);
+    if ((irq & IRQ_MASK) != hw_irq) {
+        /* The ack does not match the interrupt currently pending. */
+        printf("WARNING: ack IRQ %d differs from pending IRQ %d\n", irq, hw_irq);
+        hw_irq = irq;
+        return;
+    }
+
+    gic_ack_interrupt(hw_irq);
+    *active_irq_slot = IRQ_NONE;
+}
+
 static inline void handleSpuriousIRQ(void)
 {
     /* Nothing to do here */
