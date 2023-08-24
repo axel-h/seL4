@@ -61,7 +61,7 @@ irq_t irqInvalid = (uint16_t) -1;
 /* Setters/getters helpers for hardware irqs */
 #define IRQ_REG(IRQ) ((IRQ) >> 5u)
 #define IRQ_BIT(IRQ) ((IRQ) & 0x1f)
-#define IS_IRQ_VALID(X) (((X) & IRQ_MASK) < SPECIAL_IRQ_START)
+#define IS_HW_IRQ_VALID(X) (((X) & IRQ_MASK) < SPECIAL_IRQ_START)
 
 /*
  * The only sane way to get an GIC IRQ number that can be properly
@@ -70,7 +70,53 @@ irq_t irqInvalid = (uint16_t) -1;
  * reads will not return the same value For this reason, we have a
  * global variable to store the IRQ number.
  */
-extern word_t active_irq[CONFIG_MAX_NUM_NODES];
+word_t active_raw_irq[CONFIG_MAX_NUM_NODES] = {IRQ_NONE};
+
+static inline irq_t getActiveIRQ(void)
+{
+    word_t cur_core = CURRENT_CPU_INDEX();
+    word_t *active_irq_slot = &active_raw_irq[cur_core];
+
+    word_t raw_hw_irq = *active_irq_slot;
+    word_t hw_irq = raw_hw_irq & IRQ_MASK;
+    if (!IS_HW_IRQ_VALID(hw_irq)) {
+        /* Our slot is empty, check hardware if a new interrupt is pending. */
+        raw_hw_irq = get_gic_pending_interrupt();
+        hw_irq = raw_hw_irq & IRQ_MASK;
+        if (!IS_HW_IRQ_VALID(hw_irq)) {
+            /* There is no interrupt pending, */
+            return irqInvalid;
+        }
+        /* Put the new interrupt into our slot. */
+        *active_irq_slot = raw_hw_irq;
+    }
+
+    return CORE_IRQ_TO_IRQT(cur_core, hw_irq);
+}
+
+static inline void ackInterrupt(irq_t irq)
+{
+    word_t cur_core = CURRENT_CPU_INDEX();
+    word_t *active_irq_slot = &active_raw_irq[cur_core];
+
+    word_t a_raw_irq = *active_irq_slot;
+    word_t a_hw_irq = a_raw_irq & IRQ_MASK;
+    if (!IS_HW_IRQ_VALID(a_hw_irq)) {
+        /* This is not supposed to happen. */
+        printf("WARNING: can't ack invalid IRQ %d\n", a_raw_irq);
+        return;
+    }
+
+    word_t hw_irq = IRQT_TO_IRQ(irq);
+    if (a_hw_irq != hw_irq) {
+        /* The ack does not match the interrupt currently pending. */
+        printf("WARNING: ack IRQ %d differs from pending IRQ %d\n", hw_irq, a_hw_irq);
+        return;
+    }
+
+    gic_ack_interrupt(a_raw_irq);
+    *active_irq_slot = IRQ_NONE;
+}
 
 static inline void handleSpuriousIRQ(void)
 {
