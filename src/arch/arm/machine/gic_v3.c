@@ -34,7 +34,6 @@
 volatile struct gic_dist_map *const gic_dist = (volatile struct gic_dist_map *)(GICD_PPTR);
 volatile void *const gicr_base = (volatile uint8_t *)(GICR_PPTR);
 
-word_t active_irq[CONFIG_MAX_NUM_NODES] = {IRQ_NONE};
 volatile struct gic_rdist_map *gic_rdist_map[CONFIG_MAX_NUM_NODES] = { 0 };
 volatile struct gic_rdist_sgi_ppi_map *gic_rdist_sgi_ppi_map[CONFIG_MAX_NUM_NODES] = { 0 };
 

@@ -260,23 +260,11 @@ static inline void gic_enable_set(word_t irq)
 
 }
 
-static inline irq_t getActiveIRQ(void)
+static inline word_t get_gic_pending_interrupt(void)
 {
-    irq_t irq;
-
-    if (!IS_IRQ_VALID(active_irq[CURRENT_CPU_INDEX()])) {
-        uint32_t val = 0;
-        SYSTEM_READ_WORD(ICC_IAR1_EL1, val);
-        active_irq[CURRENT_CPU_INDEX()] = val;
-    }
-
-    if (IS_IRQ_VALID(active_irq[CURRENT_CPU_INDEX()])) {
-        irq = CORE_IRQ_TO_IRQT(CURRENT_CPU_INDEX(), active_irq[CURRENT_CPU_INDEX()] & IRQ_MASK);
-    } else {
-        irq = irqInvalid;
-    }
-
-    return irq;
+    uint32_t val = 0;
+    SYSTEM_READ_WORD(ICC_IAR1_EL1, val);
+    return val;
 }
 
 /*
@@ -307,15 +295,10 @@ static inline void maskInterrupt(bool_t disable, irq_t irq)
     }
 }
 
-static inline void ackInterrupt(irq_t irq)
+static inline void gic_ack_interrupt(word_t hw_irq)
 {
-    assert(IS_IRQ_VALID(active_irq[CURRENT_CPU_INDEX()])
-           && (active_irq[CURRENT_CPU_INDEX()] & IRQ_MASK) == IRQT_TO_IRQ(irq));
-
     /* Set End of Interrupt for active IRQ: ICC_EOIR1_EL1 */
-    SYSTEM_WRITE_WORD(ICC_EOIR1_EL1, active_irq[CURRENT_CPU_INDEX()]);
-    active_irq[CURRENT_CPU_INDEX()] = IRQ_NONE;
-
+    SYSTEM_WRITE_WORD(ICC_EOIR1_EL1, hw_irq);
 }
 
 #ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
