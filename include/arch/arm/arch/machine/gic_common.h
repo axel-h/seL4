@@ -74,6 +74,7 @@ extern word_t active_irq[CONFIG_MAX_NUM_NODES];
 
 static inline void handleSpuriousIRQ(void)
 {
+    /* Nothing to do here */
 }
 
 void initIRQController(void);
