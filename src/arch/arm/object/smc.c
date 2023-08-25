@@ -56,8 +56,8 @@ static exception_t invokeSMCCall(word_t *buffer, bool_t call)
         }
 
         setRegister(NODE_STATE(ksCurThread), badgeRegister, 0);
-        setRegister(NODE_STATE(ksCurThread), msgInfoRegister, wordFromMessageInfo(
-                        seL4_MessageInfo_new(0, 0, 0, i)));
+        setRegister(NODE_STATE(ksCurThread), msgInfoRegister,
+                    wordFromMessageInfo(seL4_MessageInfo_new(0, 0, 0, i)));
     }
     setThreadState(NODE_STATE(ksCurThread), ThreadState_Running);
     return EXCEPTION_NONE;
