@@ -100,31 +100,28 @@ deriveCap_ret_t Arch_deriveCap(cte_t *slot, cap_t cap)
 
 cap_t CONST Arch_updateCapData(bool_t preserve, word_t data, cap_t cap)
 {
+    switch (cap_get_capType(cap)) {
 #ifdef CONFIG_ALLOW_SMC_CALLS
-    if (cap_get_capType(cap) == cap_smc_cap) {
+    case cap_smc_cap:
         if (!preserve && cap_smc_cap_get_capSMCBadge(cap) == 0) {
             return cap_smc_cap_set_capSMCBadge(cap, data);
-        } else {
-            return cap_null_cap_new();
         }
-    } else {
+        return cap_null_cap_new();
 #endif
+    default:
         return cap;
-#ifdef CONFIG_ALLOW_SMC_CALLS
     }
-#endif
 }
 
 cap_t CONST Arch_maskCapRights(seL4_CapRights_t cap_rights_mask, cap_t cap)
 {
-    if (cap_get_capType(cap) == cap_frame_cap) {
+    switch (cap_get_capType(cap)) {
+    case cap_frame_cap: {
         vm_rights_t vm_rights;
-
         vm_rights = vmRightsFromWord(cap_frame_cap_get_capFVMRights(cap));
         vm_rights = maskVMRights(vm_rights, cap_rights_mask);
-
         return cap_frame_cap_set_capFVMRights(cap, wordFromVMRights(vm_rights));
-    } else {
+    default:
         return cap;
     }
 }
