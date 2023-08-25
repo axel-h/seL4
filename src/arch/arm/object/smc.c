@@ -14,13 +14,10 @@ static exception_t invokeSMCCall(word_t *buffer, bool_t call)
 {
     word_t i;
     seL4_Word arg[NUM_SMC_REGS];
-    word_t *ipcBuffer;
 
     for (i = 0; i < NUM_SMC_REGS; i++) {
         arg[i] = getSyscallArg(i, buffer);
     }
-
-    ipcBuffer = lookupIPCBuffer(true, NODE_STATE(ksCurThread));
 
     compile_assert(ARRAY_SIZE(arg) >= 8);
     register seL4_Word r0 asm("x0") = arg[0];
@@ -50,6 +47,7 @@ static exception_t invokeSMCCall(word_t *buffer, bool_t call)
             setRegister(NODE_STATE(ksCurThread), msgRegisters[i], arg[i]);
         }
 
+        word_t * ipcBuffer = lookupIPCBuffer(true, NODE_STATE(ksCurThread));
         if (ipcBuffer != NULL) {
             for (; i < NUM_SMC_REGS; i++) {
                 ipcBuffer[i + 1] = arg[i];
