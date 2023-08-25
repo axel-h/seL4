@@ -22,6 +22,7 @@ static exception_t invokeSMCCall(word_t *buffer, bool_t call)
 
     ipcBuffer = lookupIPCBuffer(true, NODE_STATE(ksCurThread));
 
+    compile_assert(ARRAY_SIZE(arg) >= 8);
     register seL4_Word r0 asm("x0") = arg[0];
     register seL4_Word r1 asm("x1") = arg[1];
     register seL4_Word r2 asm("x2") = arg[2];
