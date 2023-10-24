@@ -20,11 +20,6 @@ class Config:
         ''' Used to align the base of physical memory. Returns alignment size in bits. '''
         return 0
 
-    def get_bootloader_reserve(self) -> int:
-        ''' Used to reserve a fixed amount of memory for the bootloader. Offsets
-            the kernel load address by the amount returned in bytes. '''
-        return 0
-
     def get_page_bits(self) -> int:
         ''' Get page size in bits for this arch '''
         return 12  # 4096-byte pages
@@ -77,18 +72,14 @@ class RISCVConfig(Config):
     arch = 'riscv'
     MEGAPAGE_BITS_RV32 = 22  # 2^22 = 4 MiByte
     MEGAPAGE_BITS_RV64 = 21  # 2^21 = 2 MiByte
-    MEGA_PAGE_SIZE_RV64 = 2**MEGAPAGE_BITS_RV64
-
-    def get_bootloader_reserve(self) -> int:
-        ''' OpenSBI reserved the first 2 MiByte of physical memory on rv64,
-        which is exactly a megapage. For rv32 we use the same value for now, as
-        this seems to work nicely - even if this is just half of the 4 MiByte
-        magepages that exist there. '''
-        return self.MEGA_PAGE_SIZE_RV64
 
     def align_memory(self, regions: Set[Region]) -> (List[Region], Set[Region], int):
-        ''' Currently the RISC-V port expects physBase to be the address that the
-        bootloader is loaded at. To be generalised in the future. '''
+        ''' The RISC-V port expects physBase to be the address that the OpenSBI
+        bootloader is loaded at, which is the start of the physical memory.
+        OpenSBI reserved the first 2 MiByte of physical memory on rv64, which
+        is exactly a megapage. On rv32 we use the same value for now, as this
+        seems to work nicely - even if this is just half of the 4 MiByte
+        magepages that exist there.'''
         ret = sorted(regions)
         extra_reserved = set()
 
@@ -96,10 +87,11 @@ class RISCVConfig(Config):
         physBase = ret[0].base
 
         # reserve space for bootloader in the region
-        resv = Region(ret[0].base, self.get_bootloader_reserve())
+        len_bootloader_reserved = 1 << self.MEGAPAGE_BITS_RV64
+        resv = Region(ret[0].base, len_bootloader_reserved)
         extra_reserved.add(resv)
-        ret[0].base += self.get_bootloader_reserve()
-        ret[0].size -= self.get_bootloader_reserve()
+        ret[0].base += len_bootloader_reserved
+        ret[0].size -= len_bootloader_reserved
 
         return ret, extra_reserved, physBase
 
