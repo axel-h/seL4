@@ -16,10 +16,6 @@ class Config:
         self.sel4arch = sel4arch
         self.addrspace_max = addrspace_max
 
-    def get_kernel_phys_align(self) -> int:
-        ''' Used to align the base of physical memory. Returns alignment size in bits. '''
-        return 0
-
     def get_page_bits(self) -> int:
         ''' Get page size in bits for this arch '''
         return 12  # 4096-byte pages
@@ -47,17 +43,15 @@ class ARMConfig(Config):
     arch = 'arm'
     SUPERSECTION_BITS = 24  # 2^24 = 16 MiByte
 
-    def get_kernel_phys_align(self) -> int:
-        ''' on ARM the ELF loader expects to be able to map a supersection page to load the kernel. '''
-        return self.SUPERSECTION_BITS
-
     def align_memory(self, regions: Set[Region]) -> (List[Region], Set[Region], int):
-        ''' Arm wants physBase to be the physical load address of the kernel. '''
+        '''On ARM the ELF loader expects to be able to map a supersection page
+        to load the kernel and 'physBase' must be the physical load address of
+        the kernel. '''
         ret = sorted(regions)
         extra_reserved = set()
 
         # kernel is in the first region
-        new = ret[0].align_base(self.get_kernel_phys_align())
+        new = ret[0].align_base(self.SUPERSECTION_BITS)
         resv = Region(ret[0].base, new.base - ret[0].base)
         extra_reserved.add(resv)
         ret[0] = new
