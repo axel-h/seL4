@@ -8,6 +8,7 @@ from __future__ import annotations
 from collections import defaultdict
 from functools import lru_cache
 import logging
+import hardware
 from hardware.config import Config
 from hardware.device import WrappedNode
 from hardware.fdt import FdtParser
@@ -42,13 +43,19 @@ class KernelRegionGroup:
         self.page_bits = page_bits
         self.labels = {}  # dict of label => offset within region.
         self.user_ok = user_ok
-
-        region.size = min(max_size, region.size)
-        aligned = region.align_size(page_bits)
-        self.size = aligned.size
-        self.base = aligned.base
-        self.regions = aligned.make_chunks(1 << page_bits)
-        self.labels[kernel_name] = region.base - aligned.base
+        # the kernel region covers full pages
+        self.base = hardware.utils.align_down(region.base, page_bits)
+        # The maximum size must be properly aligned
+        if 0 != max_size % (1 << page_bits):
+            raise ValueError('max_size {} is not {}-bit aligned'.format(
+                max_size, page_bits))
+        self.size = min(max_size, hardware.utils.align_up(region.size, page_bits))
+        self.labels[kernel_name] = region.base - self.base
+        # Build a list with all pages
+        self.regions = [
+            Region(page_base, 1 << page_bits, region.owner)
+            for page_base in range(self.base, self.base + self.size, 1 << page_bits)
+        ]
 
     def has_macro(self):
         ''' True if this group has a macro '''

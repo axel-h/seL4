@@ -5,6 +5,7 @@
 #
 
 from __future__ import annotations
+import hardware
 from hardware.memory import Region
 
 
@@ -52,10 +53,16 @@ class ARMConfig(Config):
 
         # kernel is in the first region
         reg = regions[0]
-        reg_aligned = reg.align_base(self.SUPERSECTION_BITS)
-        regions[0] = reg_aligned
-        physBase = reg_aligned.base
-        extra_reserved.add(Region(reg.base, reg_aligned.base - reg.base))
+        physBase = hardware.utils.align_up(reg.base, self.SUPERSECTION_BITS)
+        diff = physBase - reg.base
+        if diff > reg.size:
+            raise ValueError(
+                'can\'t cut off {} from start, region size is only {}'.format(
+                    diff, reg.size))
+        if (diff > 0):
+            extra_reserved.add(Region(reg.base, diff))
+            reg.base = physBase
+            reg.size -= diff
 
         return regions, extra_reserved, physBase
 
@@ -81,6 +88,10 @@ class RISCVConfig(Config):
         physBase = reg.base
         # reserve space for bootloader in the region
         len_bootloader_reserved = 1 << self.MEGAPAGE_BITS_RV64
+        if len_bootloader_reserved > reg.size:
+            raise ValueError(
+                'can\'t cut off {} from start, region size is only {}'.format(
+                    len_bootloader_reserved, reg.size))
         extra_reserved.add(Region(reg.base, len_bootloader_reserved))
         reg.base += len_bootloader_reserved
         reg.size -= len_bootloader_reserved

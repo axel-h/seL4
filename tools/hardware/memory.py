@@ -87,33 +87,3 @@ class Region:
                 ret.append(Region.from_range(excluded.base + excluded.size,
                                              self.base + self.size, self.owner))
         return ret
-
-    def align_base(self, align_bits: int) -> Region:
-        ''' align this region up to a given number of bits '''
-        new_base = hardware.utils.align_up(self.base, align_bits)
-        diff = new_base - self.base
-        if self.size < diff:
-            raise ValueError(
-                'can''t align region base to {} bits, {} too small'.format(
-                    align_bits, self))
-        # This could become an empty region now. We don't care, the caller has
-        # to check if this region still fits its needs.
-        return Region(new_base, self.size - diff, self.owner)
-
-    def align_size(self, align_bits: int) -> Region:
-        ''' align this region's size to a given number of bits.
-         will move the base address down and the region's size
-         up '''
-        new_base = hardware.utils.align_down(self.base, align_bits)
-        new_size = hardware.utils.align_up(self.size, align_bits)
-        return Region(new_base, new_size, self.owner)
-
-    def make_chunks(self, chunksz: int) -> List[Region]:
-        base = self.base
-        size = self.size
-        ret = []
-        while size > 0:
-            ret.append(Region(base, min(size, chunksz), self.owner))
-            base += chunksz
-            size -= chunksz
-        return ret
