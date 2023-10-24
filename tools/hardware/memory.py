@@ -4,19 +4,16 @@
 # SPDX-License-Identifier: GPL-2.0-only
 #
 
-# Circular type dependency support has been postponed to Python 4, thus we
-# cannot simply use "from hardware.device import WrappedNode", but have to use
-# the fully qualified name in the type annotations.
 from __future__ import annotations
 import functools
-import hardware
+from hardware.device import WrappedNode
 
 
 @functools.total_ordering
 class Region:
     ''' Represents a region of memory. '''
 
-    def __init__(self, base: int, size: int, owner: hardware.device.WrappedNode = None):
+    def __init__(self, base: int, size: int, owner: WrappedNode = None):
         self.base = base
         self.size = size
         self.owner = owner
@@ -51,7 +48,7 @@ class Region:
         return hash((self.base, self.size))
 
     @staticmethod
-    def from_range(start: int, end: int, owner: hardware.device.WrappedNode = None) -> Region:
+    def from_range(start: int, end: int, owner: WrappedNode = None) -> Region:
         ''' create a region from a start/end rather than start/size '''
         if start > end:
             raise ValueError(
