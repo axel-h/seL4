@@ -55,14 +55,8 @@ class ARMConfig(Config):
         reg = regions[0]
         physBase = hardware.utils.align_up(reg.base, self.SUPERSECTION_BITS)
         diff = physBase - reg.base
-        if diff > reg.size:
-            raise ValueError(
-                'can\'t cut off {} from start, region size is only {}'.format(
-                    diff, reg.size))
         if (diff > 0):
-            extra_reserved.add(Region(reg.base, diff))
-            reg.base = physBase
-            reg.size -= diff
+            extra_reserved.add(Region(reg.cut_from_start(diff))
 
         return regions, extra_reserved, physBase
 
@@ -87,14 +81,7 @@ class RISCVConfig(Config):
         reg = regions[0]
         physBase = reg.base
         # reserve space for bootloader in the region
-        len_bootloader_reserved = 1 << self.MEGAPAGE_BITS_RV64
-        if len_bootloader_reserved > reg.size:
-            raise ValueError(
-                'can\'t cut off {} from start, region size is only {}'.format(
-                    len_bootloader_reserved, reg.size))
-        extra_reserved.add(Region(reg.base, len_bootloader_reserved))
-        reg.base += len_bootloader_reserved
-        reg.size -= len_bootloader_reserved
+        extra_reserved.add(reg.cut_from_start(1 << self.MEGAPAGE_BITS_RV64))
 
         return regions, extra_reserved, physBase
 

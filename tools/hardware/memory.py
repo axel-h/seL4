@@ -87,3 +87,28 @@ class Region:
                 ret.append(Region.from_range(excluded.base + excluded.size,
                                              self.base + self.size, self.owner))
         return ret
+
+    def cut_from_start(self, size: int) -> Region:
+        ''' Cut off a region from the start and return it, no owner is set.
+        Adjust the original region's size.'''
+        if size > self.size:
+            raise ValueError(
+                'can\'t cut off {} from start, region size is only {}'.format(
+                    size, self.size))
+        cut_reg = Region(self.base, size)
+        self.base += size
+        self.size -= size
+        return cut_reg # this might be a region with a size of 0 bytes
+
+    def cut_from_end(self, size: int) -> Region:
+        ''' Cut off a region from the end and return it, no owner is set.
+        Adjust the original region's start and size.'''
+        if size > self.size:
+            raise ValueError(
+                'can\'t cut off {} from end, region size is only {}'.format(
+                    size, self.size))
+        if 0 == size:
+            return None
+        cut_reg = Region(self.base + self.size - size, size)
+        self.size -= size
+        return cut_reg # this might be a region with a size of 0 bytes
