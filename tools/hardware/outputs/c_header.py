@@ -58,7 +58,7 @@ static inline CONST word_t physBase(void)
 #define {{ irq.label }} {{ irq.irq }}
 {% if irq.has_sel() %}
 #else
-#define {{ irq.label }} {{ irq.false_irq }}
+#define {{ irq.label }} {{ irq.false_irq }} /* dummy value */
 {{ irq.get_sel_endif() }}
 {% endif %}
 {% if irq.has_enable() %}
