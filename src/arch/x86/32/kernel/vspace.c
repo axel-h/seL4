@@ -302,7 +302,7 @@ BOOT_CODE bool_t map_kernel_window(
 
     /* null mappings up to KDEV_BASE */
 
-    while (idx < (KDEV_BASE &MASK(LARGE_PAGE_BITS)) >> PAGE_BITS) {
+    while (idx < (KDEV_BASE & MASK(LARGE_PAGE_BITS)) >> PAGE_BITS) {
         pte = pte_new(
                   0,      /* page_base_address    */
                   0,      /* avl                  */
