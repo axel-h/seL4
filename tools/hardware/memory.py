@@ -37,10 +37,6 @@ class Region:
     def __eq__(self, other: Region) -> bool:
         return self.base == other.base and self.size == other.size
 
-    def __ne__(self, other: Region) -> bool:
-        # Needed only for py2.
-        return not self.__eq__(other)
-
     def __gt__(self, other: Region) -> bool:
         return self.base > other.base
 
