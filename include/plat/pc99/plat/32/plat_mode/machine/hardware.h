@@ -75,13 +75,17 @@
 
 /* The physical memory address to use for mapping the kernel ELF */
 #define KERNEL_ELF_PADDR_BASE UL_CONST(0x00100000)
+#ifdef __LINKER__
 /* For use by the linker (only integer constants allowed) */
 #define KERNEL_ELF_PADDR_BASE_RAW KERNEL_ELF_PADDR_BASE
+#endif /* __LINKER__ */
 
 /* The base address in virtual memory to use for the kernel ELF mapping */
 #define KERNEL_ELF_BASE (PPTR_BASE + KERNEL_ELF_PADDR_BASE)
+#ifdef __LINKER__
 /* For use by the linker (only integer constants allowed) */
 #define KERNEL_ELF_BASE_RAW (PPTR_BASE + KERNEL_ELF_PADDR_BASE_RAW)
+#endif /* __LINKER__ */
 
 /* The base address in virtual memory to use for the kernel device
  * mapping region. These are mapped in the kernel page table. */

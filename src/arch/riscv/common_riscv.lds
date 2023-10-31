@@ -10,8 +10,10 @@
 OUTPUT_ARCH(riscv)
 ENTRY(_start)
 
-#include <config.h>
+#define __LINKER__
 #define __ASSEMBLER__
+
+#include <config.h>
 #include <hardware.h>
 #include <sel4/plat/api/constants.h>
 #include <plat/machine/devices_gen.h>

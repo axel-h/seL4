@@ -4,7 +4,9 @@
  * SPDX-License-Identifier: GPL-2.0-only
  */
 
+#define __LINKER__
 #define __ASSEMBLER__
+
 #include <config.h>
 #include <hardware.h>
 
