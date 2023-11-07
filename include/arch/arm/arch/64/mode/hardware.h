@@ -187,16 +187,12 @@
 
 /* The physical memory address to use for mapping the kernel ELF */
 #define KERNEL_ELF_PADDR_BASE physBase()
-#ifdef __LINKER__
-/* For use by the linker (only integer constants allowed) */
-#define KERNEL_ELF_PADDR_BASE_RAW PHYS_BASE_RAW
-#endif /* __LINKER__ */
 
 /* The base address in virtual memory to use for the kernel ELF mapping */
 #define KERNEL_ELF_BASE (PPTR_BASE_OFFSET + KERNEL_ELF_PADDR_BASE)
 #ifdef __LINKER__
 /* For use by the linker (only integer constants allowed) */
-#define KERNEL_ELF_BASE_RAW (PPTR_BASE_OFFSET + KERNEL_ELF_PADDR_BASE_RAW)
+#define KERNEL_ELF_BASE_RAW (PPTR_BASE_OFFSET + PHYS_BASE_RAW)
 #endif /* __LINKER__ */
 
 /* This is a page table mapping at the end of the virtual address space

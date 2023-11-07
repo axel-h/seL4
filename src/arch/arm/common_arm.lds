@@ -14,7 +14,8 @@
 
 ENTRY(_start)
 
-KERNEL_OFFSET = KERNEL_ELF_BASE_RAW - KERNEL_ELF_PADDR_BASE_RAW;
+/* PHYS_BASE_RAW is the physical memory address used for mapping the kernel ELF */
+KERNEL_OFFSET = KERNEL_ELF_BASE_RAW - PHYS_BASE_RAW;
 
 SECTIONS
 {

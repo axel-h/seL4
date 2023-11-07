@@ -70,16 +70,12 @@
 
 /* The physical memory address to use for mapping the kernel ELF */
 #define KERNEL_ELF_PADDR_BASE PADDR_BASE
-#ifdef __LINKER__
-/* For use by the linker (only integer constants allowed) */
-#define KERNEL_ELF_PADDR_BASE_RAW PHYS_BASE_RAW
-#endif /* __LINKER__ */
 
 /* The base address in virtual memory to use for the kernel ELF mapping */
 #define KERNEL_ELF_BASE (USER_TOP + (KERNEL_ELF_PADDR_BASE & MASK(22)))
 #ifdef __LINKER__
 /* For use by the linker (only integer constants allowed) */
-#define KERNEL_ELF_BASE_RAW (USER_TOP + (KERNEL_ELF_PADDR_BASE_RAW & MASK(22)))
+#define KERNEL_ELF_BASE_RAW (USER_TOP + (PHYS_BASE_RAW & MASK(22)))
 #endif /* __LINKER__ */
 
 /* This is a page table mapping at the end of the virtual address space
