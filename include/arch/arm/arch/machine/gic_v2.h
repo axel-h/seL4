@@ -169,7 +169,7 @@ static inline bool_t isIRQPending(void)
 
 static inline void maskInterrupt(bool_t disable, irq_t irq)
 {
-#if defined ENABLE_SMP_SUPPORT && defined CONFIG_ARCH_ARM
+#if defined ENABLE_SMP_SUPPORT
     assert(!(IRQ_IS_PPI(irq)) || (IRQT_TO_CORE(irq) == getCurrentCPUIndex()));
 #endif
     if (disable) {
