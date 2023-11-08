@@ -359,7 +359,7 @@ word_t Arch_getObjectSize(word_t t)
     case seL4_ARM_SuperSectionObject:
         return ARMSuperSectionBits;
     case seL4_ARM_PageTableObject:
-        return PTE_SIZE_BITS + PT_INDEX_BITS;
+        return seL4_PageTableEntryBits + PT_INDEX_BITS;
     case seL4_ARM_PageDirectoryObject:
         return PDE_SIZE_BITS + PD_INDEX_BITS;
 #ifdef CONFIG_TK1_SMMU
