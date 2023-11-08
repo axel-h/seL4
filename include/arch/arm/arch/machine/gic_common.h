@@ -27,8 +27,11 @@
 #define SPI_START         32u
 
 #define NUM_PPI SPI_START
-#define HW_IRQ_IS_SGI(irq) ((irq) < PPI_START)
-#define HW_IRQ_IS_PPI(irq) ((irq) < NUM_PPI)
+
+/* Setters/getters helpers for hardware irqs */
+#define IRQ_REG(IRQ) ((IRQ) >> 5u)
+#define IRQ_BIT(IRQ) ((IRQ) & 0x1f)
+
 
 #ifdef ENABLE_SMP_SUPPORT
 /* In this case irq_t is a struct with an hw irq field and target core field.
@@ -40,8 +43,15 @@
  *   core: 2, irq: 16 -> (2 * 32) + 16
  *   core: 1, irq: 33, (4 total cores) -> (4 * 32) + (33-32).
  */
-#define IRQ_IS_PPI(_irq) (HW_IRQ_IS_PPI(_irq.irq))
-#define CORE_IRQ_TO_IRQT(tgt, _irq) ((irq_t){.irq = (_irq), .target_core = (tgt)})
+
+static irq_t CORE_IRQ_TO_IRQT(word_t target_core, word_t hw_irq)
+{
+    return (irq_t) {
+        .irq = hw_irq,
+        .target_core = target_core
+    };
+}
+
 #define IRQT_TO_IDX(_irq) (HW_IRQ_IS_PPI(_irq.irq) ? \
                                  (_irq.target_core) * NUM_PPI + (_irq.irq) : \
                                  (CONFIG_MAX_NUM_NODES - 1) * NUM_PPI + (_irq.irq))
@@ -49,19 +59,51 @@
 #define IDX_TO_IRQT(idx) (((idx) < NUM_PPI*CONFIG_MAX_NUM_NODES) ? \
                         CORE_IRQ_TO_IRQT((idx) / NUM_PPI, (idx) - ((idx)/NUM_PPI)*NUM_PPI): \
                         CORE_IRQ_TO_IRQT(0, (idx) - (CONFIG_MAX_NUM_NODES-1)*NUM_PPI))
-#define IRQT_TO_CORE(irqt) (irqt.target_core)
-#define IRQT_TO_IRQ(irqt) (irqt.irq)
-irq_t irqInvalid = CORE_IRQ_TO_IRQT(-1, -1);
 
-#else /* not ENABLE_SMP_SUPPORT */
-#define IRQ_IS_PPI(irq) HW_IRQ_IS_PPI(irq)
-irq_t irqInvalid = (uint16_t) -1;
+static word_t IRQT_TO_CORE(irq_t irq)
+{
+    return irqt.target_core
+}
+
 #endif /* [not] ENABLE_SMP_SUPPORT */
 
-/* Setters/getters helpers for hardware irqs */
-#define IRQ_REG(IRQ) ((IRQ) >> 5u)
-#define IRQ_BIT(IRQ) ((IRQ) & 0x1f)
-#define IS_HW_IRQ_VALID(X) (((X) & IRQ_MASK) < SPECIAL_IRQ_START)
+#define hw_irq_invalid ((word_t)(-1))
+
+#define irqInvalid SMP_TERNARY(CORE_IRQ_TO_IRQT(-1, hw_irq_invalid), \
+                               (irq_t)hw_irq_invalid);
+
+static bool_t HW_IRQ_IS_SGI(word_t hw_irq)
+{
+    return hw_irq < PPI_START;
+}
+
+static bool_t HW_IRQ_IS_PPI(word_t hw_irq)
+{
+    return hw_irq < NUM_PPI;
+}
+
+static bool_t IS_HW_IRQ_VALID(word_t hw_irq)
+{
+    return (hw_irq & IRQ_MASK) < SPECIAL_IRQ_START;
+}
+
+static word_t IRQT_TO_IRQ(irq_t irq)
+{
+    return SMP_TERNARY(irq.irq, irq);
+}
+
+static bool_t IS_IRQT_NONE(irq_t irq)
+{
+    word_t hw_irq = IRQT_TO_IRQ(irq);
+    return hw_irq != hw_irq_invalid;
+
+}
+
+static bool_t IRQ_IS_PPI(irq_t irq)
+{
+    word_t hw_irq = IRQT_TO_IRQ(irq);
+    return HW_IRQ_IS_PPI(hw_irq);
+}
 
 /*
  * The only sane way to get an GIC IRQ number that can be properly
