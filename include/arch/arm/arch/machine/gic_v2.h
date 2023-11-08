@@ -125,22 +125,6 @@ struct gic_cpu_iface_map {
 extern volatile struct gic_dist_map *const gic_dist;
 extern volatile struct gic_cpu_iface_map *const gic_cpuiface;
 
-/* Helpers */
-static inline void dist_enable_clr(word_t irq)
-{
-    int word = IRQ_REG(irq);
-    int bit = IRQ_BIT(irq);
-    /* Using |= here is detrimental to your health */
-    gic_dist->enable_clr[word] = BIT(bit);
-}
-
-static inline void dist_enable_set(word_t irq)
-{
-    int word = IRQ_REG(irq);
-    int bit = IRQ_BIT(irq);
-    gic_dist->enable_set[word] = BIT(bit);
-}
-
 static inline word_t get_gic_pending_interrupt(void)
 {
     return gic_cpuiface->int_ack;
@@ -161,10 +145,18 @@ static inline void maskInterrupt(bool_t disable, irq_t irq)
 #if defined ENABLE_SMP_SUPPORT
     assert(!(IRQ_IS_PPI(irq)) || (IRQT_TO_CORE(irq) == getCurrentCPUIndex()));
 #endif
+    word_t hw_irq = IRQT_TO_IRQ(irq);
+
+    int num = hw_irq % 32;
+    if (num >= 32) {
+        printf("WARNING: can't ack invalid IRQ %d\n", hw_irq);
+        return;
+    }
+    uint32_t val = BIT(hw_irq / 32);
     if (disable) {
-        dist_enable_clr(IRQT_TO_IRQ(irq));
+        gic_dist->enable_clr[num] = val;
     } else {
-        dist_enable_set(IRQT_TO_IRQ(irq));
+        gic_dist->enable_set[num] = val;
     }
 }
 
