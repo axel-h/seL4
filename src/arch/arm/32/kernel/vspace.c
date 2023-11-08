@@ -40,7 +40,7 @@
 
 /* helper stuff to avoid fencepost errors when
  * getting the last byte of a PTE or PDE */
-#define LAST_BYTE_PTE(PTE,LENGTH) ((word_t)&(PTE)[(LENGTH)-1] + (BIT(PTE_SIZE_BITS)-1))
+#define LAST_BYTE_PTE(PTE,LENGTH) ((word_t)&(PTE)[(LENGTH)-1] + (BIT(seL4_PageTableEntryBits)-1))
 #define LAST_BYTE_PDE(PDE,LENGTH) ((word_t)&(PDE)[(LENGTH)-1] + (BIT(PDE_SIZE_BITS)-1))
 
 #ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
