@@ -365,7 +365,6 @@ add_sources(
     PREFIX src/arch/x86
     CFILES
         c_traps.c
-        idle.c
         api/faults.c
         object/interrupt.c
         object/ioport.c
@@ -392,7 +391,7 @@ add_sources(
         machine/registerset.c
         benchmark/benchmark.c
         smp/ipi.c
-    ASMFILES multiboot.S
+    ASMFILES multiboot.S idle.S
 )
 
 add_bf_source_old("KernelArchX86" "structures.bf" "include/arch/x86" "arch/object")
