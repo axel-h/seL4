@@ -77,5 +77,3 @@ static inline void handleSpuriousIRQ(void)
 }
 
 void initIRQController(void);
-
-
