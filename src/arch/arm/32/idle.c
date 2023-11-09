@@ -29,7 +29,7 @@ void FORCE_O2 idle_thread(void)
 void NORETURN NO_INLINE VISIBLE halt(void)
 {
     /* halt is actually, idle thread without the interrupts */
-    asm volatile("cpsid iaf");
+    cpsid_iaf();
 
 #ifdef CONFIG_PRINTING
     printf("halting...");

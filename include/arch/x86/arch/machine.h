@@ -99,6 +99,11 @@
 word_t PURE getRestartPC(tcb_t *thread);
 void setNextPC(tcb_t *thread, word_t v);
 
+static inline void FORCE_INLINE x86_cli(void)
+{
+    asm volatile("cli" ::: "memory");
+}
+
 static uint64_t x86_rdmsr(const uint32_t reg)
 {
     uint32_t low, high;

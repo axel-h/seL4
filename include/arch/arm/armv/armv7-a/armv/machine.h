@@ -14,6 +14,11 @@ static inline void FORCE_INLINE wfi(void)
     asm volatile("wfi" ::: "memory");
 }
 
+static inline void FORCE_INLINE cpsid_iaf(void)
+{
+    asm volatile("cpsid iaf" ::: "memory");
+}
+
 static inline void FORCE_INLINE dsb(void)
 {
     asm volatile("dsb" ::: "memory");

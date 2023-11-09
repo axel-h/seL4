@@ -28,7 +28,7 @@ __attribute__((naked)) NORETURN void idle_thread(void)
 void VISIBLE halt(void)
 {
     /* halt is actually, idle thread without the interrupts */
-    asm volatile("cli");
+    x86_cli();
 
 #ifdef CONFIG_PRINTING
     printf("halting...");
