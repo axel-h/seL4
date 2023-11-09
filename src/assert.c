@@ -9,7 +9,7 @@
 
 #ifdef CONFIG_DEBUG_BUILD
 
-void _fail(
+void debug_msg_fail(
     const char  *s,
     const char  *file,
     unsigned int line,
@@ -22,10 +22,9 @@ void _fail(
         function,
         s
     );
-    halt();
 }
 
-void _assert_fail(
+void debug_msg_assert_fail(
     const char  *assertion,
     const char  *file,
     unsigned int line,
@@ -37,7 +36,6 @@ void _assert_fail(
            line,
            function
           );
-    halt();
 }
 
 #endif /* CONFIG_DEBUG_BUILD */
