@@ -18,8 +18,7 @@ static bool_t isActiveFaultHander(cap_t handlerCap)
     /* validFaultHandler() allows null-caps, but here we really need an entity
      * to be set up that is capable of handling the faults.
      */
-    return (cap_get_capType(handlerCap) != cap_null_cap) &&
-           validFaultHandler(handlerCap);
+    return !is_cap_null(handlerCap) && validFaultHandler(handlerCap);
 }
 
 #ifdef CONFIG_KERNEL_MCS

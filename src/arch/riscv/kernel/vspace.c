@@ -587,7 +587,7 @@ void setVMRoot(tcb_t *tcb)
 
     threadRoot = TCB_PTR_CTE_PTR(tcb, tcbVTable)->cap;
 
-    if (cap_get_capType(threadRoot) != cap_page_table_cap) {
+    if (!is_cap_page_table(threadRoot)) {
         setVSpaceRoot(kpptr_to_paddr(&kernel_root_pageTable), 0);
         return;
     }
@@ -606,13 +606,13 @@ void setVMRoot(tcb_t *tcb)
 
 bool_t CONST isValidVTableRoot(cap_t cap)
 {
-    return (cap_get_capType(cap) == cap_page_table_cap &&
+    return (is_cap_page_table(cap) &&
             cap_page_table_cap_get_capPTIsMapped(cap));
 }
 
 exception_t checkValidIPCBuffer(vptr_t vptr, cap_t cap)
 {
-    if (unlikely(cap_get_capType(cap) != cap_frame_cap)) {
+    if (unlikely(!is_cap_frame(cap))) {
         userError("Requested IPC Buffer is not a frame cap.");
         current_syscall_error.type = seL4_IllegalOperation;
         return EXCEPTION_SYSCALL_ERROR;

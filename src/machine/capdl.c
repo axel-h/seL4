@@ -96,7 +96,7 @@ void obj_tcb_print_attrs(tcb_t *tcb)
 
 #ifdef CONFIG_KERNEL_MCS
     cap_t ep_cap = TCB_PTR_CTE_PTR(tcb, tcbFaultHandler)->cap;
-    if (cap_get_capType(ep_cap) != cap_null_cap) {
+    if (!is_cap_null(ep_cap)) {
         printf(", fault_ep: %p", EP_PTR(cap_endpoint_cap_get_capEPPtr(ep_cap)));
     }
 #endif
@@ -230,21 +230,21 @@ void obj_tcb_print_slots(tcb_t *tcb)
     printf("%p_tcb {\n", tcb);
 
     /* CSpace root */
-    if (cap_get_capType(TCB_PTR_CTE_PTR(tcb, tcbCTable)->cap) != cap_null_cap) {
+    if (!is_cap_null(TCB_PTR_CTE_PTR(tcb, tcbCTable)->cap)) {
         printf("cspace: %p_cnode ",
                (void *)cap_cnode_cap_get_capCNodePtr(TCB_PTR_CTE_PTR(tcb, tcbCTable)->cap));
         cap_cnode_print_attrs(TCB_PTR_CTE_PTR(tcb, tcbCTable)->cap);
     }
 
     /* VSpace root */
-    if (cap_get_capType(TCB_PTR_CTE_PTR(tcb, tcbVTable)->cap) != cap_null_cap) {
+    if (!is_cap_null(TCB_PTR_CTE_PTR(tcb, tcbVTable)->cap)) {
         printf("vspace: %p_pd\n",
                cap_vtable_cap_get_vspace_root_fp(TCB_PTR_CTE_PTR(tcb, tcbVTable)->cap));
 
     }
 
     /* IPC buffer cap slot */
-    if (cap_get_capType(TCB_PTR_CTE_PTR(tcb, tcbBuffer)->cap) != cap_null_cap) {
+    if (!is_cap_null(TCB_PTR_CTE_PTR(tcb, tcbBuffer)->cap)) {
         /* TBD: print out the bound vcpu */
         print_ipc_buffer_slot(tcb);
     }
@@ -252,7 +252,7 @@ void obj_tcb_print_slots(tcb_t *tcb)
 #ifdef CONFIG_KERNEL_MCS
 
     /* Fault endpoint slot */
-    if (cap_get_capType(TCB_PTR_CTE_PTR(tcb, tcbFaultHandler)->cap) != cap_null_cap) {
+    if (!is_cap_null(TCB_PTR_CTE_PTR(tcb, tcbFaultHandler)->cap)) {
         printf("fault_ep_slot: %p_ep ",
                (void *)cap_endpoint_cap_get_capEPPtr(TCB_PTR_CTE_PTR(tcb, tcbFaultHandler)->cap));
         cap_ep_print_attrs(TCB_PTR_CTE_PTR(tcb, tcbFaultHandler)->cap);
@@ -264,7 +264,7 @@ void obj_tcb_print_slots(tcb_t *tcb)
     }
 
     /* Timeout endpoint slot */
-    if (cap_get_capType(TCB_PTR_CTE_PTR(tcb, tcbTimeoutHandler)->cap) != cap_null_cap) {
+    if (!is_cap_null(TCB_PTR_CTE_PTR(tcb, tcbTimeoutHandler)->cap)) {
         printf("temp_fault_ep_slot: %p_ep ",
                (void *)cap_endpoint_cap_get_capEPPtr(TCB_PTR_CTE_PTR(tcb, tcbTimeoutHandler)->cap));
         cap_ep_print_attrs(TCB_PTR_CTE_PTR(tcb, tcbTimeoutHandler)->cap);
@@ -272,13 +272,13 @@ void obj_tcb_print_slots(tcb_t *tcb)
 
 # else
     /* Reply cap slot */
-    if (cap_get_capType(TCB_PTR_CTE_PTR(tcb, tcbReply)->cap) != cap_null_cap) {
+    if (!is_cap_null(TCB_PTR_CTE_PTR(tcb, tcbReply)->cap)) {
         printf("reply_slot: %p_reply\n",
                (void *)cap_reply_cap_get_capTCBPtr(TCB_PTR_CTE_PTR(tcb, tcbReply)->cap));
     }
 
     /* TCB of most recent IPC sender */
-    if (cap_get_capType(TCB_PTR_CTE_PTR(tcb, tcbCaller)->cap) != cap_null_cap) {
+    if (!is_cap_null(TCB_PTR_CTE_PTR(tcb, tcbCaller)->cap)) {
         tcb_t *caller = TCB_PTR(cap_thread_cap_get_capTCBPtr(TCB_PTR_CTE_PTR(tcb, tcbCaller)->cap));
         printf("caller_slot: %p_tcb\n", caller);
     }
@@ -304,7 +304,7 @@ void obj_cnode_print_slots(tcb_t *tcb)
 
     for (uint32_t i = 0; i < (1 << radix); i++) {
         lookupCapAndSlot_ret_t c = lookupCapAndSlot(tcb, i);
-        if (cap_get_capType(c.cap) != cap_null_cap) {
+        if (!is_cap_null(c.cap)) {
             printf("0x%x: ", i);
             print_cap(c.cap);
         }
@@ -329,7 +329,7 @@ void obj_irq_print_maps(void)
             irq_t irq = CORE_IRQ_TO_IRQT(target, i);
             if (isIRQActive(irq)) {
                 cap_t cap = intStateIRQNode[IRQT_TO_IDX(irq)].cap;
-                if (cap_get_capType(cap) != cap_null_cap) {
+                if (!is_cap_null(cap)) {
                     printf("%d: 0x%lx_%lu_irq\n",
                            i,
 #if defined(ENABLE_SMP_SUPPORT) && defined(CONFIG_ARCH_ARM)
@@ -357,7 +357,7 @@ void obj_irq_print_slots(cap_t irq_cap)
 #endif
                (long unsigned int)IRQT_TO_CORE(irq));
         cap_t ntfn_cap = intStateIRQNode[IRQT_TO_IDX(irq)].cap;
-        if (cap_get_capType(ntfn_cap) != cap_null_cap) {
+        if (!is_cap_null(ntfn_cap)) {
             printf("0x0: ");
             print_cap(ntfn_cap);
         }
