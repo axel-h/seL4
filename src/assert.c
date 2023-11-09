@@ -40,4 +40,4 @@ void _assert_fail(
     halt();
 }
 
-#endif
+#endif /* CONFIG_DEBUG_BUILD */
