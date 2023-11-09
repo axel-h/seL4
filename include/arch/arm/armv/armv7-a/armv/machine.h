@@ -14,22 +14,22 @@ static inline void FORCE_INLINE wfi(void)
     asm volatile("wfi" ::: "memory");
 }
 
-static inline void dsb(void)
+static inline void FORCE_INLINE dsb(void)
 {
     asm volatile("dsb" ::: "memory");
 }
 
-static inline void dsb_ishst(void)
+static inline void FORCE_INLINE dsb_ishst(void)
 {
     asm volatile("dsb ishst" ::: "memory");
 }
 
-static inline void dmb(void)
+static inline void FORCE_INLINE dmb(void)
 {
     asm volatile("dmb" ::: "memory");
 }
 
-static inline void isb(void)
+static inline void FORCE_INLINE isb(void)
 {
     asm volatile("isb" ::: "memory");
 }
