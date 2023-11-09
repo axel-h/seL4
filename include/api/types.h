@@ -104,8 +104,8 @@ static inline word_t CONST wordFromMessageInfo(seL4_MessageInfo_t mi)
 #ifdef CONFIG_COLOUR_PRINTING
 #define ANSI_ESC_SEQUENCE(seq) "\033[" seq "m"
 #define ANSI_RESET ANSI_ESC_SEQUENCE("0")
-#define ANSI_GREEN ANSI_RESET ANSI_ESC_SEQUENCE("32")
-#define ANSI_BOLD  ANSI_RESET ANSI_ESC_SEQUENCE("1")
+#define ANSI_GREEN ANSI_ESC_SEQUENCE("0;32")
+#define ANSI_BOLD  ANSI_ESC_SEQUENCE("0;1")
 #else
 #define ANSI_RESET ""
 #define ANSI_GREEN ""
