@@ -104,6 +104,11 @@ static inline void FORCE_INLINE x86_cli(void)
     asm volatile("cli" ::: "memory");
 }
 
+static inline void FORCE_INLINE x86_hlt(void)
+{
+    asm volatile("hlt" ::: "memory");
+}
+
 static uint64_t x86_rdmsr(const uint32_t reg)
 {
     uint32_t low, high;

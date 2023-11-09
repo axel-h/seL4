@@ -5,7 +5,7 @@
  */
 
 #include <config.h>
-#include <api/debug.h>
+#include <util.h>
 
 /*
  * The idle thread does not have a dedicated stack and runs in
@@ -22,20 +22,4 @@ __attribute__((naked)) NORETURN void idle_thread(void)
         "1: hlt\n"
         "jmp 1b"
     );
-}
-
-/** DONT_TRANSLATE */
-void VISIBLE halt(void)
-{
-    /* halt is actually, idle thread without the interrupts */
-    x86_cli();
-
-#ifdef CONFIG_PRINTING
-    printf("halting...");
-#ifdef CONFIG_DEBUG_BUILD
-    debug_printKernelEntryReason();
-#endif
-#endif
-    idle_thread();
-    UNREACHABLE();
 }

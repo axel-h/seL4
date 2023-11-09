@@ -6,31 +6,10 @@
  */
 
 #include <config.h>
-#include <arch/sbi.h>
 
 void idle_thread(void)
 {
     while (1) {
         asm volatile("wfi");
     }
-}
-
-/** DONT_TRANSLATE */
-void VISIBLE NO_INLINE halt(void)
-{
-    /*
-     * ToDo: Halting is usually running the idle thread with all interrupts
-     *       disabled. Even is we use SBI to halt the platform here, we should
-     *       still disbale all interrupt to play safe.
-     */
-#ifdef CONFIG_PRINTING
-    printf("halting...");
-#ifdef CONFIG_DEBUG_BUILD
-    debug_printKernelEntryReason();
-#endif /* CONFIG_DEBUG_BUILD */
-#endif /* CONFIG_PRINTING */
-
-    sbi_shutdown();
-
-    UNREACHABLE();
 }
