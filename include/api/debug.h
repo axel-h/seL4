@@ -133,4 +133,3 @@ static inline void debug_dumpScheduler(void)
 }
 #endif /* CONFIG_PRINTING */
 #endif /* CONFIG_DEBUG_BUILD */
-
