@@ -34,13 +34,13 @@ void _assert_fail(
         } \
     } while(0)
 
-#else /* !DEBUG */
+#else /* not CONFIG_DEBUG_BUILD */
 
 #define fail(s) halt()
 
 #define assert(expr)
 
-#endif /* DEBUG */
+#endif /* [not] CONFIG_DEBUG_BUILD */
 
 /* Create an assert that triggers a compile error if the condition fails. We do
  * not include sel4/macros.h that provides SEL4_COMPILE_ASSERT() for two
