@@ -18,6 +18,11 @@ void idle_thread(void)
 /** DONT_TRANSLATE */
 void VISIBLE NO_INLINE halt(void)
 {
+    /*
+     * ToDo: Halting is usually running the idle thread with all interrupts
+     *       disabled. Even is we use SBI to halt the platform here, we should
+     *       still disbale all interrupt to play safe.
+     */
 #ifdef CONFIG_PRINTING
     printf("halting...");
 #ifdef CONFIG_DEBUG_BUILD
