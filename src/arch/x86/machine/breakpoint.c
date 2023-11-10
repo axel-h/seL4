@@ -611,13 +611,13 @@ exception_t handleUserLevelDebugException(int int_vector)
                                                           active_bp.reason);
         } else {
             single_step_info = testAndResetSingleStepException(ct);
-            if (single_step_info.ret == true) {
+            if (single_step_info.ret) {
                 /* If the caller asked us to skip over N instructions before
                  * generating the next single-step breakpoint, we shouldn't
                  * bother to construct a fault message until we've skipped N
                  * instructions.
                  */
-                if (singleStepFaultCounterReady(ct) == false) {
+                if (!singleStepFaultCounterReady(ct)) {
                     return EXCEPTION_NONE;
                 }
                 current_fault = seL4_Fault_DebugException_new(single_step_info.instr_vaddr,
