@@ -142,12 +142,15 @@ bool_t tryRaisingTimeoutFault(tcb_t *tptr, word_t scBadge)
 }
 #endif /* CONFIG_KERNEL_MCS */
 
-void handleFault(tcb_t *tptr)
+void handleFault(tcb_t *tptr, seL4_Fault_t fault, lookup_fault_t lookup_fault)
 {
-    seL4_Fault_t fault = current_fault;
+    /* ToDo: drop globals completely */
+    current_fault = fault;
+    current_lookup_fault = lookup_fault;
+
     tptr->tcbFault = fault;
     if (seL4_Fault_get_seL4_FaultType(fault) == seL4_Fault_CapFault) {
-        tptr->tcbLookupFailure = current_lookup_fault;
+        tptr->tcbLookupFailure = lookup_fault;
     }
 
     /* get fault hanlder */

@@ -127,13 +127,14 @@ void VPPIEvent(irq_t irq)
         maskInterrupt(true, irq);
         assert(irqVPPIEventIndex(irq) != VPPIEventIRQ_invalid);
         ARCH_NODE_STATE(armHSCurVCPU)->vppi_masked[irqVPPIEventIndex(irq)] = true;
-        current_fault = seL4_Fault_VPPIEvent_new(IRQT_TO_IRQ(irq));
         /* Current VCPU being active should indicate that the current thread
          * is runnable. At present, verification cannot establish this so we
          * perform an extra check. */
         assert(isRunnable(NODE_STATE(ksCurThread)));
         if (isRunnable(NODE_STATE(ksCurThread))) {
-            handleFault(NODE_STATE(ksCurThread));
+            handleFault(NODE_STATE(ksCurThread),
+                        seL4_Fault_VPPIEvent_new(IRQT_TO_IRQ(irq)),
+                        NO_LOOKUP_FAULT);
         }
     }
 }
@@ -142,6 +143,7 @@ void VGICMaintenance(void)
 {
     uint32_t eisr0, eisr1;
     uint32_t flags;
+    seL4_Fault_t fault;
 
 #ifdef CONFIG_KERNEL_MCS
     /* See VPPIEvent for details on this check. */
@@ -178,7 +180,7 @@ void VGICMaintenance(void)
         /* the hardware should never give us an invalid index, but we don't
          * want to trust it that far */
         if (irq_idx == -1  || irq_idx >= gic_vcpu_num_list_regs) {
-            current_fault = seL4_Fault_VGICMaintenance_new(0, 0);
+            fault = seL4_Fault_VGICMaintenance_new(0, 0);
         } else {
             virq_t virq = get_gic_vcpu_ctrl_lr(irq_idx);
             switch (virq_get_virqType(virq)) {
@@ -201,12 +203,12 @@ void VGICMaintenance(void)
             } else {
                 /* FIXME This should not happen */
             }
-            current_fault = seL4_Fault_VGICMaintenance_new(irq_idx, 1);
+            fault = seL4_Fault_VGICMaintenance_new(irq_idx, 1);
         }
 
     } else {
         /* Assume that it was an EOI for a LR that was not present */
-        current_fault = seL4_Fault_VGICMaintenance_new(0, 0);
+        fault = seL4_Fault_VGICMaintenance_new(0, 0);
     }
 
     /* Current VCPU being active should indicate that the current thread
@@ -214,7 +216,7 @@ void VGICMaintenance(void)
      * perform an extra check. */
     assert(isRunnable(NODE_STATE(ksCurThread)));
     if (isRunnable(NODE_STATE(ksCurThread))) {
-        handleFault(NODE_STATE(ksCurThread));
+        handleFault(NODE_STATE(ksCurThread), fault, NO_LOOKUP_FAULT);
     }
 }
 
@@ -570,8 +572,9 @@ void handleVCPUFault(word_t hsr)
         {
             return;
         }
-        current_fault = seL4_Fault_VCPUFault_new(hsr);
-        handleFault(NODE_STATE(ksCurThread));
+        handleFault(NODE_STATE(ksCurThread),
+                    seL4_Fault_VCPUFault_new(hsr),
+                    NO_LOOKUP_FAULT);
     })
     schedule();
     activateThread();

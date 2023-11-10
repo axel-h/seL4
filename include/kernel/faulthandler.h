@@ -10,6 +10,9 @@
 #include <types.h>
 #include <object.h>
 
+/* ToDo: seems there is no dedicated value */
+#define NO_LOOKUP_FAULT lookup_fault_missing_capability_new(0)
+
 static bool_t isValidFaultHandlerEp(cap_t cap)
 {
     return ((cap_get_capType(cap) == cap_endpoint_cap) &&
