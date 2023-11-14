@@ -69,8 +69,33 @@
 
 #ifndef __ASSEMBLER__
 
+/* C23 featurss
+ * https://en.wikipedia.org/wiki/C23_(C_standard_revision)#cite_note-N3132-3
+ *
+ * [[deprecated]]
+ * [[fallthrough]]
+ * [[maybe_unused]]
+ * [[nodiscard]]
+ * [[noreturn]]
+ *
+ */
+#define __USE_C23__
+
+#ifdef __USE_C23__
+#else /* not __USE_C23__ */
+#define constexpr   const
+#endif /* [not] __USE_C23__ */
+
 #define PACKED       __attribute__((packed))
+
+#ifdef __USE_C23__
+#define NORETURN    [[noreturn]]
+#define UNUSED      [[maybe_unused]]
+#else /* not __USE_C23__ */
 #define NORETURN     __attribute__((__noreturn__))
+#define UNUSED       __attribute__((unused))
+#endif /* [not] __USE_C23__ */
+
 #define CONST        __attribute__((__const__))
 #define PURE         __attribute__((__pure__))
 #define ALIGN(n)     __attribute__((__aligned__(n)))
@@ -83,7 +108,6 @@
 #define NO_INLINE    __attribute__((noinline))
 #define FORCE_INLINE __attribute__((always_inline))
 #define SECTION(sec) __attribute__((__section__(sec)))
-#define UNUSED       __attribute__((unused))
 #define USED         __attribute__((used))
 #ifdef __clang__
 #define FORCE_O2     /* nothing */
