@@ -55,12 +55,12 @@
 
 #endif /* [not] __ASSEMBLER__ */
 
+/* These macros work for both the assembler and the compiler. */
 #define BIT(n) (UL_CONST(1) << (n))
 #define MASK(n) (BIT(n) - UL_CONST(1))
 #define IS_ALIGNED(n, b) (!((n) & MASK(b)))
 #define ROUND_DOWN(n, b) (((n) >> (b)) << (b))
 #define ROUND_UP(n, b) (((((n) - UL_CONST(1)) >> (b)) + UL_CONST(1)) << (b))
-#define ARRAY_SIZE(x) (sizeof(x) / sizeof((x)[0]))
 #define MIN(a,b) (((a)<(b))?(a):(b))
 #define MAX(a,b) (((a)>(b))?(a):(b))
 
@@ -114,6 +114,7 @@ void __builtin_unreachable(void);
 #define UNREACHABLE()  __builtin_unreachable()
 #define MAY_ALIAS    __attribute__((may_alias))
 
+#define ARRAY_SIZE(x) (sizeof(x) / sizeof((x)[0]))
 #define OFFSETOF(type, member)   __builtin_offsetof(type, member)
 
 #ifdef __GNUC__
