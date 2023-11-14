@@ -357,12 +357,12 @@ static BOOT_CODE void map_it_pt_cap(cap_t vspace_cap, cap_t pt_cap)
                                                           );
 }
 
-static BOOT_CODE cap_t create_it_pt_cap(cap_t vspace_cap, pptr_t pptr, vptr_t vptr, asid_t asid)
+static BOOT_CODE cap_t create_it_pt_cap(cap_t vspace_cap, vptr_t vptr)
 {
     cap_t cap;
     cap = cap_page_table_cap_new(
-              asid,                   /* capPTMappedASID */
-              pptr,                   /* capPTBasePtr */
+              IT_ASID,                /* capPTMappedASID */
+              it_alloc_paging(),      /* capPTBasePtr */
               1,                      /* capPTIsMapped */
               vptr                    /* capPTMappedAddress */
           );
@@ -391,12 +391,12 @@ static BOOT_CODE void map_it_pd_cap(cap_t vspace_cap, cap_t pd_cap)
                                                            );
 }
 
-static BOOT_CODE cap_t create_it_pd_cap(cap_t vspace_cap, pptr_t pptr, vptr_t vptr, asid_t asid)
+static BOOT_CODE cap_t create_it_pd_cap(cap_t vspace_cap, vptr_t vptr)
 {
     cap_t cap;
     cap = cap_page_table_cap_new(
-              asid,                   /* capPTMappedASID */
-              pptr,                   /* capPTBasePtr */
+              IT_ASID,                /* capPTMappedASID */
+              it_alloc_paging(),      /* capPTBasePtr */
               1,                      /* capPTIsMapped */
               vptr                    /* capPTMappedAddress */
           );
@@ -417,12 +417,12 @@ static BOOT_CODE void map_it_pud_cap(cap_t vspace_cap, cap_t pud_cap)
                                                                pptr_to_paddr(pud));
 }
 
-static BOOT_CODE cap_t create_it_pud_cap(cap_t vspace_cap, pptr_t pptr, vptr_t vptr, asid_t asid)
+static BOOT_CODE cap_t create_it_pud_cap(cap_t vspace_cap, vptr_t vptr)
 {
     cap_t cap;
     cap = cap_page_table_cap_new(
-              asid,               /* capPTMappedASID */
-              pptr,               /* capPTBasePtr */
+              IT_ASID,            /* capPTMappedASID */
+              it_alloc_paging(),  /* capPTBasePtr */
               1,                  /* capPTIsMapped */
               vptr                /* capPTMappedAddress */
           );
@@ -463,7 +463,7 @@ BOOT_CODE cap_t create_it_address_space(cap_t root_cnode_cap, seL4_BootInfo *bi,
          vptr < it_v_reg.end;
          vptr += GET_ULVL_PGSIZE(ULVL_FRM_ARM_PT_LVL(0))) {
         if (!provide_cap(root_cnode_cap,
-                         create_it_pud_cap(vspace_cap, it_alloc_paging(), vptr, IT_ASID),
+                         create_it_pud_cap(vspace_cap, vptr),
                          &bi->userImagePaging)) {
             return cap_null_cap_new();
         }
@@ -474,7 +474,7 @@ BOOT_CODE cap_t create_it_address_space(cap_t root_cnode_cap, seL4_BootInfo *bi,
          vptr < it_v_reg.end;
          vptr += GET_ULVL_PGSIZE(ULVL_FRM_ARM_PT_LVL(1))) {
         if (!provide_cap(root_cnode_cap,
-                         create_it_pd_cap(vspace_cap, it_alloc_paging(), vptr, IT_ASID),
+                         create_it_pd_cap(vspace_cap, vptr),
                          &bi->userImagePaging)) {
             return cap_null_cap_new();
         }
@@ -485,7 +485,7 @@ BOOT_CODE cap_t create_it_address_space(cap_t root_cnode_cap, seL4_BootInfo *bi,
          vptr < it_v_reg.end;
          vptr += GET_ULVL_PGSIZE(ULVL_FRM_ARM_PT_LVL(2))) {
         if (!provide_cap(root_cnode_cap,
-                         create_it_pt_cap(vspace_cap, it_alloc_paging(), vptr, IT_ASID),
+                        create_it_pt_cap(vspace_cap, vptr),
                          &bi->userImagePaging)) {
             return cap_null_cap_new();
         }
