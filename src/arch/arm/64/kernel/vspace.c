@@ -315,12 +315,7 @@ static BOOT_CODE void map_it_frame_cap(cap_t vspace_cap, cap_t frame_cap, bool_t
 
 static BOOT_CODE cap_t create_it_frame_cap(pptr_t pptr, vptr_t vptr, asid_t asid, bool_t use_large)
 {
-    vm_page_size_t frame_size;
-    if (use_large) {
-        frame_size = ARMLargePage;
-    } else {
-        frame_size = ARMSmallPage;
-    }
+    vm_page_size_t frame_size = use_large ? ARMLargePage : ARMSmallPage;
     return
         cap_frame_cap_new(
             asid,                          /* capFMappedASID */
