@@ -462,9 +462,8 @@ BOOT_CODE cap_t create_it_address_space(cap_t root_cnode_cap, seL4_BootInfo *bi,
     for (vptr = ROUND_DOWN(it_v_reg.start, GET_ULVL_PGSIZE_BITS(ULVL_FRM_ARM_PT_LVL(0)));
          vptr < it_v_reg.end;
          vptr += GET_ULVL_PGSIZE(ULVL_FRM_ARM_PT_LVL(0))) {
-        if (!provide_cap(root_cnode_cap,
-                         create_it_pud_cap(vspace_cap, vptr),
-                         &bi->userImagePaging)) {
+        cap_t cap_pud = create_it_pud_cap(vspace_cap, vptr);
+        if (!provide_cap(root_cnode_cap, cap_pud, &bi->userImagePaging)) {
             return cap_null_cap_new();
         }
     }
@@ -473,9 +472,8 @@ BOOT_CODE cap_t create_it_address_space(cap_t root_cnode_cap, seL4_BootInfo *bi,
     for (vptr = ROUND_DOWN(it_v_reg.start, GET_ULVL_PGSIZE_BITS(ULVL_FRM_ARM_PT_LVL(1)));
          vptr < it_v_reg.end;
          vptr += GET_ULVL_PGSIZE(ULVL_FRM_ARM_PT_LVL(1))) {
-        if (!provide_cap(root_cnode_cap,
-                         create_it_pd_cap(vspace_cap, vptr),
-                         &bi->userImagePaging)) {
+        cap_t cap_pd = create_it_pd_cap(vspace_cap, vptr);
+        if (!provide_cap(root_cnode_cap, cap_pd, &bi->userImagePaging)) {
             return cap_null_cap_new();
         }
     }
@@ -484,9 +482,8 @@ BOOT_CODE cap_t create_it_address_space(cap_t root_cnode_cap, seL4_BootInfo *bi,
     for (vptr = ROUND_DOWN(it_v_reg.start, GET_ULVL_PGSIZE_BITS(ULVL_FRM_ARM_PT_LVL(2)));
          vptr < it_v_reg.end;
          vptr += GET_ULVL_PGSIZE(ULVL_FRM_ARM_PT_LVL(2))) {
-        if (!provide_cap(root_cnode_cap,
-                        create_it_pt_cap(vspace_cap, vptr),
-                         &bi->userImagePaging)) {
+        cap_t cap_pt = create_it_pt_cap(vspace_cap, vptr);
+        if (!provide_cap(root_cnode_cap, cap_pt, &bi->userImagePaging)) {
             return cap_null_cap_new();
         }
     }
