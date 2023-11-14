@@ -45,6 +45,7 @@ bool_t init_freemem(word_t n_available, const p_region_t *available,
 bool_t reserve_region(p_region_t reg);
 void write_slot(slot_ptr_t slot_ptr, cap_t cap);
 cap_t create_root_cnode(void);
+pptr_t it_alloc_paging(void);
 bool_t provide_cap(cap_t root_cnode_cap, cap_t cap,
                    seL4_SlotRegion *bi_slot_region);
 cap_t create_it_asid_pool(cap_t root_cnode_cap);
@@ -125,15 +126,6 @@ static inline BOOT_CODE word_t get_n_paging(v_region_t v_reg, word_t bits)
     vptr_t start = ROUND_DOWN(v_reg.start, bits);
     vptr_t end = ROUND_UP(v_reg.end, bits);
     return (end - start) / BIT(bits);
-}
-
-/* allocate a page table sized structure from rootserver.paging */
-static inline BOOT_CODE pptr_t it_alloc_paging(void)
-{
-    pptr_t allocated = rootserver.paging.start;
-    rootserver.paging.start += BIT(seL4_PageTableBits);
-    assert(rootserver.paging.start <= rootserver.paging.end);
-    return allocated;
 }
 
 /* return the amount of paging structures required to cover v_reg */

@@ -257,6 +257,19 @@ BOOT_CODE static void create_rootserver_objects(pptr_t start, v_region_t it_v_re
     assert(rootserver_mem.start == rootserver_mem.end);
 }
 
+/* allocate a page table sized structure from rootserver.paging */
+BOOT_CODE pptr_t it_alloc_paging(void)
+{
+    word_t len = BIT(seL4_PageTableBits);
+    assert(rootserver.paging.start <= rootserver.paging.end);
+    assert(rootserver.paging.end- rootserver.paging.start >= len);
+
+    pptr_t allocated = rootserver.paging.start;
+    rootserver.paging.start += len
+
+    return allocated;
+}
+
 BOOT_CODE void write_slot(slot_ptr_t slot_ptr, cap_t cap)
 {
     slot_ptr->cap = cap;
