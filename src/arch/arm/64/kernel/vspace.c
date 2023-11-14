@@ -327,41 +327,41 @@ static BOOT_CODE cap_t create_it_frame_cap(pptr_t pptr, vptr_t vptr, asid_t asid
         );
 }
 
-static BOOT_CODE void map_it_pt_cap(cap_t vspace_cap, cap_t pt_cap)
-{
-    vspace_root_t *vspaceRoot = VSPACE_PTR(pptr_of_cap(vspace_cap));
-    pte_t *pud;
-    pte_t *pd;
-    pte_t *pt = PT_PTR(cap_page_table_cap_get_capPTBasePtr(pt_cap));
-    vptr_t vptr = cap_page_table_cap_get_capPTMappedAddress(pt_cap);
-
-    assert(cap_page_table_cap_get_capPTIsMapped(pt_cap));
-
-#ifdef AARCH64_VSPACE_S2_START_L1
-    pud = vspaceRoot;
-#else
-    vspaceRoot += GET_UPT_INDEX(vptr, ULVL_FRM_ARM_PT_LVL(0));
-    assert(pte_pte_table_ptr_get_present(vspaceRoot));
-    pud = paddr_to_pptr(pte_pte_table_ptr_get_pt_base_address(vspaceRoot));
-#endif
-    pud += GET_UPT_INDEX(vptr, ULVL_FRM_ARM_PT_LVL(1));
-    assert(pte_pte_table_ptr_get_present(pud));
-    pd = paddr_to_pptr(pte_pte_table_ptr_get_pt_base_address(pud));
-    *(pd + GET_UPT_INDEX(vptr, ULVL_FRM_ARM_PT_LVL(2))) = pte_pte_table_new(
-                                                              pptr_to_paddr(pt)
-                                                          );
-}
 
 static BOOT_CODE cap_t create_it_pt_cap(cap_t vspace_cap, vptr_t vptr)
 {
-    cap_t cap;
-    cap = cap_page_table_cap_new(
-              IT_ASID,                /* capPTMappedASID */
-              it_alloc_paging(),      /* capPTBasePtr */
-              1,                      /* capPTIsMapped */
-              vptr                    /* capPTMappedAddress */
-          );
-    map_it_pt_cap(vspace_cap, cap);
+    cap_t cap = cap_page_table_cap_new(
+                    IT_ASID,                /* capPTMappedASID */
+                    it_alloc_paging(),      /* capPTBasePtr */
+                    1,                      /* capPTIsMapped */
+                    vptr                    /* capPTMappedAddress */
+                );
+
+    assert(cap_page_table_cap_get_capPTIsMapped(cap));
+
+    /* find PTE slot */
+    vspace_root_t *vspaceRoot = VSPACE_PTR(pptr_of_cap(vspace_cap));
+#ifdef AARCH64_VSPACE_S2_START_L1
+    pte_t *pt_l1 = vspaceRoot;
+#else
+    int idx_l0 = GET_UPT_INDEX(vptr, ULVL_FRM_ARM_PT_LVL(0));
+    pte_t *pte_l0_ptr = &vspaceRoot[idx_l0];
+    assert(pte_pte_table_ptr_get_present(pte_l0_ptr);
+    pte_t *pt_l1 = paddr_to_pptr(pte_pte_table_ptr_get_pt_base_address(pte_l0_ptr));
+#endif
+
+    int idx_l1 = GET_UPT_INDEX(vptr, ULVL_FRM_ARM_PT_LVL(1));
+    pte_t *pte_l1_ptr = &pt_l1[idx_l1];
+    assert(pte_pte_table_ptr_get_present(pte_l1_ptr));
+    pte_t *pt_l2 = paddr_to_pptr(pte_pte_table_ptr_get_pt_base_address(pte_l1_ptr));
+
+    int idx_l2 = GET_UPT_INDEX(vptr, ULVL_FRM_ARM_PT_LVL(2));
+    pte_t *pte_l2_ptr = &pt_l2[idx_l2]
+
+    /* create page table entry from cap */
+    pte_t *pt = PT_PTR(cap_page_table_cap_get_capPTBasePtr(cap));
+    *pte_l2_ptr = pte_pte_table_new(pptr_to_paddr(pt));
+
     return cap;
 }
 
