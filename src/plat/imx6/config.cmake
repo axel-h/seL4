@@ -72,7 +72,6 @@ if(KernelPlatImx6)
         TIMER ${timer_file}
         CLK_SHIFT 41llu
         CLK_MAGIC 4415709349llu
-        KERNEL_WCET 10llu
         TIMER_PRECISION 2u
     )
 endif()

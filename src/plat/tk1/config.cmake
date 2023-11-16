@@ -26,7 +26,7 @@ if(KernelPlatformTK1)
         SMMU plat/machine/smmu.h
         CLK_MAGIC 2863311531llu
         CLK_SHIFT 35u
-        KERNEL_WCET 100u
+        KERNEL_WCET 100
     )
 endif()
 
