@@ -37,8 +37,7 @@ static inline void ackDeadlineIRQ(void)
      * unclear why we don't disable it, maybe that is too much overhead given a
      * new timer value is set by the scheduler on kernel exit. The only
      */
-    ticks_t deadline = UINT64_MAX;
-    setDeadline(deadline);
+    setDeadline(UINT64_MAX);
     /* Ensure that the timer deasserts the IRQ before GIC EOIR/DIR.
      * This is sufficient to remove the pending state from the GICR
      * and avoid the interrupt happening twice because of the level
