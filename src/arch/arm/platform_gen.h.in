@@ -14,6 +14,10 @@
 #define TIMER_PRECISION @CONFIGURE_TIMER_PRECISION@
 #define TIMER_OVERHEAD_TICKS @CONFIGURE_TIMER_OVERHEAD_TICKS@
 
+#ifdef CONFIG_KERNEL_MCS
+#cmakedefine CONFIGURE_KERNEL_WCET @CONFIGURE_KERNEL_WCET@
+#endif
+
 enum IRQConstants {
     maxIRQ                      = @CONFIGURE_MAX_IRQ@
 } platform_interrupt_t;
@@ -31,10 +35,3 @@ enum IRQConstants {
 #define SMMU_MAX_CB  @CONFIGURE_MAX_CB@
 #endif /* CONFIG_ARM_SMMU */
 #endif /* CONFIGURE_SMMU  && (CONFIG_TK1_SMMU || CONFIG_ARM_SMMU) */
-
-#ifdef CONFIG_KERNEL_MCS
-static inline CONST time_t getKernelWcetUs(void)
-{
-    return @CONFIGURE_KERNEL_WCET@;
-}
-#endif
