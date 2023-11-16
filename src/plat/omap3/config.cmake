@@ -24,7 +24,6 @@ if(KernelPlatformOMAP3)
         TIMER drivers/timer/omap3430.h
         CLK_MAGIC 1321528399llu
         CLK_SHIFT 34u
-        KERNEL_WCET 10u
     )
 endif()
 

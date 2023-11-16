@@ -63,7 +63,6 @@ if(KernelPlatformZynqmp)
         INTERRUPT_CONTROLLER arch/machine/gic_v2.h
         CLK_MAGIC 1374389535llu
         CLK_SHIFT 37u
-        KERNEL_WCET 10u
     )
 endif()
 
