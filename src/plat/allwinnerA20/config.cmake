@@ -24,7 +24,6 @@ if(KernelPlatformAllwinnerA20)
     declare_default_headers(
         TIMER_FREQUENCY 24000000
         MAX_IRQ 122
-        NUM_PPI 32
         TIMER drivers/timer/arm_generic.h
         INTERRUPT_CONTROLLER arch/machine/gic_v2.h
     )
