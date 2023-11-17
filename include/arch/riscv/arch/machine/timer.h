@@ -13,10 +13,6 @@
 #include <arch/sbi.h>
 #include <arch/machine/hardware.h>
 
-#ifndef CONFIGURE_TIMER_PRECISION
-#define CONFIGURE_TIMER_PRECISION   1
-#endif
-
 /* The scheduler clock is greater than 1MHz */
 #define TICKS_IN_US (TIMER_CLOCK_HZ / (US_IN_MS * MS_IN_S))
 
