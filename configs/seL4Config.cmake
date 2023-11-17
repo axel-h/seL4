@@ -129,6 +129,17 @@ macro(declare_default_headers)
         ""
         ${ARGN}
     )
+
+    if(KernelArchARM)
+        if(NOT DEFINED CONFIGURE_NUM_PPI)
+            set(CONFIGURE_NUM_PPI "32")
+        endif()
+    else()
+        if(DEFINED CONFIGURE_NUM_PPI)
+            message(FATAL_ERROR "NUM_PPI is currently for ARM only")
+        endif()
+    endif()
+
     set(CALLED_declare_default_headers 1)
 endmacro()
 
