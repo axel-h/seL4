@@ -299,24 +299,6 @@ void doNBRecvFailedTransfer(tcb_t *thread)
     setRegister(thread, badgeRegister, 0);
 }
 
-static void nextDomain(void)
-{
-    ksDomScheduleIdx++;
-    if (ksDomScheduleIdx >= ksDomScheduleLength) {
-        ksDomScheduleIdx = 0;
-    }
-#ifdef CONFIG_KERNEL_MCS
-    NODE_STATE(ksReprogram) = true;
-#endif
-    ksWorkUnitsCompleted = 0;
-    ksCurDomain = ksDomSchedule[ksDomScheduleIdx].domain;
-#ifdef CONFIG_KERNEL_MCS
-    ksDomainTime = usToTicks(ksDomSchedule[ksDomScheduleIdx].length * US_IN_MS);
-#else
-    ksDomainTime = ksDomSchedule[ksDomScheduleIdx].length;
-#endif
-}
-
 #ifdef CONFIG_KERNEL_MCS
 static void switchSchedContext(void)
 {
@@ -343,7 +325,21 @@ static void switchSchedContext(void)
 static void scheduleChooseNewThread(void)
 {
     if (ksDomainTime == 0) {
-        nextDomain();
+        /* switch to next domain */
+        ksDomScheduleIdx++;
+        if (ksDomScheduleIdx >= ksDomScheduleLength) {
+            ksDomScheduleIdx = 0;
+        }
+#ifdef CONFIG_KERNEL_MCS
+        NODE_STATE(ksReprogram) = true;
+#endif
+        ksWorkUnitsCompleted = 0;
+        ksCurDomain = ksDomSchedule[ksDomScheduleIdx].domain;
+#ifdef CONFIG_KERNEL_MCS
+        ksDomainTime = usToTicks(ksDomSchedule[ksDomScheduleIdx].length * US_IN_MS);
+#else
+        ksDomainTime = ksDomSchedule[ksDomScheduleIdx].length;
+#endif
     }
     chooseThread();
 }
