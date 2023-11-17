@@ -27,7 +27,6 @@ if(KernelPlatformZynq7000)
         # SCHED0011), but may not be the correct number.
         TIMER_FREQUENCY 320000000
         MAX_IRQ 92
-        NUM_PPI 32
         INTERRUPT_CONTROLLER arch/machine/gic_v2.h
         TIMER ${timer_file}
         CLK_SHIFT 40llu

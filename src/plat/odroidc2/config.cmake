@@ -19,7 +19,6 @@ if(KernelPlatformOdroidc2)
     declare_default_headers(
         TIMER_FREQUENCY 24000000
         MAX_IRQ 250
-        NUM_PPI 32
         TIMER drivers/timer/arm_generic.h
         INTERRUPT_CONTROLLER arch/machine/gic_v2.h
         CLK_MAGIC 375299969u

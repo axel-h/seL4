@@ -23,7 +23,6 @@ if(KernelPlatformTx2)
         TIMER_FREQUENCY 31250000
         MAX_IRQ 383
         INTERRUPT_CONTROLLER arch/machine/gic_v2.h
-        NUM_PPI 32
         TIMER drivers/timer/arm_generic.h
         CLK_SHIFT 57u
         CLK_MAGIC 4611686019u

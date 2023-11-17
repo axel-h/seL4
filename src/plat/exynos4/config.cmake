@@ -19,7 +19,6 @@ if(KernelPlatformExynos4)
     declare_default_headers(
         TIMER_FREQUENCY 24000000
         MAX_IRQ 159
-        NUM_PPI 32
         TIMER drivers/timer/exynos4412-mct.h
         INTERRUPT_CONTROLLER arch/machine/gic_v2.h
         CLK_MAGIC 2863311531llu

@@ -24,7 +24,6 @@ if(KernelPlatformTqma8xqp1gb)
         TIMER drivers/timer/arm_generic.h
         TIMER_OVERHEAD_TICKS 1
         INTERRUPT_CONTROLLER arch/machine/gic_v3.h
-        NUM_PPI 32
         CLK_MAGIC 1llu
         CLK_SHIFT 3u
     )
