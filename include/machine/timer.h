@@ -48,6 +48,18 @@ static inline CONST time_t getKernelWcetUs(void)
 #endif
 }
 
+static inline CONST ticks_t getTimerPrecision(void)
+{
+    ticks_t precision = 0;
+#ifdef CONFIGURE_TIMER_PRECISION
+    precision += usToTicks(CONFIGURE_TIMER_PRECISION);
+#endif
+#ifdef CONFIGURE_TIMER_OVERHEAD_TICKS
+    precision += CONFIGURE_TIMER_OVERHEAD_TICKS;
+#endif
+    return precision;
+}
+
 #else /* not CONFIG_KERNEL_MCS */
 
 static inline void resetTimer(void);

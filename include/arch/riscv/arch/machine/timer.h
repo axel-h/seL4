@@ -13,6 +13,10 @@
 #include <arch/sbi.h>
 #include <arch/machine/hardware.h>
 
+#ifndef CONFIGURE_TIMER_PRECISION
+#define CONFIGURE_TIMER_PRECISION   1
+#endif
+
 /* The scheduler clock is greater than 1MHz */
 #define TICKS_IN_US (TIMER_CLOCK_HZ / (US_IN_MS * MS_IN_S))
 
@@ -26,10 +30,6 @@ static inline PURE time_t ticksToUs(ticks_t ticks)
     return div64(ticks, TICKS_IN_US);
 }
 
-static inline PURE ticks_t getTimerPrecision(void)
-{
-    return usToTicks(1);
-}
 
 /* Get the max. ticks_t value that can be expressed in time_t (time in us). This
  * is the max. value ticksToUs() can be passed without overflowing.

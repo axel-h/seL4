@@ -14,6 +14,10 @@
 #include <mode/util.h>
 #include <arch/kernel/apic.h>
 
+#ifndef CONFIGURE_TIMER_PRECISION
+#define CONFIGURE_TIMER_PRECISION   1
+#endif
+
 static inline PURE ticks_t usToTicks(time_t us)
 {
     assert(x86KStscMhz > 0);
@@ -26,11 +30,6 @@ static inline PURE ticks_t usToTicks(time_t us)
 static inline PURE time_t getMaxUsToTicks(void)
 {
     return div64(UINT64_MAX, x86KStscMhz);
-}
-
-static inline PURE ticks_t getTimerPrecision(void)
-{
-    return usToTicks(1u);
 }
 
 static inline void ackDeadlineIRQ(void)
