@@ -10,28 +10,34 @@
 
 static inline void resetTimer(void)
 {
-    mct_reset();
+    timer_t *mct = mct_get_timer();
+    mct_reset(mct);
 }
 
 #ifdef CONFIG_KERNEL_MCS
 /** DONT_TRANSLATE **/
 static inline ticks_t getCurrentTime(void)
 {
-    uint32_t hi, hi2, lo;
-    hi2 = mct->global.cnth;
+    timer_t *mct = mct_get_timer();
 
-    do {
-        hi = hi2;
+    /* Reading the counter must handle overflows on the low part. There is no
+     * need to loop here, because this is kernel code and thus can't get
+     * interrupted.
+     */
+    uint32_t hi = mct->global.cnth;
+    uint32_t lo = mct->global.cntl;
+    uint32_t hi2 = mct->global.cnth;
+    if (hi != hi2) {
         lo = mct->global.cntl;
-        hi2 = mct->global.cnth;
-    } while (hi != hi2);
-
-    return ((((uint64_t) hi) << 32llu) | (uint64_t) lo);
+    }
+    return MAKE_U64(hi, lo);
 }
 
 /** DONT_TRANSLATE **/
 static inline void setDeadline(ticks_t deadline)
 {
+    timer_t *mct = mct_get_timer();
+
     /*
      * After writing a value to a comp register a bit in the wstat
      * register is asserted. A write of 1 clears this bit.
@@ -48,8 +54,10 @@ static inline void setDeadline(ticks_t deadline)
 
 static inline void ackDeadlineIRQ(void)
 {
+    timer_t *mct = mct_get_timer();
+
     /* ack everything */
-    mct_reset();
+    mct_reset(mct);
 }
 
 #endif

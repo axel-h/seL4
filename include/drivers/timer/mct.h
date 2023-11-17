@@ -2,11 +2,25 @@
  * Copyright 2014, General Dynamics C4 Systems
  *
  * SPDX-License-Identifier: GPL-2.0-only
+ *
+ * Driver for the Samsung Multi Core Timer (MCT)
  */
 
 #pragma once
 
 #include <stdint.h>
+
+#define MAKE_U64(h, l) \
+    ((((uint64_t)(h)) << 32) | l)
+
+#define SET_2XU32_FROM_U64(h, l, v) { \
+    uint64_t _v = (v); /* evaluate v only once */ \
+    h = (uint32_t)(_v >> 32); \
+    l = (uint32_t)_v; \
+}
+
+#define INC64_ON_2X32(h, l, v) \
+    SET_2XU32_FROM_U64(h, l, MAKE_U64(h, l) + v)
 
 /*
  * Samsung Exynos multi-core timer implementation
@@ -111,18 +125,20 @@ struct mct_map {
     struct mct_local_map local[4];
 };
 typedef volatile struct mct_map timer_t;
-extern timer_t *mct;
 
-static inline void mct_reset(void)
+static inline timer_t *mct_get_timer(void)
+{
+    return (timer_t *)EXYNOS_MCT_PPTR;
+}
+
+static inline void mct_reset(timer_t *mct)
 {
     mct->global.int_stat = mct->global.int_stat;
 }
 
-static inline void mct_clear_write_status(void)
+static inline void mct_clear_write_status(timer_t *mct)
 {
     /* Clear write status */
     mct->global.wstat = mct->global.wstat;
     mct->global.cnt_wstat = mct->global.cnt_wstat;
 }
-
-
