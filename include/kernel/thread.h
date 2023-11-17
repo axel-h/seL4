@@ -313,11 +313,6 @@ static inline bool_t checkBudgetRestart(void)
 }
 
 
-/* Set the next kernel tick, which is either the end of the current
- * domains timeslice OR the end of the current threads timeslice.
- */
-void setNextInterrupt(void);
-
 /* Wake any periodic threads that are ready for budget recharge */
 void awaken(void);
 /* Place the thread bound to this scheduling context in the release queue

@@ -299,6 +299,72 @@ void doNBRecvFailedTransfer(tcb_t *thread)
     setRegister(thread, badgeRegister, 0);
 }
 
+static void setNextInterrupt(void)
+{
+    /*
+     * Caclulate the deadline for the next kernel tick. Start with the end of
+     * the current thread's timeslice.
+     */
+    ticks_t time_base = NODE_STATE(ksCurTime);
+    sched_context_t *sc = NODE_STATE(ksCurThread)->tcbSchedContext;
+    assert(sc); /* there must be a scheduling context */
+    ticks_t delta = refill_head(sc)->rAmount;
+
+    /*
+     * If there are multiple domains, take into account the end of the current
+     * domain's timeslice.
+     */
+    if ((numDomains > 1) && (ksDomainTime < delta)) {
+        delta = ksDomainTime;
+    }
+
+    /*
+     * There might be another thread in the queue that has to run even before
+     * out calculated deadline expires.
+     */
+    tcb_t *tcb = NODE_STATE(ksReleaseHead);
+    if (tcb) {
+        sc = tcb->tcbSchedContext;
+        assert(sc); /* there must be a scheduling context */
+        ticks_t rTime = refill_head(sc)->rTime;
+        if (unlikely(rTime <= time_base)) {
+            delta = 0;
+        } else {
+            ticks_t delta_rTime = rTime - time_base;
+            if (delta_rTime < delta) {
+                delta = delta_rTime;
+            }
+        }
+    }
+
+    /* Take into account the timer precision. */
+    ticks_t precision = getTimerPrecision();
+    if (unlikely(delta <= precision)) {
+        delta = 0;
+    } else {
+        delta -= precision;
+    }
+
+    /*
+     * Calculate the new deadline. An integer overflow should not happen
+     * practically if the timer is large enough. At 1 GHz (= 1 ns) a 32-bit
+     * timer overflows after 4,3 sec, but a 64-bit timer take 584,9 years.
+     */
+    tickt_t deadline = time_base + delta;
+    if (unlikely(deadline < time_base)) {
+        fail("timer overflow for deadline");
+    }
+
+    /*
+     * The lower bound time_base (form ksCurTime) is slightly in the past, as
+     * it was sampled at kernel entry. For low delta values, we could end up
+     * setting a deadline that is in the past. However, we assume that timers
+     * can handle this case and trigger immediately after we leave the kernel
+     * then. Platform specific code must handle this case otherwise.
+     */
+    setDeadline(deadline);
+}
+
 static void nextDomain(void)
 {
     ksDomScheduleIdx++;
@@ -570,72 +636,6 @@ void postpone(sched_context_t *sc)
     tcbSchedDequeue(sc->scTcb);
     tcbReleaseEnqueue(sc->scTcb);
     NODE_STATE_ON_CORE(ksReprogram, sc->scCore) = true;
-}
-
-void setNextInterrupt(void)
-{
-    /*
-     * Caclulate the deadline for the next kernel tick. Start with the end of
-     * the current thread's timeslice.
-     */
-    ticks_t time_base = NODE_STATE(ksCurTime);
-    sched_context_t *sc = NODE_STATE(ksCurThread)->tcbSchedContext;
-    assert(sc); /* there must be a scheduling context */
-    ticks_t delta = refill_head(sc)->rAmount;
-
-    /*
-     * If there are multiple domains, take into account the end of the current
-     * domain's timeslice.
-     */
-    if ((numDomains > 1) && (ksDomainTime < delta)) {
-        delta = ksDomainTime;
-    }
-
-    /*
-     * There might be another thread in the queue that has to run even before
-     * out calculated deadline expires.
-     */
-    tcb_t *tcb = NODE_STATE(ksReleaseHead);
-    if (tcb) {
-        sc = tcb->tcbSchedContext;
-        assert(sc); /* there must be a scheduling context */
-        ticks_t rTime = refill_head(sc)->rTime;
-        if (unlikely(rTime <= time_base)) {
-            delta = 0;
-        } else {
-            ticks_t delta_rTime = rTime - time_base;
-            if (delta_rTime < delta) {
-                delta = delta_rTime;
-            }
-        }
-    }
-
-    /* Take into account the timer precision. */
-    ticks_t precision = getTimerPrecision();
-    if (unlikely(delta <= precision)) {
-        delta = 0;
-    } else {
-        delta -= precision;
-    }
-
-    /*
-     * Calculate the new deadline. An integer overflow should not happen
-     * practically if the timer is large enough. At 1 GHz (= 1 ns) a 32-bit
-     * timer overflows after 4,3 sec, but a 64-bit timer take 584,9 years.
-     */
-    tickt_t deadline = time_base + delta;
-    if (unlikely(deadline < time_base)) {
-        fail("timer overflow for deadline");
-    }
-
-    /*
-     * The lower bound time_base (form ksCurTime) is slightly in the past, as
-     * it was sampled at kernel entry. For low delta values, we could end up
-     * setting a deadline that is in the past. However, we assume that timers
-     * can handle this case and trigger immediately after we leave the kernel
-     * then. Platform specific code must handle this case otherwise.
-     */
-    setDeadline(deadline);
 }
 
 void chargeBudget(ticks_t consumed, bool_t canTimeoutFault)
