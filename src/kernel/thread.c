@@ -341,7 +341,23 @@ static void scheduleChooseNewThread(void)
         ksDomainTime = ksDomSchedule[ksDomScheduleIdx].length;
 #endif
     }
-    chooseThread();
+
+    /* choose new thread */
+    word_t dom = (numDomains > 1) ? ksCurDomain : 0;
+    if (unlikely(NODE_STATE(ksReadyQueuesL1Bitmap[dom]))) {
+        switchToIdleThread();
+        return;
+    }
+
+    word_t prio = getHighestPrio(dom);
+    tcb_t *thread = NODE_STATE(ksReadyQueues)[ready_queues_index(dom, prio)].head;
+    assert(thread);
+    assert(isSchedulable(thread));
+#ifdef CONFIG_KERNEL_MCS
+    assert(refill_sufficient(thread->tcbSchedContext, 0));
+    assert(refill_ready(thread->tcbSchedContext));
+#endif
+    switchToThread(thread);
 }
 
 void schedule(void)
@@ -405,33 +421,6 @@ void schedule(void)
         NODE_STATE(ksReprogram) = false;
     }
 #endif
-}
-
-void chooseThread(void)
-{
-    word_t prio;
-    word_t dom;
-    tcb_t *thread;
-
-    if (numDomains > 1) {
-        dom = ksCurDomain;
-    } else {
-        dom = 0;
-    }
-
-    if (likely(NODE_STATE(ksReadyQueuesL1Bitmap[dom]))) {
-        prio = getHighestPrio(dom);
-        thread = NODE_STATE(ksReadyQueues)[ready_queues_index(dom, prio)].head;
-        assert(thread);
-        assert(isSchedulable(thread));
-#ifdef CONFIG_KERNEL_MCS
-        assert(refill_sufficient(thread->tcbSchedContext, 0));
-        assert(refill_ready(thread->tcbSchedContext));
-#endif
-        switchToThread(thread);
-    } else {
-        switchToIdleThread();
-    }
 }
 
 void switchToThread(tcb_t *thread)

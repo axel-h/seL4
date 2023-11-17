@@ -186,7 +186,6 @@ void doFaultTransfer(word_t badge, tcb_t *sender, tcb_t *receiver,
                      word_t *receiverIPCBuffer);
 void doNBRecvFailedTransfer(tcb_t *thread);
 void schedule(void);
-void chooseThread(void);
 void switchToThread(tcb_t *thread);
 void switchToIdleThread(void);
 void setDomain(tcb_t *tptr, dom_t dom);
