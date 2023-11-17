@@ -48,6 +48,4 @@ enum irqNumbers {
     irqInvalid = 0
 };
 
-#define IRQ_CNODE_SLOT_BITS (@CONFIGURE_IRQ_SLOT_BITS@)
-
 #include <@CONFIGURE_INTERRUPT_CONTROLLER@>

@@ -14,7 +14,7 @@
 /* interrupt vectors (corresponds to IDT entries) */
 
 #define IRQ_INT_OFFSET 0x20
-#define IRQ_CNODE_SLOT_BITS 8
+#define IRQ_CNODE_SLOTS BIT(8)
 
 typedef enum _interrupt_t {
     int_invalid                 = -1,
