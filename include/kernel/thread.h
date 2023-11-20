@@ -309,3 +309,4 @@ void awaken(void);
 void postpone(sched_context_t *sc);
 #endif
 
+#endif /* CONFIG_KERNEL_MCS */
