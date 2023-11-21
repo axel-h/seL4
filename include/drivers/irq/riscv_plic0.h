@@ -158,7 +158,6 @@ static inline void plic_mask_irq(bool_t disable, irq_t irq)
 
 static inline void plic_init_hart(void)
 {
-
     word_t hart_id = plic_get_current_hart_id();
 
     for (int i = 1; i <= PLIC_NUM_INTERRUPTS; i++) {
@@ -172,7 +171,6 @@ static inline void plic_init_hart(void)
 
 static inline void plic_init_controller(void)
 {
-
     for (int i = 1; i <= PLIC_NUM_INTERRUPTS; i++) {
         /* Clear all pending bits */
         if (plic_pending_interrupt(i)) {
@@ -185,7 +183,6 @@ static inline void plic_init_controller(void)
     for (int i = 1; i <= PLIC_MAX_IRQ + 1; i++) {
         writel(2, PLIC_PPTR_BASE + PLIC_PRIO + PLIC_PRIO_PER_ID * i);
     }
-
 }
 
 
