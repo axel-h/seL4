@@ -81,8 +81,10 @@ void ipi_send_target(irq_t irq, word_t hart_id)
     word_t core_id = hartIDToCoreID(hart_id);
     assert(core_id < CONFIG_MAX_NUM_NODES);
 
-    assert((ipiIrq[core_id] == irqInvalid) || (ipiIrq[core_id] == irq_reschedule_ipi) ||
-           (ipiIrq[core_id] == irq_remote_call_ipi && big_kernel_lock.node_owners[core_id].ipi == 0));
+    assert((ipiIrq[core_id] == irqInvalid) ||
+           (ipiIrq[core_id] == irq_reschedule_ipi) ||
+           ( (ipiIrq[core_id] == irq_remote_call_ipi) &&
+             (big_kernel_lock.node_owners[core_id].ipi == 0) ) );
 
     ipiIrq[core_id] = irq;
     fence_rw_rw();
