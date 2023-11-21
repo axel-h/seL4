@@ -11,10 +11,6 @@
 #include <model/smp.h>
 
 #ifdef ENABLE_SMP_SUPPORT
-static inline cpu_id_t cpuIndexToID(word_t index)
-{
-    return BIT(index);
-}
 
 static inline bool_t try_arch_atomic_exchange_rlx(void *ptr, void *new_val, void **prev)
 {

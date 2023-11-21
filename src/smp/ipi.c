@@ -119,30 +119,32 @@ void doMaskReschedule(word_t mask)
     }
 }
 
+/*
+ * The function ipi_send_mask() eventually calls this to sends IPIs one by one,
+ * if the architecture or platform does providee a more efficient function to
+ * send multiple IPIs at once. Each logical core ID corresponds to a bit in the
+ * paramter "mask", this must be translated to the actual physical ID in the
+ * function ipi_send_target().
+ */
 void generic_ipi_send_mask(irq_t ipi, word_t mask, bool_t isBlocking)
 {
-    word_t nr_target_cores = 0;
-    uint16_t target_cores[CONFIG_MAX_NUM_NODES];
-
-    while (mask) {
-        int index = wordBits - 1 - clzl(mask);
-        if (isBlocking) {
-            big_kernel_lock.node_owners[index].ipi = 1;
-            target_cores[nr_target_cores] = index;
-            nr_target_cores++;
-        } else {
-            IPI_MEM_BARRIER;
-            ipi_send_target(ipi, cpuIndexToID(index));
+    if (isBlocking) {
+        word_t lock_mask = mask;
+        while (lock_mask) {
+            int core_id = wordBits - 1 - clzl(lock_mask);
+            lock_mask &= ~BIT(core_id);
+            big_kernel_lock.node_owners[core_id].ipi = 1;
         }
-        mask &= ~BIT(index);
+        IPI_MEM_BARRIER;
     }
 
-    if (nr_target_cores > 0) {
-        /* sending IPIs... */
-        IPI_MEM_BARRIER;
-        for (int i = 0; i < nr_target_cores; i++) {
-            ipi_send_target(ipi, cpuIndexToID(target_cores[i]));
+    while (mask) {
+        int core_id = wordBits - 1 - clzl(mask);
+        mask &= ~BIT(core_id);
+        if (!isBlocking) {
+            IPI_MEM_BARRIER;
         }
+        ipi_send_target(ipi, core_id);
     }
 }
 
@@ -160,7 +162,7 @@ exception_t handle_SysDebugSendIPI(void)
         userError("SysDebugSendIPI: Invalid IRQ, not a SGI, halting");
         halt();
     }
-    ipi_send_target(CORE_IRQ_TO_IRQT(0, irq), BIT(target));
+    ipi_send_target(CORE_IRQ_TO_IRQT(0, irq), target);
     return EXCEPTION_NONE;
 #else /* not CONFIG_ARCH_ARM */
     userError("SysDebugSendIPI: not supported on this architecture");

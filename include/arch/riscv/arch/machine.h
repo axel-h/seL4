@@ -96,7 +96,8 @@ static inline word_t get_sbi_mask_for_all_remote_harts(void)
     word_t mask = 0;
     for (int i = 0; i < CONFIG_MAX_NUM_NODES; i++) {
         if (i != getCurrentCPUIndex()) {
-            mask |= BIT(cpuIndexToID(i));
+            word_t hart_id = coreMap.map[i]
+            mask |= BIT(hart_id);
         }
     }
     return mask;

@@ -36,3 +36,8 @@ extern pte_t kernel_image_level2_dev_pt[BIT(PT_INDEX_BITS)];
 extern pte_t kernel_image_level2_log_buffer_pt[BIT(PT_INDEX_BITS)];
 #endif
 
+word_t get_current_hart_id(void);
+
+#ifdef ENABLE_SMP_SUPPORT
+void add_hart_to_core_map(word_t hart_id, cpu_id_t core_id);
+#endif

@@ -26,11 +26,6 @@ typedef struct cpu_id_mapping {
 
 extern cpu_id_mapping_t cpu_mapping;
 
-static inline cpu_id_t cpuIndexToID(word_t index)
-{
-    return cpu_mapping.index_to_cpu_id[index];
-}
-
 static inline PURE word_t getCurrentCPUID(void)
 {
     return cpu_mapping.index_to_cpu_id[getCurrentCPUIndex()];

@@ -175,20 +175,8 @@ BOOT_CODE void cpu_initLocalIRQController(void)
 }
 
 #ifdef ENABLE_SMP_SUPPORT
-/*
-* 25-24: target lister filter
-* 0b00 - send the ipi to the CPU interfaces specified in the CPU target list
-* 0b01 - send the ipi to all CPU interfaces except the cpu interface.
-*        that requrested teh ipi
-* 0b10 - send the ipi only to the CPU interface that requested the IPI.
-* 0b11 - reserved
-*.
-* 23-16: CPU targets list
-* each bit of CPU target list [7:0] refers to the corresponding CPU interface.
-* 3-0:   SGIINTID
-* software generated interrupt id, from 0 to 15...
-*/
-void ipi_send_target(irq_t irq, word_t cpuTargetList)
+
+void ipi_send_target(irq_t irq, cpu_id_t core_id)
 {
     word_t sgiintid = IRQT_TO_IRQ(irq);
     /* SGIINTID must be 0 - 15 */
@@ -197,14 +185,37 @@ void ipi_send_target(irq_t irq, word_t cpuTargetList)
         return; /* it's a no-op in release build */
     }
 
-    if (config_set(CONFIG_PLAT_TX2)) {
-        /* We need to swap the top 4 bits and the bottom 4 bits of the
-         * cpuTargetList since the A57 cores with logical core ID 0-3 are
-         * in cluster 1 and the Denver2 cores with logical core ID 4-5 are
-         * in cluster 0. */
-        cpuTargetList = ((cpuTargetList & 0xf) << 4) | ((cpuTargetList & 0xf0) >> 4);
     }
-    gic_dist->sgi_control = (cpuTargetList << (GICD_SGIR_CPUTARGETLIST_SHIFT)) |
+
+#ifdef CONFIG_PLAT_TX2
+    /*
+     * The A57 cores with logical core ID 0-3 are in cluster 1 and the Denver2
+     * cores with logical core ID 4-5 are in cluster 0.
+     */
+    if (core_id < 4) {
+        core_id += 4;
+    } else {
+        core_id -= 4;
+    }
+#endif /* CONFIG_PLAT_TX2 */
+
+    /* support is limited to 8 cores */
+    if (core_id > 7) {
+        assert(!"core_id must be 0 - 7")
+        return
+    }
+
+    word_t targetMask = BIT(core_id);
+    /*
+     * 25-24: target lister filter
+     *   0b00 - send ipi to CPU interfaces specified in target list
+     *   0b01 - send ipi to all other CPU interfaces (ie besides us))
+     *   0b10 - send ipi only to CPU interface that requested the IPI.
+     *   0b11 - reserved
+     * 23-16: CPU targets list
+     * 3-0:   SGIINTID, software generated interrupt id (0 to 15)
+     */
+    gic_dist->sgi_control = (targetMask << GICD_SGIR_CPUTARGETLIST_SHIFT) |
                             (sgiintid << GICD_SGIR_SGIINTID_SHIFT);
 }
 

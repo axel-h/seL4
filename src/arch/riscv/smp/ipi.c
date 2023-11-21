@@ -73,12 +73,12 @@ void ipi_clear_irq(irq_t irq)
     return;
 }
 
-/* this function is called with a single hart id. */
-void ipi_send_target(irq_t irq, word_t hart_id)
+/* this function is called with a single core ID. */
+void ipi_send_target(irq_t irq, cpu_id_t core_id)
 {
-    word_t hart_mask = BIT(hart_id);
-    word_t core_id = hartIDToCoreID(hart_id);
     assert(core_id < CONFIG_MAX_NUM_NODES);
+    word_t hart_id = coreMap.map[core_id]
+    word_t hart_mask = BIT(hart_id);
 
     assert((ipiIrq[core_id] == irqInvalid) ||
            (ipiIrq[core_id] == irq_reschedule_ipi) ||

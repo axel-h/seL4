@@ -20,23 +20,6 @@ extern char kernel_stack_alloc[CONFIG_MAX_NUM_NODES][BIT(CONFIG_KERNEL_STACK_BIT
 compile_assert(kernel_stack_4k_aligned, KERNEL_STACK_ALIGNMENT == 4096)
 extern core_map_t coreMap;
 
-static inline cpu_id_t cpuIndexToID(word_t index)
-{
-    assert(index < CONFIG_MAX_NUM_NODES);
-    return coreMap.map[index];
-}
-
-static inline word_t hartIDToCoreID(word_t hart_id)
-{
-    word_t i = 0;
-    for (i = 0; i < CONFIG_MAX_NUM_NODES; i++) {
-        if (coreMap.map[i] == hart_id) {
-            break;
-        }
-    }
-    return i;
-}
-
 static inline void add_hart_to_core_map(word_t hart_id, word_t core_id)
 {
     assert(core_id < CONFIG_MAX_NUM_NODES);
