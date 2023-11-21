@@ -348,6 +348,12 @@ BOOT_CODE void cpu_initLocalIRQController(void)
 void ipi_send_target(irq_t irq, word_t cpuTargetList)
 {
     word_t sgiintid = IRQT_TO_IRQ(irq);
+    /* SGIINTID must be 0 - 15 */
+    if (sgiintid > 0xf) {
+        assert(!"SGIINTID must be 0 - 15")
+        return; /* it's a no-op in release build */
+    }
+
     uint64_t sgi1r_base = sgiintid << ICC_SGI1R_INTID_SHIFT;
 
     word_t sgi1r[CONFIG_MAX_NUM_NODES];

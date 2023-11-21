@@ -191,6 +191,11 @@ BOOT_CODE void cpu_initLocalIRQController(void)
 void ipi_send_target(irq_t irq, word_t cpuTargetList)
 {
     word_t sgiintid = IRQT_TO_IRQ(irq);
+    /* SGIINTID must be 0 - 15 */
+    if (sgiintid > 0xf) {
+        assert(!"SGIINTID must be 0 - 15")
+        return; /* it's a no-op in release build */
+    }
 
     if (config_set(CONFIG_PLAT_TX2)) {
         /* We need to swap the top 4 bits and the bottom 4 bits of the
