@@ -15,6 +15,13 @@
 #define TIMER_OVERHEAD_TICKS @CONFIGURE_TIMER_OVERHEAD_TICKS@
 
 enum IRQConstants {
+#ifdef ENABLE_SMP_SUPPORT
+    /* Use the first two SGI (Software Generated Interrupt) IDs for the seL4
+     * IPI implementation. SGIs are per-core banked.
+     */
+    irq_remote_call_ipi         = 0,
+    irq_reschedule_ipi          = 1,
+#endif /* ENABLE_SMP_SUPPORT */
     maxIRQ                      = @CONFIGURE_MAX_IRQ@
 } platform_interrupt_t;
 
