@@ -39,18 +39,18 @@ volatile struct gic_rdist_map *gic_rdist_map[CONFIG_MAX_NUM_NODES] = { 0 };
 volatile struct gic_rdist_sgi_ppi_map *gic_rdist_sgi_ppi_map[CONFIG_MAX_NUM_NODES] = { 0 };
 
 #ifdef CONFIG_ARCH_AARCH64
-#define MPIDR_AFF0(x) (x & 0xff)
-#define MPIDR_AFF1(x) ((x >> 8) & 0xff)
-#define MPIDR_AFF2(x) ((x >> 16) & 0xff)
-#define MPIDR_AFF3(x) ((x >> 32) & 0xff)
+#define MPIDR_AFF0(x) ((x) & 0xff)
+#define MPIDR_AFF1(x) (((x) >> 8) & 0xff)
+#define MPIDR_AFF2(x) (((x) >> 16) & 0xff)
+#define MPIDR_AFF3(x) (((x) >> 32) & 0xff)
 #else
-#define MPIDR_AFF0(x) (x & 0xff)
-#define MPIDR_AFF1(x) ((x >> 8) & 0xff)
-#define MPIDR_AFF2(x) ((x >> 16) & 0xff)
+#define MPIDR_AFF0(x) ((x) & 0xff)
+#define MPIDR_AFF1(x) (((x) >> 8) & 0xff)
+#define MPIDR_AFF2(x) (((x) >> 16) & 0xff)
 #define MPIDR_AFF3(x) (0)
 #endif
-#define MPIDR_MT(x)   (x & BIT(24))
-#define MPIDR_AFF_MASK(x) (x & 0xff00ffffff)
+#define MPIDR_MT(x)   ((x) & BIT(24))
+#define MPIDR_AFF_MASK(x) ((x) & 0xff00ffffff)
 
 static word_t mpidr_map[CONFIG_MAX_NUM_NODES];
 
