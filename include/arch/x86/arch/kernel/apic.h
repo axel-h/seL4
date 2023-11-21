@@ -27,7 +27,7 @@ word_t apic_get_cluster(logical_id_t logical_id);
 void apic_ack_active_interrupt(void);
 bool_t apic_is_interrupt_pending(void);
 
-void apic_send_ipi_core(irq_t vector, cpu_id_t cpu_id);
-void apic_send_ipi_cluster(irq_t vector, word_t mda);
+void apic_send_ipi_core(ipi_t ipi, cpu_id_t cpu_id);
+void apic_send_ipi_cluster(ipi_t ipi, word_t mda);
 
 #define ipi_send_target apic_send_ipi_core

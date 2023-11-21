@@ -108,9 +108,9 @@ BOOT_CODE void apic_send_startup_ipi(cpu_id_t cpu_id, paddr_t startup_addr)
     );
 }
 
-void apic_send_ipi_core(irq_t irq, cpu_id_t cpu_id)
+void apic_send_ipi_core(ipi ipi, cpu_id_t cpu_id)
 {
-    word_t vector = IRQT_TO_IRQ(irq);
+    word_t vector = ipi.value;
     apic_write_icr(
         x2apic_icr2_new(
             cpu_id      /* dest */
@@ -121,14 +121,14 @@ void apic_send_ipi_core(irq_t irq, cpu_id_t cpu_id)
             0,          /* level           */
             0,          /* dest_mode       */
             0,          /* delivery_mode   */
-            vector      /* vector          */
+            vector     /* vector          */
         ).words[0]
     );
 }
 
-void apic_send_ipi_cluster(irq_t irq, word_t mda)
+void apic_send_ipi_cluster(ipi ipi, word_t mda)
 {
-    word_t vector = IRQT_TO_IRQ(irq);
+    word_t vector = ipi.value;
     apic_write_icr(
         x2apic_icr2_new(
             mda         /* message destination address */
@@ -139,7 +139,7 @@ void apic_send_ipi_cluster(irq_t irq, word_t mda)
             0,          /* level           */
             1,          /* dest_mode       */
             0,          /* delivery_mode   */
-            vector      /* vector          */
+            vector     /* vector          */
         ).words[0]
     );
 }

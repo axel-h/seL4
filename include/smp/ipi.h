@@ -14,6 +14,22 @@
 #ifdef ENABLE_SMP_SUPPORT
 #define MAX_IPI_ARGS    3   /* Maximum number of parameters to remote function */
 
+/*
+ * Due to the way irq_t can be defined, using this for IPIs adds an unnecessary
+ * level of complexity. Having a dedicated types allows keeping them separate
+ * from plain interrupt numbers.
+ */
+typedef struct {
+    word_t value;
+} ipi_t;
+
+static const ipi_t ipi_reschedule = { .value = irq_reschedule_ipi };
+static const ipi_t ipi_remote_call = { .value = irq_remote_call_ipi };
+
+bool_t is_irq_ipi(irq_t irq, ipi_t ipi) {
+    return (IRQT_TO_IRQ(irq) == ipi.value);
+}
+
 static volatile struct {
     word_t count;
     word_t globalsense;
@@ -46,16 +62,16 @@ static inline void ipi_wait(word_t cores)
 }
 
 /* Architecture independent function for sending handling pre-hardware-send IPIs */
-void generic_ipi_send_mask(irq_t ipi, word_t mask, bool_t isBlocking);
+void generic_ipi_send_mask(ipi_t ipi, word_t mask, bool_t isBlocking);
 
 /* An architecture/platform should implement this function either as a wrapper to
  * its own arch_ipi_send_mask() or using the generic_ipi_send_mask() function
  * provided to be architecture agnostic.
  */
-void ipi_send_mask(irq_t ipi, word_t mask, bool_t isBlocking);
+void ipi_send_mask(ipi_t ipi, word_t mask, bool_t isBlocking);
 
 /* Hardware implementation for sending an IPI to a logical core ID */
-void ipi_send_target(irq_t irq, cpu_id_t core_id);
+void ipi_send_target(ipi_t ipi, cpu_id_t core_id);
 
 /* This function switches the core it is called on to the idle thread,
  * in order to avoid IPI storms. If the core is waiting on the lock, the actual

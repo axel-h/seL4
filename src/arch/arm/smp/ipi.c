@@ -78,7 +78,7 @@ static void handleRemoteCall(IpiModeRemoteCall_t call, word_t arg0,
     }
 }
 
-void ipi_send_mask(irq_t ipi, word_t mask, bool_t isBlocking)
+void ipi_send_mask(ipi_t ipi, word_t mask, bool_t isBlocking)
 {
     generic_ipi_send_mask(ipi, mask, isBlocking);
 }

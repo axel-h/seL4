@@ -347,12 +347,11 @@ BOOT_CODE void cpu_initLocalIRQController(void)
 #ifdef ENABLE_SMP_SUPPORT
 #define MPIDR_MT(x)   (x & BIT(24))
 
-void ipi_send_target(irq_t irq, cpu_id_t core_id)
+void ipi_send_target(ipi_t ipi, cpu_id_t core_id)
 {
-    word_t sgiintid = IRQT_TO_IRQ(irq);
-    /* SGIINTID must be 0 - 15 */
+    word_t sgiintid = ipi.value;
     if (sgiintid > 0xf) {
-        assert(!"SGIINTID must be 0 - 15")
+        assert(!"invalid IPI, SGIINTID can be 0 - 15 only")
         return; /* it's a no-op in release build */
     }
 

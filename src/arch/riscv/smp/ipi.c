@@ -13,7 +13,7 @@
 
 /* the remote call being requested */
 static volatile IpiRemoteCall_t  remoteCall;
-static volatile irq_t            ipiIrq[CONFIG_MAX_NUM_NODES];
+static volatile ipi_t            ipiIrq[CONFIG_MAX_NUM_NODES];
 
 static inline void init_ipi_args(IpiRemoteCall_t func,
                                  word_t data1, word_t data2, word_t data3,
@@ -56,15 +56,15 @@ static void handleRemoteCall(IpiRemoteCall_t call, word_t arg0,
     }
 }
 
-void ipi_send_mask(irq_t ipi, word_t mask, bool_t isBlocking)
+void ipi_send_mask(ipi_t ipi, word_t mask, bool_t isBlocking)
 {
     generic_ipi_send_mask(ipi, mask, isBlocking);
 }
 
 irq_t ipi_get_irq(void)
 {
-    assert(!(ipiIrq[getCurrentCPUIndex()] == irqInvalid && big_kernel_lock.node_owners[getCurrentCPUIndex()].ipi == 1));
-    return ipiIrq[getCurrentCPUIndex()];
+    assert(!(ipi_t[getCurrentCPUIndex()] == irqInvalid && big_kernel_lock.node_owners[getCurrentCPUIndex()].ipi == 1));
+    return ipi_t[getCurrentCPUIndex()];
 }
 
 void ipi_clear_irq(irq_t irq)
@@ -74,7 +74,7 @@ void ipi_clear_irq(irq_t irq)
 }
 
 /* this function is called with a single core ID. */
-void ipi_send_target(irq_t irq, cpu_id_t core_id)
+void ipi_send_target(ipi_t ipi, cpu_id_t core_id)
 {
     assert(core_id < CONFIG_MAX_NUM_NODES);
     word_t hart_id = coreMap.map[core_id]
@@ -85,7 +85,7 @@ void ipi_send_target(irq_t irq, cpu_id_t core_id)
            ( (ipiIrq[core_id] == irq_remote_call_ipi) &&
              (big_kernel_lock.node_owners[core_id].ipi == 0) ) );
 
-    ipiIrq[core_id] = irq;
+    ipiIrq[core_id] = ipi;
     fence_rw_rw();
     sbi_send_ipi(hart_mask);
 }

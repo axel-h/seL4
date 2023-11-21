@@ -176,12 +176,11 @@ BOOT_CODE void cpu_initLocalIRQController(void)
 
 #ifdef ENABLE_SMP_SUPPORT
 
-void ipi_send_target(irq_t irq, cpu_id_t core_id)
+void ipi_send_target(ipi_t ipi, cpu_id_t core_id)
 {
-    word_t sgiintid = IRQT_TO_IRQ(irq);
-    /* SGIINTID must be 0 - 15 */
+    word_t sgiintid = ipi.value;
     if (sgiintid > 0xf) {
-        assert(!"SGIINTID must be 0 - 15")
+        assert(!"invalid IPI, SGIINTID can be 0 - 15 only")
         return; /* it's a no-op in release build */
     }
 
@@ -216,7 +215,7 @@ void ipi_send_target(irq_t irq, cpu_id_t core_id)
      * 3-0:   SGIINTID, software generated interrupt id (0 to 15)
      */
     gic_dist->sgi_control = (targetMask << GICD_SGIR_CPUTARGETLIST_SHIFT) |
-                            (sgiintid << GICD_SGIR_SGIINTID_SHIFT);
+                            (ipi << GICD_SGIR_SGIINTID_SHIFT);
 }
 
 /*

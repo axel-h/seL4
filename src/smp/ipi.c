@@ -81,14 +81,20 @@ void ipiStallCoreCallback(bool_t irqPath)
 
 void handleIPI(irq_t irq, bool_t irqPath)
 {
-    if (IRQT_TO_IRQ(irq) == irq_remote_call_ipi) {
+    switch (IRQT_TO_IRQ(irq)) {
+
+    case irq_remote_call_ipi:
         handleRemoteCall(remoteCall, get_ipi_arg(0), get_ipi_arg(1), get_ipi_arg(2), irqPath);
-    } else if (IRQT_TO_IRQ(irq) == irq_reschedule_ipi) {
+        break;
+
+    case irq_reschedule_ipi:
         rescheduleRequired();
 #ifdef CONFIG_ARCH_RISCV
         ifence_local();
 #endif
-    } else {
+        break;
+
+    default:
         fail("Invalid IPI");
     }
 }
@@ -105,7 +111,7 @@ void doRemoteMaskOp(IpiRemoteCall_t func, word_t data1, word_t data2, word_t dat
 
         /* make sure no resource access passes from this point */
         asm volatile("" ::: "memory");
-        ipi_send_mask(CORE_IRQ_TO_IRQT(0, irq_remote_call_ipi), mask, true);
+        ipi_send_mask(ipi_remote_call, mask, true);
         ipi_wait(totalCoreBarrier);
     }
 }
@@ -115,7 +121,7 @@ void doMaskReschedule(word_t mask)
     /* make sure the current core is not set in the mask */
     mask &= ~BIT(getCurrentCPUIndex());
     if (mask != 0) {
-        ipi_send_mask(CORE_IRQ_TO_IRQT(0, irq_reschedule_ipi), mask, false);
+        ipi_send_mask(ipi_reschedule, mask, false);
     }
 }
 
@@ -126,7 +132,7 @@ void doMaskReschedule(word_t mask)
  * paramter "mask", this must be translated to the actual physical ID in the
  * function ipi_send_target().
  */
-void generic_ipi_send_mask(irq_t ipi, word_t mask, bool_t isBlocking)
+void generic_ipi_send_mask(ipi_t ipi, word_t mask, bool_t isBlocking)
 {
     if (isBlocking) {
         word_t lock_mask = mask;
