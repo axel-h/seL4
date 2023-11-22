@@ -46,7 +46,7 @@ exception_t Arch_decodeIRQControlInvocation(word_t invLabel, word_t length,
         }
 
         word_t irq_w = getSyscallArg(0, buffer);
-        irq_t irq = (irq_t) irq_w;
+        irq_t irq = IRQ_TO_IRQT(irq_w);
         bool_t trigger = !!getSyscallArg(1, buffer);
         word_t index = getSyscallArg(2, buffer);
         word_t depth = getSyscallArg(3, buffer);
@@ -60,14 +60,14 @@ exception_t Arch_decodeIRQControlInvocation(word_t invLabel, word_t length,
 
         if (isIRQActive(irq)) {
             current_syscall_error.type = seL4_RevokeFirst;
-            userError("Rejecting request for IRQ %u. Already active.", (int)irq);
+            userError("Rejecting request for IRQ %u. Already active.", (int)IRQT_TO_IRQ(irq));
             return EXCEPTION_SYSCALL_ERROR;
         }
 
         lookupSlot_ret_t lu_ret = lookupTargetSlot(cnodeCap, index, depth);
         if (lu_ret.status != EXCEPTION_NONE) {
             userError("Target slot for new IRQ Handler cap invalid: cap %lu, IRQ %u.",
-                      getExtraCPtr(buffer, 0), (int)irq);
+                      getExtraCPtr(buffer, 0), (int)IRQT_TO_IRQ(irq));
             return lu_ret.status;
         }
 
@@ -76,7 +76,7 @@ exception_t Arch_decodeIRQControlInvocation(word_t invLabel, word_t length,
         status = ensureEmptySlot(destSlot);
         if (status != EXCEPTION_NONE) {
             userError("Target slot for new IRQ Handler cap not empty: cap %lu, IRQ %u.",
-                      getExtraCPtr(buffer, 0), (int)irq);
+                      getExtraCPtr(buffer, 0), (int)IRQT_TO_IRQ(irq));
             return status;
         }
 

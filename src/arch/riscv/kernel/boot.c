@@ -97,15 +97,15 @@ BOOT_CODE static void init_irqs(cap_t root_cnode_cap)
 {
     setIRQState(IRQReserved, IRQT_TO_IRQ(irqInvalid));
     for (word_t i = 0; i <= maxIRQ; i++) {
-        if (i != irqInvalid) {
+        if (i != IRQT_TO_IRQ(irqInvalid)) {
             /* IRQ 0 is irqInvalid */
             setIRQState(IRQInactive, i);
         }
     }
-    setIRQState(IRQTimer, KERNEL_TIMER_IRQ);
+    setIRQState(IRQTimer, IRQ_TO_IRQT(KERNEL_TIMER_IRQ));
 #ifdef ENABLE_SMP_SUPPORT
-    setIRQState(IRQIPI, irq_remote_call_ipi);
-    setIRQState(IRQIPI, irq_reschedule_ipi);
+    setIRQState(IRQIPI, IRQ_TO_IRQT(irq_remote_call_ipi));
+    setIRQState(IRQIPI, IRQ_TO_IRQT(irq_reschedule_ipi));
 #endif
     /* provide the IRQ control cap */
     write_slot(SLOT_PTR(pptr_of_cap(root_cnode_cap), seL4_CapIRQControl), cap_irq_control_cap_new());

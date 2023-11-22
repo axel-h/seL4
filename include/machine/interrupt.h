@@ -65,6 +65,8 @@ static irq_t const irqInvalid = (uint16_t) -1;
 
 #endif
 
+#define IRQ_TO_IRQT(irq)    CORE_IRQ_TO_IRQT(-1, irq)
+
 
 /**
  * Return a currently pending IRQ.
