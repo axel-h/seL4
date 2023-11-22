@@ -47,7 +47,7 @@ enum {
 #define HW_IRQ_IS_SGI(irq) ((irq) < PPI_START)
 #define HW_IRQ_IS_PPI(irq) ((irq) < NUM_PPI)
 
-#if defined ENABLE_SMP_SUPPORT
+#ifdef ENABLE_SMP_SUPPORT
 /* In this case irq_t is a struct with an hw irq field and target core field.
  * The following macros convert between (target_core, hw_irq) <-> irq_t <-> cnode index.
  * IRQ_IS_PPI returns true if hw_irq < 32 which is a property of the GIC.
@@ -70,10 +70,12 @@ enum {
 #define IRQT_TO_IRQ(irqt) (irqt.irq)
 irq_t irqInvalid = CORE_IRQ_TO_IRQT(-1, gic_irq_invalid);
 
-#else
+#else /* not ENABLE_SMP_SUPPORT */
+
 #define IRQ_IS_PPI(irq) HW_IRQ_IS_PPI(irq)
 irq_t irqInvalid = gic_irq_invalid;
-#endif
+
+#endif /* [not] ENABLE_SMP_SUPPORT */
 
 /* Setters/getters helpers for hardware irqs */
 #define IRQ_REG(IRQ) ((IRQ) >> 5u)
