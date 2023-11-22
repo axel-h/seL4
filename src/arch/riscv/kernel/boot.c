@@ -95,6 +95,7 @@ BOOT_CODE static bool_t arch_init_freemem(region_t ui_reg,
 
 BOOT_CODE static void init_irqs(cap_t root_cnode_cap)
 {
+    setIRQState(IRQReserved, IRQT_TO_IRQ(irqInvalid));
     for (word_t i = 0; i <= maxIRQ; i++) {
         if (i != irqInvalid) {
             /* IRQ 0 is irqInvalid */
