@@ -36,18 +36,35 @@
  * Currently only Arm SMP configurations use this scheme.
  */
 #if defined(ENABLE_SMP_SUPPORT) && defined(CONFIG_ARCH_ARM)
+
 typedef struct {
     word_t irq;
     word_t target_core;
 } irq_t;
+
+#define CORE_IRQ_TO_IRQT(tgt, _irq) ((irq_t){.irq = (_irq), .target_core = (tgt)})
+#define IRQT_TO_CORE(irqt)          (irqt.target_core)
+#define IRQT_TO_IRQ(irqt)           (irqt.irq)
+
+static irq_t const irqInvalid = CORE_IRQ_TO_IRQT(-1, -1);
+
 #else
+
 typedef word_t irq_t;
-#define CORE_IRQ_TO_IRQT(tgt, irq) (irq)
-#define IRQT_TO_IDX(irq) (irq)
-#define IDX_TO_IRQT(idx) (idx)
-#define IRQT_TO_CORE(irqt) 0
-#define IRQT_TO_IRQ(irqt) (irqt)
+
+#define CORE_IRQ_TO_IRQT(tgt, irq)  (irq)
+#define IRQT_TO_IDX(irq)            (irq)
+#define IDX_TO_IRQT(idx)            (idx)
+#define IRQT_TO_CORE(irqt)          0
+#define IRQT_TO_IRQ(irqt)           (irqt)
+
+
+#ifdef CONFIG_ARCH_ARM
+static irq_t const irqInvalid = (uint16_t) -1;
+#endif /* CONFIG_ARCH_ARM */
+
 #endif
+
 
 /**
  * Return a currently pending IRQ.

@@ -58,7 +58,7 @@ enum {
  *   core: 1, irq: 33, (4 total cores) -> (4 * 32) + (33-32).
  */
 #define IRQ_IS_PPI(_irq) (HW_IRQ_IS_PPI(_irq.irq))
-#define CORE_IRQ_TO_IRQT(tgt, _irq) ((irq_t){.irq = (_irq), .target_core = (tgt)})
+
 #define IRQT_TO_IDX(_irq) (HW_IRQ_IS_PPI(_irq.irq) ? \
                                  (_irq.target_core) * NUM_PPI + (_irq.irq) : \
                                  (CONFIG_MAX_NUM_NODES - 1) * NUM_PPI + (_irq.irq))
@@ -66,15 +66,10 @@ enum {
 #define IDX_TO_IRQT(idx) (((idx) < NUM_PPI*CONFIG_MAX_NUM_NODES) ? \
                         CORE_IRQ_TO_IRQT((idx) / NUM_PPI, (idx) - ((idx)/NUM_PPI)*NUM_PPI): \
                         CORE_IRQ_TO_IRQT(0, (idx) - (CONFIG_MAX_NUM_NODES-1)*NUM_PPI))
-#define IRQT_TO_CORE(irqt) (irqt.target_core)
-#define IRQT_TO_IRQ(irqt) (irqt.irq)
-irq_t irqInvalid = CORE_IRQ_TO_IRQT(-1, gic_irq_invalid);
 
 #else /* not ENABLE_SMP_SUPPORT */
 
 #define IRQ_IS_PPI(irq) HW_IRQ_IS_PPI(irq)
-irq_t irqInvalid = gic_irq_invalid;
-
 #endif /* [not] ENABLE_SMP_SUPPORT */
 
 /* Setters/getters helpers for hardware irqs */
