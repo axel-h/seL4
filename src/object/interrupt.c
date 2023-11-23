@@ -201,13 +201,15 @@ void handleInterrupt(irq_t irq)
         return;
     }
 
-    switch (intStateIRQTable[IRQT_TO_IDX(irq)]) {
+    word_t idx = IRQT_TO_IDX(irq);
+
+    switch (intStateIRQTable[idx]) {
     case IRQSignal: {
         /* Merging the variable declaration and initialization into one line
          * requires an update in the proofs first. Might be a c89 legacy.
          */
         cap_t cap;
-        cap = intStateIRQNode[IRQT_TO_IDX(irq)].cap;
+        cap = intStateIRQNode[idx].cap;
         if (cap_get_capType(cap) == cap_notification_cap &&
             cap_notification_cap_get_capNtfnCanSend(cap)) {
             sendSignal(NTFN_PTR(cap_notification_cap_get_capNtfnPtr(cap)),
