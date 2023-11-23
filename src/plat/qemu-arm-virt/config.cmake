@@ -58,7 +58,7 @@ if(KernelPlatformQEMUArmVirt)
     endif()
 
     if("${ARM_CPU}" STREQUAL "cortex-a7")
-        setup_qemu_armv7()
+        setup_qemu_armv7(ve)
         set(KernelArmCortexA7 ON)
     elseif("${ARM_CPU}" STREQUAL "cortex-a15")
         setup_qemu_armv7(ve)
