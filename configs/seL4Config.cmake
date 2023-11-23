@@ -240,6 +240,18 @@ if(KernelArchARM)
     endif()
     set(KernelArmArmV "${KernelArmArmV}" CACHE INTERNAL "")
 
+    if(KernelArchArmV7a)
+        set(KernelArmArmV "armv7-a" CACHE INTERNAL "")
+    elseif(KernelArchArmV8a)
+        set(KernelArmArmV "armv8-a" CACHE INTERNAL "")
+    else()
+        message(FATAL_ERROR "unsupported ARM architecture")
+    endif()
+
+    config_set(KernelArchArmV7a ARCH_ARM_V7A "${KernelArchArmV7a}")
+    config_set(KernelArchArmV7ve ARCH_ARM_V7VE "${KernelArchArmV7ve}")
+    config_set(KernelArchArmV8a ARCH_ARM_V8A "${KernelArchArmV8a}")
+
     # Now enshrine all the common variables in the config
     config_set(KernelArmCortexA7 ARM_CORTEX_A7 "${KernelArmCortexA7}")
     config_set(KernelArmCortexA8 ARM_CORTEX_A8 "${KernelArmCortexA8}")
@@ -275,6 +287,8 @@ if(KernelArchARM)
     elseif(KernelArmCortexA72)
         set(KernelArmCPU "cortex-a72" CACHE INTERNAL "")
     endif()
+
+    config_set(KernelAArch64SErrorIgnore AARCH64_SERROR_IGNORE "${KernelAArch64SErrorIgnore}")
 
     config_set(KernelArmMach ARM_MACH "${KernelArmMach}")
 
