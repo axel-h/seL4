@@ -23,9 +23,7 @@ unset(KernelPlatExynos54xx CACHE)
 if(KernelPlatExynos5)
     declare_seL4_arch(aarch32 arm_hyp)
     set(KernelArmCortexA15 ON)
-    set(KernelArchArmV7ve ON)
-    # v7ve is a superset of v7a, so we enable that as well
-    set(KernelArchArmV7a ON)
+    set(KernelArchArmV7ve ON) # implies KernelArchArmV7a
     config_set(KernelArmMach MACH "exynos")
     check_platform_and_fallback_to_default(KernelARMPlatform "exynos5250")
 
