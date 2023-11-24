@@ -116,6 +116,20 @@ macro(check_platform_and_fallback_to_default var_cmake_kernel_plat default_sub_p
     endif()
 endmacro()
 
+unset(CONFIGURE_TIMER_FREQUENCY CACHE)
+unset(CONFIGURE_MAX_IRQ CACHE)
+unset(CONFIGURE_NUM_PPI CACHE)
+unset(CONFIGURE_INTERRUPT_CONTROLLER CACHE)
+unset(CONFIGURE_TIMER CACHE)
+unset(CONFIGURE_SMMU CACHE)
+unset(CONFIGURE_CLK_SHIFT CACHE)
+unset(CONFIGURE_CLK_MAGIC CACHE)
+unset(CONFIGURE_KERNEL_WCET CACHE)
+unset(CONFIGURE_TIMER_PRECISION CACHE)
+unset(CONFIGURE_TIMER_OVERHEAD_TICKS CACHE)
+unset(CONFIGURE_MAX_SID CACHE)
+unset(CONFIGURE_MAX_CB CACHE)
+
 # CLK_SHIFT and CLK_MAGIC are generated from tools/reciprocal.py based on the
 # TIMER_CLK_HZ to avoid doing a 64-bit division on 32-bit platforms. The
 # calculation could happen automatically in a CMake function also, but the
