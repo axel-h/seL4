@@ -7,11 +7,16 @@
 
 cmake_minimum_required(VERSION 3.7.2)
 
-declare_platform(qemu-riscv-virt KernelPlatformQEMURiscVVirt PLAT_QEMU_RISCV_VIRT KernelArchRiscV)
+declare_platform(
+    "qemu-riscv-virt"
+    ARCH "riscv64" "riscv32"
+    NO_DEFAULT_DTS # there is no tools/dts/qemu-riscv-virt.dts
+    CAMKE_VAR "KernelPlatformQEMURiscVVirt"
+    # C_DEFINE defaults to CONFIG_PLAT_QEMU_RISCV_VIRT
+)
 
 if(KernelPlatformQEMURiscVVirt)
 
-    declare_seL4_arch(riscv64 riscv32)
     config_set(KernelOpenSBIPlatform OPENSBI_PLATFORM "generic")
     config_set(KernelPlatformFirstHartID FIRST_HART_ID 0)
 

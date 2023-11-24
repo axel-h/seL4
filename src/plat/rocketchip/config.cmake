@@ -8,31 +8,19 @@
 
 cmake_minimum_required(VERSION 3.7.2)
 
-declare_platform(rocketchip KernelPlatformRocketchip PLAT_ROCKETCHIP KernelArchRiscV)
-
-set(c_configs PLAT_ROCKETCHIP_BASE PLAT_ROCKETCHIP_ZCU102)
-set(cmake_configs KernelPlatformRocketchipBase KernelPlatformRocketchipZCU102)
-
-set(plat_lists rocketchip-base rocketchip-zcu102)
-foreach(config IN LISTS cmake_configs)
-    unset(${config} CACHE)
-endforeach()
+declare_platform(
+    "rocketchip"
+    ARCH "riscv64"
+    NO_DEFAULT_DTS # DTS is selected below
+    CAMKE_VAR "KernelPlatformRocketchip"
+    # C_DEFINE defaults to CONFIG_PLAT_ROCKETCHIP
+    BOARDS # first is default
+        "rocketchip-base,KernelPlatformRocketchipBase,PLAT_ROCKETCHIP_BASE"
+        "rocketchip-zcu102,KernelPlatformRocketchipZCU102,PLAT_ROCKETCHIP_ZCU102"
+)
 
 if(KernelPlatformRocketchip)
-    declare_seL4_arch(riscv64)
-
-    check_platform_and_fallback_to_default(KernelRiscVPlatform "${KernelPlatform}-base")
-    list(FIND plat_lists ${KernelRiscVPlatform} index)
-    if("${index}" STREQUAL "-1")
-        message(FATAL_ERROR "Which rocketchip platform not specified")
-    endif()
-    list(GET c_configs ${index} c_config)
-    list(GET cmake_configs ${index} cmake_config)
-    config_set(KernelRiscVPlatform RISCV_PLAT "${KernelRiscVPlatform}")
-    config_set(${cmake_config} ${c_config} ON)
-
     config_set(KernelPlatformFirstHartID FIRST_HART_ID 0)
-    list(APPEND KernelDTSList "tools/dts/${KernelPlatform}.dts")
     list(APPEND KernelDTSList "${CMAKE_CURRENT_LIST_DIR}/overlay-${KernelRiscVPlatform}.dts")
     # The Rocketchip-ZCU102 is a softcore instantiation that runs on the ZCU102's
     # FPGA fabric. Information on generating and running seL4 on the platform can
@@ -50,19 +38,20 @@ if(KernelPlatformRocketchip)
             MAX_IRQ 128
             INTERRUPT_CONTROLLER drivers/irq/riscv_plic0.h
         )
-    else()
+    elseif(KernelPlatformRocketchipBase)
         config_set(KernelOpenSBIPlatform OPENSBI_PLATFORM "generic")
         # This is an experimental platform that supports accessing peripherals, but
         # the status of support for external interrupts via a PLIC is unclear and
         # may differ depending on the version that is synthesized. Declaring no
         # interrupts and using the dummy PLIC driver seems the best option for now
         # to avoid confusion or even crashes.
+        list(APPEND KernelDTSList "${CMAKE_CURRENT_LIST_DIR}/overlay-${KernelPlatformRocketchipBase}.dts")
         declare_default_headers(
             TIMER_FREQUENCY 10000000
             MAX_IRQ 0
             INTERRUPT_CONTROLLER drivers/irq/riscv_plic_dummy.h
         )
+    else()
+        message(FATAL_ERROR "unsupported rocketchip platform")
     endif()
-else()
-    unset(KernelPlatformFirstHartID CACHE)
 endif()

@@ -6,15 +6,23 @@
 
 cmake_minimum_required(VERSION 3.7.2)
 
-declare_platform(fvp KernelPlatformFVP PLAT_FVP KernelSel4ArchAarch64)
+declare_platform(
+    "fvp"
+    ARCH "aarch64"
+    # use default DTS at tools/dts/<board-name>.dts
+    CAMKE_VAR "KernelPlatformFVP"
+    # C_DEFINE defaults to CONFIG_PLAT_FVP
+    FLAGS
+        "KernelArmCortexA57"
+        "KernelArchArmV8a"
+        "KernelArmGicV3"
+    SOURCES
+        "src/arch/arm/machine/l2c_nop.c"
+        "src/arch/arm/machine/gic_v3.c"
+    # BOARDS: there is just one board, it defaults to the platform name
+)
 
 if(KernelPlatformFVP)
-    declare_seL4_arch(aarch64)
-    set(KernelArmCortexA57 ON)
-    set(KernelArchArmV8a ON)
-    set(KernelArmGicV3 ON)
-    config_set(KernelARMPlatform ARM_PLAT "${KernelPlatform}")
-    list(APPEND KernelDTSList "tools/dts/${KernelPlatform}.dts")
     list(APPEND KernelDTSList "${CMAKE_CURRENT_LIST_DIR}/overlay-${KernelPlatform}.dts")
     declare_default_headers(
         TIMER_FREQUENCY 100000000
@@ -23,8 +31,3 @@ if(KernelPlatformFVP)
         TIMER drivers/timer/arm_generic.h
     )
 endif()
-
-add_sources(
-    DEP "KernelPlatformFVP"
-    CFILES src/arch/arm/machine/l2c_nop.c src/arch/arm/machine/gic_v3.c
-)
