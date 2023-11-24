@@ -32,19 +32,19 @@ if(KernelPlatformZynqmp)
     set(KernelHardwareDebugAPIUnsupported ON CACHE INTERNAL "")
 
     if(KernelPlatformZynqmpUltra96v2 OR KernelPlatformZynqmpUltra96)
-        list(APPEND KernelDTSList "tools/dts/${KernelBoard}.dts")
+        add_platform_dts("tools/dts/${KernelBoard}.dts")
     elseif(KernelPlatformZynqmpZcu102)
         # The default board uses the platform name for the DTS and not the name
         # of the actual board.
-        list(APPEND KernelDTSList "tools/dts/${KernelPlatform}.dts")
+        add_platform_dts("tools/dts/${KernelPlatform}.dts")
     else()
         message(FATAL_ERROR "unknown platform")
     endif()
 
     if(KernelSel4ArchAarch32)
-        list(APPEND KernelDTSList "${CMAKE_CURRENT_LIST_DIR}/overlay-${KernelPlatform}32.dts")
+        add_platform_dts("${CMAKE_CURRENT_LIST_DIR}/overlay-${KernelPlatform}32.dts")
     elseif(KernelSel4ArchAarch64)
-        list(APPEND KernelDTSList "${CMAKE_CURRENT_LIST_DIR}/overlay-${KernelPlatform}.dts")
+        add_platform_dts("${CMAKE_CURRENT_LIST_DIR}/overlay-${KernelPlatform}.dts")
     else()
         message(FATAL_ERROR "unsupported KernelSel4Arch")
     endif()

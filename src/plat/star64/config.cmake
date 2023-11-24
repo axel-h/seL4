@@ -25,7 +25,7 @@ if(KernelPlatformStar64)
     config_set(KernelPlatformFirstHartID FIRST_HART_ID 1)
     config_set(KernelOpenSBIPlatform OPENSBI_PLATFORM "generic")
     # Note that by default the kernel is configured for the 4GB Star64 model.
-    list(APPEND KernelDTSList "${CMAKE_CURRENT_LIST_DIR}/overlay-${KernelPlatform}.dts")
+    add_platform_dts("${CMAKE_CURRENT_LIST_DIR}/overlay-${KernelPlatform}.dts")
     # The value for TIMER_FREQUENCY is from the "timebase-frequency" field on
     # the "cpus" node in the Star64 device tree.
     # The value for MAX_IRQ comes from the DTS "plic" node which says

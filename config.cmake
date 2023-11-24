@@ -138,7 +138,7 @@ if(DEFINED KernelDTSList AND (NOT "${KernelDTSList}" STREQUAL ""))
         if(NOT EXISTS ${dts_entry})
             message(FATAL_ERROR "Can't open external overlay file '${dts_entry}'!")
         endif()
-        list(APPEND KernelDTSList "${dts_entry}")
+        add_platform_dts("${dts_entry}")
         message(STATUS "Appending ${dts_entry} overlay")
     endforeach()
 

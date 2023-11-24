@@ -40,7 +40,7 @@ if(KernelPlatExynos5)
         set(KernelHardwareDebugAPIUnsupported ON CACHE INTERNAL "")
     endif()
 
-    list(APPEND KernelDTSList "${CMAKE_CURRENT_LIST_DIR}/overlay-${KernelBoard}.dts")
+    add_platform_dts("${CMAKE_CURRENT_LIST_DIR}/overlay-${KernelBoard}.dts")
 
     declare_default_headers(
         TIMER_FREQUENCY 24000000

@@ -30,9 +30,9 @@ if(KernelPlatformMaaxboard)
 
     config_set(KernelPlatImx8mq PLAT_IMX8MQ ON)
 
-    list(APPEND KernelDTSList "${CMAKE_CURRENT_LIST_DIR}/overlay-${KernelPlatform}.dts")
+    add_platform_dts("${CMAKE_CURRENT_LIST_DIR}/overlay-${KernelPlatform}.dts")
     if(KernelSel4ArchAarch32)
-        list(APPEND KernelDTSList"${CMAKE_CURRENT_LIST_DIR}/overlay-${KernelPlatform}-32bit.dts")
+        add_platform_dts("${CMAKE_CURRENT_LIST_DIR}/overlay-${KernelPlatform}-32bit.dts")
     endif()
     declare_default_headers(
         TIMER_FREQUENCY 8000000

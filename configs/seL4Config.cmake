@@ -88,6 +88,13 @@ function(sanitize_str_for_var out_var str)
     set(${out_var} "${str}" PARENT_SCOPE)
 endfunction()
 
+function(add_platform_dts)
+    foreach(dts IN LISTS ARGV)
+        list(APPEND KernelDTSList "${dts}")
+    endforeach()
+    set(KernelDTSList "${KernelDTSList}" PARENT_SCOPE)
+endfunction()
+
 # Register a platform's config options to be set if it is selected.
 # Additionally, the kernel_platforms variable can be used as a record of all
 # platforms that can be built once the platform configuration files have been
@@ -359,7 +366,8 @@ function(declare_platform name)
         if(NOT EXISTS "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/../${main_dts}")
             message(FATAL_ERROR "missing DTS: ${main_dts}")
         endif()
-        set(KernelDTSList "${main_dts}" PARENT_SCOPE)
+        add_platform_dts("${main_dts}")
+        set(KernelDTSList "${KernelDTSList}" PARENT_SCOPE)
     endif()
 
     # ensure the parent sees all the changes that e.g. config_set() made

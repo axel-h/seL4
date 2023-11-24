@@ -26,7 +26,7 @@ if(KernelPlatformAllwinnerA20)
     # implements the tickless programming requirements.
     set(KernelPlatformSupportsMCS OFF)
 
-    list(APPEND KernelDTSList "${CMAKE_CURRENT_LIST_DIR}/overlay-${KernelPlatform}.dts")
+    add_platform_dts("${CMAKE_CURRENT_LIST_DIR}/overlay-${KernelPlatform}.dts")
 
     declare_default_headers(
         TIMER_FREQUENCY 24000000

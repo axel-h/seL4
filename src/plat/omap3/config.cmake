@@ -26,7 +26,7 @@ if(KernelPlatformOMAP3)
 
     set(KernelHardwareDebugAPIUnsupported ON CACHE INTERNAL "")
 
-    list(APPEND KernelDTSList "${CMAKE_CURRENT_LIST_DIR}/overlay-${KernelPlatform}.dts")
+    add_platform_dts("${CMAKE_CURRENT_LIST_DIR}/overlay-${KernelPlatform}.dts")
 
     declare_default_headers(
         TIMER_FREQUENCY 13000000

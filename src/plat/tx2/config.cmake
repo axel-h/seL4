@@ -26,7 +26,7 @@ declare_platform(
 if(KernelPlatformTx2)
     # Note: If we enable the Denver 2 cores, which are 40-bit PA,
     # the 44-bit PA for Cortex-A57 cores would need to be downgraded to 40bit.
-    list(APPEND KernelDTSList "${CMAKE_CURRENT_LIST_DIR}/overlay-${KernelPlatform}.dts")
+    add_platform_dts("${CMAKE_CURRENT_LIST_DIR}/overlay-${KernelPlatform}.dts")
     declare_default_headers(
         TIMER_FREQUENCY 31250000
         MAX_IRQ 383

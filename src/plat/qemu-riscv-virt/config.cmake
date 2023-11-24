@@ -196,10 +196,10 @@ if(KernelPlatformQEMURiscVVirt)
 
     endif()
 
-    list(APPEND KernelDTSList "${QEMU_DTS}" "${CMAKE_CURRENT_LIST_DIR}/overlay-qemu-riscv-virt.dts")
+    add_platform_dts("${QEMU_DTS}" "${CMAKE_CURRENT_LIST_DIR}/overlay-qemu-riscv-virt.dts")
 
     if(KernelSel4ArchRiscV32)
-        list(APPEND KernelDTSList "${CMAKE_CURRENT_LIST_DIR}/overlay-qemu-riscv-virt32.dts")
+        add_platform_dts("${CMAKE_CURRENT_LIST_DIR}/overlay-qemu-riscv-virt32.dts")
     endif()
 
     # QEMU emulates a SiFive PLIC/CLINT with 127 interrupt sources by default.

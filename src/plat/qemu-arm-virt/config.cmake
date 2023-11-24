@@ -260,14 +260,14 @@ if(KernelPlatformQEMUArmVirt)
 
     endif()
 
-    list(APPEND KernelDTSList "${QEMU_DTS}" "${CMAKE_CURRENT_LIST_DIR}/overlay-qemu-arm-virt.dts")
+    add_platform_dts("${QEMU_DTS}" "${CMAKE_CURRENT_LIST_DIR}/overlay-qemu-arm-virt.dts")
 
     if(KernelSel4ArchAarch32)
-        list(APPEND KernelDTSList "${CMAKE_CURRENT_LIST_DIR}/overlay-qemu-arm-virt32.dts")
+        add_platform_dts("${CMAKE_CURRENT_LIST_DIR}/overlay-qemu-arm-virt32.dts")
     endif()
 
     if(KernelArmHypervisorSupport OR KernelSel4ArchArmHyp)
-        list(APPEND KernelDTSList "${CMAKE_CURRENT_LIST_DIR}/overlay-reserve-vm-memory.dts")
+        add_platform_dts("${CMAKE_CURRENT_LIST_DIR}/overlay-reserve-vm-memory.dts")
     endif()
 
     declare_default_headers(

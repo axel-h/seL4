@@ -25,10 +25,10 @@ declare_platform(
 if(KernelPlatformZynq7000)
 
     if(KernelIsMCS)
-        list(APPEND KernelDTSList "${CMAKE_CURRENT_LIST_DIR}/mcs-overlay-${KernelPlatform}.dts")
+        add_platform_dts("${CMAKE_CURRENT_LIST_DIR}/mcs-overlay-${KernelPlatform}.dts")
         set(timer_file drivers/timer/arm_global.h)
     else()
-        list(APPEND KernelDTSList "${CMAKE_CURRENT_LIST_DIR}/overlay-${KernelPlatform}.dts")
+        add_platform_dts("${CMAKE_CURRENT_LIST_DIR}/overlay-${KernelPlatform}.dts")
         set(timer_file drivers/timer/arm_priv.h)
     endif()
 
