@@ -10,12 +10,16 @@
 
 #pragma once
 
+#include <config.h>
+#include <util.h>
+#include <types.h>
+#include <machine/interrupt.h>
+#include <arch/machine/plic.h>
+
 /* Since this is a template, it has a dummy implementation for the trigger API
  * function plic_irq_set_trigger().
  */
 #define HAVE_SET_TRIGGER 1
-
-#include <arch/machine/plic.h>
 
 static inline irq_t plic_get_claim(void)
 {

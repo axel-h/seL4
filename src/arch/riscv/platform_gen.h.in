@@ -10,8 +10,6 @@
 
 #define TIMER_CLOCK_HZ ULL_CONST(@CONFIGURE_TIMER_FREQUENCY@)
 
-#include <machine/interrupt.h>
-
 /*
  * seL4 assigns all IRQs global interrupt numbers that are used in interrupt
  * invocations. On RISC-V we have 3 different types of interrupts: core timer,
