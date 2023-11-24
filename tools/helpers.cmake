@@ -570,6 +570,7 @@ function(config_choice optionname configname doc)
     # We create a new variable because cmake doesn't support arbitrary properties on cache variables.
     set(${optionname}_all_strings ${all_strings} CACHE INTERNAL "" FORCE)
     set(configure_string "${local_config_string}" PARENT_SCOPE)
+    message("config_choice: ${local_config_string}")
 endfunction(config_choice)
 
 # Defines a target for a 'configuration' library, which generates a header based

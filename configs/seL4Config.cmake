@@ -90,6 +90,7 @@ endfunction()
 
 function(add_platform_dts)
     foreach(dts IN LISTS ARGV)
+        message(STATUS "add KernelDTSList: <${dts}>")
         list(APPEND KernelDTSList "${dts}")
     endforeach()
     set(KernelDTSList "${KernelDTSList}" PARENT_SCOPE)
@@ -151,6 +152,7 @@ function(declare_platform name)
     # "_". That's all what is needed for the platform names currently in use,
     # new names may require additional sanitizing. We also capitalize all
     # letters to have the C define and the CMake variable aligned closely.
+    message(STATUS "${name}    (KernelPlatform='${KernelPlatform}')")
     sanitize_str_for_var(name_as_var "${name}")
 
     if(NOT DEFINED PARAM_ARCH)
@@ -159,10 +161,18 @@ function(declare_platform name)
 
     if(NOT DEFINED PARAM_CAMKE_VAR)
         set(PARAM_CAMKE_VAR "KernelPlatform_${name_as_var}")
+    else()
+        message(STATUS "   CAMKE_VAR: KernelPlatform_${name_as_var} -> ${PARAM_CAMKE_VAR}")
     endif()
 
     if(NOT DEFINED PARAM_C_DEFINE)
         set(PARAM_C_DEFINE "PLAT_${name_as_var}")
+    else()
+        message(STATUS "   C_DEFINE: PLAT_${name_as_var} -> ${PARAM_C_DEFINE}")
+    endif()
+
+    if(PARAM_NO_DEFAULT_DTS)
+        message(STATUS "   DTS: (none by default)")
     endif()
 
     # disable any CMake variables by default
@@ -193,6 +203,7 @@ function(declare_platform name)
 
     set(filter "")
     foreach(a IN LISTS PARAM_ARCH)
+        message(STATUS "ARCH: <${a}>")
         if(NOT ";${arch_mapping};" MATCHES ";${a}:([^;]*);")
             message(FATAL_ERROR "KernelPlatform '${name}': unsupported architecture '${a}'")
         endif()
@@ -216,6 +227,9 @@ function(declare_platform name)
             string(REPLACE "," ";" board_descr "${board}")
             list(LENGTH board_descr cnt)
             list(GET board_descr 0 board_name)
+
+            message(STATUS "   board: ${board_name}")
+
             list(APPEND board_names "${board_name}")
             sanitize_str_for_var(board_name_as_var "${board_name}")
             set(board_cmake_var "KernelPlatform_${board_name_as_var}")
@@ -223,8 +237,10 @@ function(declare_platform name)
 
             if(cnt GREATER 1)
                 list(GET board_descr 1 board_cmake_var)
+                message(STATUS "   CAMKE_VAR: KernelPlatform_${board_name_as_var} -> ${board_cmake_var}")
                 if(cnt GREATER 2)
                     list(GET board_descr 2 board_c_define)
+                    message(STATUS "   C_DEFINE: PLAT_${board_name_as_var} -> ${board_c_define}")
                 endif()
             endif()
 
@@ -251,6 +267,7 @@ function(declare_platform name)
         set(KernelPlatform "${name}")
     elseif(NOT KernelPlatform STREQUAL "${name}")
         # We are done here if this is not the currently selected platform.
+        message(STATUS "   OFF")
         return()
     elseif(board_names)
         # The KernelPlatform was not set to a specific board name, pick the
@@ -349,14 +366,18 @@ function(declare_platform name)
         # we have to loop here, because add_sources() does not support a list
         # inside a parameter.
         foreach(f IN LISTS PARAM_SOURCES)
+            message(STATUS "   add: ${f}")
             add_sources(CFILES "${f}")
         endforeach()
         set(c_sources "${c_sources}" PARENT_SCOPE)
+        message(STATUS "   c_sources: ${c_sources}")
         set(asm_sources "${asm_sources}" PARENT_SCOPE)
+        message(STATUS "   asm_sources: ${asm_sources}")
     endif()
 
     if(DEFINED PARAM_FLAGS)
         foreach(f IN LISTS PARAM_FLAGS)
+            message(STATUS "   add: ${f}=ON")
             set(${f} ON PARENT_SCOPE)
         endforeach()
     endif()
@@ -372,6 +393,9 @@ function(declare_platform name)
 
     # ensure the parent sees all the changes that e.g. config_set() made
     set(configure_string "${configure_string}" PARENT_SCOPE)
+
+    message(STATUS "   ON")
+
 endfunction()
 
 unset(CONFIGURE_TIMER_FREQUENCY CACHE)
@@ -394,6 +418,7 @@ unset(CONFIGURE_MAX_CB CACHE)
 # python script also verifies the multiply-and-shift operation works for every
 # 32-bit integer, and this check takes a very long time.
 macro(declare_default_headers)
+    message(STATUS "declare_default_headers: ${ARGN}")
     cmake_parse_arguments(
         CONFIGURE
         ""
