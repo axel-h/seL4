@@ -10,6 +10,14 @@
 
 #pragma once
 
+#include <config.h>
+#include <util.h>
+#include <types.h>
+#include <machine/interrupt.h>
+#include <plat/machine.h>
+#include <arch/model/smp.h>
+#include <arch/machine/plic.h>
+
 /* This is a check that prevents using this driver blindly. Extend the list if
  * this driver is confirmed to be working on other platforms. */
 #if !defined(CONFIG_PLAT_HIFIVE) && \
@@ -23,10 +31,6 @@
 
 /* tell the kernel we have the set trigger feature */
 #define HAVE_SET_TRIGGER 1
-
-#include <plat/machine/devices_gen.h>
-#include <arch/model/smp.h>
-#include <arch/machine/plic.h>
 
 /* The memory map is based on the PLIC section in
  * https://static.dev.sifive.com/U54-MC-RVCoreIP.pdf
