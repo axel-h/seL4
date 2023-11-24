@@ -7,7 +7,16 @@
 
 cmake_minimum_required(VERSION 3.7.2)
 
-declare_platform(qemu-arm-virt KernelPlatformQEMUArmVirt PLAT_QEMU_ARM_VIRT KernelArchARM)
+declare_platform(
+    "qemu-arm-virt"
+    ARCH "aarch64" "aarch32" "arm_hyp"
+    NO_DEFAULT_DTS # there is no tools/dts/qemu-arm-virt.dts
+    CAMKE_VAR "KernelPlatformQEMUArmVirt"
+    # C_DEFINE defaults to CONFIG_PLAT_QEMU_ARM_VIRT
+    SOURCES
+        "src/arch/arm/machine/gic_v2.c"
+        "src/arch/arm/machine/l2c_nop.c"
+)
 
 set(qemu_user_top 0xa0000000)
 
@@ -82,8 +91,6 @@ if(KernelPlatformQEMUArmVirt)
     else()
         message(FATAL_ERROR "Unsupported ARM_CPU: ${ARM_CPU}")
     endif()
-
-    config_set(KernelARMPlatform ARM_PLAT qemu-arm-virt)
 
     # If neither QEMU_DTS nor QEMU_DTB is set explicitly, the device tree is
     # extracted from QEMU. This keeps it nicely up to date with the the actual
@@ -275,11 +282,6 @@ if(KernelPlatformQEMUArmVirt)
     )
 
 endif()
-
-add_sources(
-    DEP "KernelPlatformQEMUArmVirt"
-    CFILES src/arch/arm/machine/gic_v2.c src/arch/arm/machine/l2c_nop.c
-)
 
 config_string(
     KernelUserTop USER_TOP "Set seL4_UserTop constant"
