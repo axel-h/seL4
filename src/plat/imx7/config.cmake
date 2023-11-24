@@ -24,7 +24,7 @@ declare_platform(
 )
 
 if(KernelPlatformImx7Sabre)
-    list(APPEND KernelDTSList "${CMAKE_CURRENT_LIST_DIR}/overlay-${KernelBoard}.dts")
+    add_platform_dts("${CMAKE_CURRENT_LIST_DIR}/overlay-${KernelBoard}.dts")
     declare_default_headers(
         TIMER_FREQUENCY 8000000
         MAX_IRQ 159

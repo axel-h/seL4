@@ -23,7 +23,7 @@ declare_platform(
 
 if(KernelPlatformHikey)
     set(KernelArmMachFeatureModifiers "+crc" CACHE INTERNAL "")
-    list(APPEND KernelDTSList "${CMAKE_CURRENT_LIST_DIR}/overlay-${KernelPlatform}.dts")
+    add_platform_dts("${CMAKE_CURRENT_LIST_DIR}/overlay-${KernelPlatform}.dts")
     declare_default_headers(
         TIMER_FREQUENCY 1200000
         MAX_IRQ 159

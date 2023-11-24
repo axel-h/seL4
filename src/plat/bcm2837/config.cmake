@@ -24,7 +24,7 @@ declare_platform(
 
 if(KernelPlatformRpi3)
     set(KernelArmMachFeatureModifiers "+crc" CACHE INTERNAL "")
-    list(APPEND KernelDTSList "${CMAKE_CURRENT_LIST_DIR}/overlay-${KernelBoard}.dts")
+    add_platform_dts("${CMAKE_CURRENT_LIST_DIR}/overlay-${KernelBoard}.dts")
     declare_default_headers(
         TIMER_FREQUENCY 19200000
         MAX_IRQ 127

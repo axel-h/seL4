@@ -24,13 +24,13 @@ if(KernelPlatformSpike)
     config_set(KernelPlatformFirstHartID FIRST_HART_ID 0)
     config_set(KernelOpenSBIPlatform OPENSBI_PLATFORM "generic")
     if(KernelSel4ArchRiscV32)
-        list(APPEND KernelDTSList "tools/dts/${KernelPlatform}32.dts")
+        add_platform_dts("tools/dts/${KernelPlatform}32.dts")
     elseif(KernelSel4ArchRiscV64)
-        list(APPEND KernelDTSList "tools/dts/${KernelPlatform}.dts")
+        add_platform_dts("tools/dts/${KernelPlatform}.dts")
     else()
         message(FATAL_ERROR "invalid architecture")
     endif()
-    list(APPEND KernelDTSList "${CMAKE_CURRENT_LIST_DIR}/overlay-${KernelPlatform}.dts")
+    add_platform_dts("${CMAKE_CURRENT_LIST_DIR}/overlay-${KernelPlatform}.dts")
 
     declare_default_headers(
         TIMER_FREQUENCY 10000000

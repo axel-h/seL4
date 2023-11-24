@@ -20,9 +20,7 @@ declare_platform(
 if(KernelPlatformPolarfire)
     config_set(KernelOpenSBIPlatform OPENSBI_PLATFORM "generic")
     config_set(KernelPlatformFirstHartID FIRST_HART_ID 1)
-    list(
-        APPEND
-        KernelDTSList
+    add_platform_dts(
         "tools/dts/mpfs_icicle.dts"
         "${CMAKE_CURRENT_LIST_DIR}/overlay-${KernelPlatform}.dts"
     )

@@ -27,7 +27,7 @@ declare_platform(
 
 if(KernelPlatformTqma8xqp1gb)
     set(KernelArmVtimerUpdateVOffset OFF)
-    list(APPEND KernelDTSList "${CMAKE_CURRENT_LIST_DIR}/overlay-${KernelPlatform}.dts")
+    add_platform_dts("${CMAKE_CURRENT_LIST_DIR}/overlay-${KernelPlatform}.dts")
     declare_default_headers(
         TIMER_FREQUENCY 8000000
         MAX_IRQ 511

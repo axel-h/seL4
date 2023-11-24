@@ -23,7 +23,7 @@ declare_platform(
 )
 
 if(KernelPlatformFVP)
-    list(APPEND KernelDTSList "${CMAKE_CURRENT_LIST_DIR}/overlay-${KernelPlatform}.dts")
+    add_platform_dts("${CMAKE_CURRENT_LIST_DIR}/overlay-${KernelPlatform}.dts")
     declare_default_headers(
         TIMER_FREQUENCY 100000000
         MAX_IRQ 207

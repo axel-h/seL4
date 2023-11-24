@@ -25,11 +25,9 @@ declare_platform(
 
 if(KernelPlatformRpi4)
     set(KernelArmMachFeatureModifiers "+crc" CACHE INTERNAL "")
-    list(
-        APPEND
-        KernelDTSList
-            "${CMAKE_CURRENT_LIST_DIR}/overlay-${KernelBoard}.dts"
-            "${CMAKE_CURRENT_LIST_DIR}/overlay-${KernelBoard}-address-mapping.dts"
+    add_platform_dts(
+        "${CMAKE_CURRENT_LIST_DIR}/overlay-${KernelBoard}.dts"
+        "${CMAKE_CURRENT_LIST_DIR}/overlay-${KernelBoard}-address-mapping.dts"
     )
 
     if(NOT DEFINED RPI4_MEMORY)
@@ -38,13 +36,13 @@ if(KernelPlatformRpi4)
     endif()
 
     if("${RPI4_MEMORY}" STREQUAL "1024")
-        list(APPEND KernelDTSList "${CMAKE_CURRENT_LIST_DIR}/overlay-${KernelBoard}-1gb.dts")
+        add_platform_dts("${CMAKE_CURRENT_LIST_DIR}/overlay-${KernelBoard}-1gb.dts")
     elseif("${RPI4_MEMORY}" STREQUAL "2048")
-        list(APPEND KernelDTSList "${CMAKE_CURRENT_LIST_DIR}/overlay-${KernelBoard}-2gb.dts")
+        add_platform_dts("${CMAKE_CURRENT_LIST_DIR}/overlay-${KernelBoard}-2gb.dts")
     elseif("${RPI4_MEMORY}" STREQUAL "4096")
-        list(APPEND KernelDTSList "${CMAKE_CURRENT_LIST_DIR}/overlay-${KernelBoard}-4gb.dts")
+        add_platform_dts("${CMAKE_CURRENT_LIST_DIR}/overlay-${KernelBoard}-4gb.dts")
     elseif("${RPI4_MEMORY}" STREQUAL "8192")
-        list(APPEND KernelDTSList "${CMAKE_CURRENT_LIST_DIR}/overlay-${KernelBoard}-8gb.dts")
+        add_platform_dts("${CMAKE_CURRENT_LIST_DIR}/overlay-${KernelBoard}-8gb.dts")
     else()
         message(FATAL_ERROR "Unsupported memory size given ${RPI4_MEMORY},
                             supported memory sizes (in megabytes) are 1024,

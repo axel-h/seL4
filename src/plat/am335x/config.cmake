@@ -28,9 +28,9 @@ if(KernelPlatformAM335X)
     set(KernelHardwareDebugAPIUnsupported ON CACHE INTERNAL "")
 
     if(KernelPlatformAM335XBoneBlack)
-        list(APPEND KernelDTSList "${CMAKE_CURRENT_LIST_DIR}/overlay-${KernelPlatform}.dts")
+        add_platform_dts("${CMAKE_CURRENT_LIST_DIR}/overlay-${KernelPlatform}.dts")
     endif()
-    list(APPEND KernelDTSList "${CMAKE_CURRENT_LIST_DIR}/overlay-${KernelPlatform}.dts")
+    add_platform_dts("${CMAKE_CURRENT_LIST_DIR}/overlay-${KernelPlatform}.dts")
 
     declare_default_headers(
         MAX_IRQ 127

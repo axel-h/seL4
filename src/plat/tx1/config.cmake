@@ -24,7 +24,7 @@ declare_platform(
 
 if(KernelPlatformTx1)
 
-    list(APPEND KernelDTSList "${CMAKE_CURRENT_LIST_DIR}/overlay-${KernelPlatform}.dts")
+    add_platform_dts("${CMAKE_CURRENT_LIST_DIR}/overlay-${KernelPlatform}.dts")
 
     declare_default_headers(
         TIMER_FREQUENCY 12000000

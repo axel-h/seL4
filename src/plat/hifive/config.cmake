@@ -21,7 +21,7 @@ declare_platform(
 if(KernelPlatformHifive)
     config_set(KernelPlatformFirstHartID FIRST_HART_ID 1)
     config_set(KernelOpenSBIPlatform OPENSBI_PLATFORM "generic")
-    list(APPEND KernelDTSList "${CMAKE_CURRENT_LIST_DIR}/overlay-${KernelPlatform}.dts")
+    add_platform_dts("${CMAKE_CURRENT_LIST_DIR}/overlay-${KernelPlatform}.dts")
     declare_default_headers(
         TIMER_FREQUENCY 1000000
         MAX_IRQ 53

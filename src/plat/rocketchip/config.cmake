@@ -21,7 +21,7 @@ declare_platform(
 
 if(KernelPlatformRocketchip)
     config_set(KernelPlatformFirstHartID FIRST_HART_ID 0)
-    list(APPEND KernelDTSList "${CMAKE_CURRENT_LIST_DIR}/overlay-${KernelRiscVPlatform}.dts")
+    add_platform_dts("${CMAKE_CURRENT_LIST_DIR}/overlay-${KernelBoard}.dts")
     # The Rocketchip-ZCU102 is a softcore instantiation that runs on the ZCU102's
     # FPGA fabric. Information on generating and running seL4 on the platform can
     # be found at https://docs.sel4.systems/Hardware/

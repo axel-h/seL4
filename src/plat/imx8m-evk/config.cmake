@@ -59,9 +59,9 @@ declare_platform(
 )
 
 if(KernelPlatformImx8mq-evk OR KernelPlatformImx8mm-evk OR KernelPlatformImx8mp-evk)
-    list(APPEND KernelDTSList "${CMAKE_CURRENT_LIST_DIR}/overlay-${KernelPlatform}.dts")
+    add_platform_dts("${CMAKE_CURRENT_LIST_DIR}/overlay-${KernelPlatform}.dts")
     if(KernelSel4ArchAarch32)
-        list(APPEND KernelDTSList "${CMAKE_CURRENT_LIST_DIR}/overlay-imx8m-32bit.dts")
+        add_platform_dts("${CMAKE_CURRENT_LIST_DIR}/overlay-imx8m-32bit.dts")
     endif()
 
     if(KernelPlatformImx8mq-evk)
