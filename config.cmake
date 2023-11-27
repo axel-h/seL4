@@ -155,7 +155,7 @@ if(DEFINED KernelDTSList AND (NOT "${KernelDTSList}" STREQUAL ""))
         file(REMOVE "${KernelDTSIntermediate}")
         foreach(entry IN LISTS dts_list)
             file(READ ${entry} CONTENTS)
-            file(APPEND "${KernelDTSIntermediate}" "${CONTENTS}")
+            file(APPEND "${KernelDTSIntermediate}" "/*\n *\n * ${entry}\n *\n */\n\n${CONTENTS}")
         endforeach()
         # Compile DTS to DTB
         execute_process(
