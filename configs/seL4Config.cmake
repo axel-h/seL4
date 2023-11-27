@@ -129,6 +129,12 @@ macro(declare_default_headers)
         ""
         ${ARGN}
     )
+    if(CONFIGURE_UNPARSED_ARGUMENTS)
+        message(
+            FATAL_ERROR
+                "Unknown arguments in declare_default_headers(): ${CONFIGURE_UNPARSED_ARGUMENTS}"
+        )
+    endif()
     set(CALLED_declare_default_headers 1)
 endmacro()
 
