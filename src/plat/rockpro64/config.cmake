@@ -14,9 +14,9 @@ if(KernelPlatformRockpro64)
     set(KernelArmCortexA53 ON)
     set(KernelArchArmV8a ON)
     set(KernelArmGicV3 ON)
-    config_set(KernelARMPlatform ARM_PLAT "rockpro64")
-    list(APPEND KernelDTSList "tools/dts/rockpro64.dts")
-    list(APPEND KernelDTSList "src/plat/rockpro64/overlay-rockpro64.dts")
+    config_set(KernelARMPlatform ARM_PLAT "${KernelPlatform}")
+    list(APPEND KernelDTSList "tools/dts/${KernelPlatform}.dts")
+    list(APPEND KernelDTSList "${CMAKE_CURRENT_LIST_DIR}/overlay-${KernelPlatform}.dts")
     declare_default_headers(
         TIMER_FREQUENCY 24000000
         MAX_IRQ 181

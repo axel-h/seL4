@@ -13,9 +13,9 @@ if(KernelPlatformFVP)
     set(KernelArmCortexA57 ON)
     set(KernelArchArmV8a ON)
     set(KernelArmGicV3 ON)
-    config_set(KernelARMPlatform ARM_PLAT "fvp")
-    list(APPEND KernelDTSList "tools/dts/fvp.dts")
-    list(APPEND KernelDTSList "src/plat/fvp/overlay-fvp.dts")
+    config_set(KernelARMPlatform ARM_PLAT "${KernelPlatform}")
+    list(APPEND KernelDTSList "tools/dts/${KernelPlatform}.dts")
+    list(APPEND KernelDTSList "${CMAKE_CURRENT_LIST_DIR}/overlay-${KernelPlatform}.dts")
     declare_default_headers(
         TIMER_FREQUENCY 100000000
         MAX_IRQ 207

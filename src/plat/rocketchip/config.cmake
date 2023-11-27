@@ -21,18 +21,19 @@ endforeach()
 if(KernelPlatformRocketchip)
     declare_seL4_arch(riscv64)
 
-    check_platform_and_fallback_to_default(KernelRiscVPlatform "rocketchip-base")
+    check_platform_and_fallback_to_default(KernelRiscVPlatform "${KernelPlatform}-base")
     list(FIND plat_lists ${KernelRiscVPlatform} index)
     if("${index}" STREQUAL "-1")
         message(FATAL_ERROR "Which rocketchip platform not specified")
     endif()
     list(GET c_configs ${index} c_config)
     list(GET cmake_configs ${index} cmake_config)
-    config_set(KernelRiscVPlatform RISCV_PLAT ${KernelRiscVPlatform})
+    config_set(KernelRiscVPlatform RISCV_PLAT "${KernelRiscVPlatform}")
     config_set(${cmake_config} ${c_config} ON)
 
     config_set(KernelPlatformFirstHartID FIRST_HART_ID 0)
-    list(APPEND KernelDTSList "tools/dts/rocketchip.dts")
+    list(APPEND KernelDTSList "tools/dts/${KernelPlatform}.dts")
+    list(APPEND KernelDTSList "${CMAKE_CURRENT_LIST_DIR}/overlay-${KernelRiscVPlatform}.dts")
     # The Rocketchip-ZCU102 is a softcore instantiation that runs on the ZCU102's
     # FPGA fabric. Information on generating and running seL4 on the platform can
     # be found at https://docs.sel4.systems/Hardware/
@@ -43,7 +44,6 @@ if(KernelPlatformRocketchip)
         # In order for this to function, please ensure the bao-project/opensbi
         # repo is added as a remote to the tools/opensbi project in the seL4 codebase
         config_set(KernelOpenSBIPlatform OPENSBI_PLATFORM "rocket-fpga-zcu104")
-        list(APPEND KernelDTSList "src/plat/rocketchip/overlay-rocketchip-zcu102.dts")
         # The zcu102 instantiation supports the PLIC and external interrupts
         declare_default_headers(
             TIMER_FREQUENCY 10000000
@@ -51,7 +51,6 @@ if(KernelPlatformRocketchip)
             INTERRUPT_CONTROLLER drivers/irq/riscv_plic0.h
         )
     else()
-        list(APPEND KernelDTSList "src/plat/rocketchip/overlay-rocketchip-base.dts")
         config_set(KernelOpenSBIPlatform OPENSBI_PLATFORM "generic")
         # This is an experimental platform that supports accessing peripherals, but
         # the status of support for external interrupts via a PLIC is unclear and

@@ -28,7 +28,7 @@ if(KernelPlatformImx8mq-evk OR KernelPlatformImx8mm-evk OR KernelPlatformImx8mp-
     config_set(KernelARMPlatform ARM_PLAT ${KernelPlatform})
     set(KernelArmMach "imx" CACHE INTERNAL "")
     list(APPEND KernelDTSList "tools/dts/${KernelPlatform}.dts")
-    list(APPEND KernelDTSList "src/plat/imx8m-evk/overlay-${KernelPlatform}.dts")
+    list(APPEND KernelDTSList "${CMAKE_CURRENT_LIST_DIR}/overlay-${KernelPlatform}.dts")
     if(KernelSel4ArchAarch32)
         list(APPEND KernelDTSList "src/plat/imx8m-evk/overlay-imx8m-32bit.dts")
     endif()

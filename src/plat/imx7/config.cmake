@@ -13,10 +13,10 @@ if(KernelPlatImx7)
     declare_seL4_arch(aarch32)
     set(KernelArmCortexA7 ON)
     set(KernelArchArmV7a ON)
-    config_set(KernelARMPlatform ARM_PLAT imx7sabre)
+    config_set(KernelARMPlatform ARM_PLAT "imx7sabre")
     set(KernelArmMach "imx" CACHE INTERNAL "")
-    list(APPEND KernelDTSList "tools/dts/imx7sabre.dts")
-    list(APPEND KernelDTSList "src/plat/imx7/overlay-imx7sabre.dts")
+    list(APPEND KernelDTSList "tools/dts/${KernelARMPlatform}.dts")
+    list(APPEND KernelDTSList "${CMAKE_CURRENT_LIST_DIR}/overlay-${KernelARMPlatform}.dts")
     declare_default_headers(
         TIMER_FREQUENCY 8000000
         MAX_IRQ 159
