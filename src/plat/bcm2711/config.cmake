@@ -17,7 +17,11 @@ if(KernelPlatformRpi4)
     set(KernelArmMachFeatureModifiers "+crc" CACHE INTERNAL "")
     list(APPEND KernelDTSList "tools/dts/${KernelARMPlatform}.dts")
     list(APPEND KernelDTSList "${CMAKE_CURRENT_LIST_DIR}/overlay-${KernelARMPlatform}.dts")
-    list(APPEND KernelDTSList "${CMAKE_CURRENT_LIST_DIR}/overlay-${KernelARMPlatform}-address-mapping.dts")
+    list(
+        APPEND
+            KernelDTSList
+            "${CMAKE_CURRENT_LIST_DIR}/overlay-${KernelARMPlatform}-address-mapping.dts"
+    )
 
     if(NOT DEFINED RPI4_MEMORY)
         # By default we assume an RPi4B model with 8GB of RAM

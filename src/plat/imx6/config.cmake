@@ -55,7 +55,11 @@ if(KernelPlatImx6)
 
     if(KernelIsMCS)
         if(KernelPlatformNitrogen6SX)
-            list(APPEND KernelDTSList "${CMAKE_CURRENT_LIST_DIR}/mcs-overlay-${KernelARMPlatform}.dts")
+            list(
+                APPEND
+                    KernelDTSList
+                    "${CMAKE_CURRENT_LIST_DIR}/mcs-overlay-${KernelARMPlatform}.dts"
+            )
         else()
             list(APPEND KernelDTSList "${CMAKE_CURRENT_LIST_DIR}/mcs-overlay-${KernelPlatform}.dts")
         endif()
