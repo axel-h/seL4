@@ -29,13 +29,22 @@
 #include <machine/timer.h>
 #include <model/statedata.h>
 
-/* To do an operation in the kernel, the thread must have
- * at least this much budget - see comment on refill_sufficient */
-#define MIN_BUDGET_US (2u * getKernelWcetUs() * CONFIG_KERNEL_WCET_SCALE)
-#define MIN_BUDGET    (2u * getKernelWcetTicks() * CONFIG_KERNEL_WCET_SCALE)
-#if (CONFIG_KERNEL_STATIC_MAX_PERIOD_US) != 0
-#define MAX_PERIOD_US (CONFIG_KERNEL_STATIC_MAX_PERIOD_US)
-#else
+static inline CONST time_t getMinBudgetUs(void)
+{
+    time_t wcet_us = getKernelWcetUs();
+    /*
+     * The minimum budget is calculated based on the fact that the thread must
+     * have enough budget to do a kernel operation and thus must have at least
+     * enough budget to enter and exit the kernel after usage is charged to it.
+     */
+    return 2 * wcet_us * CONFIG_KERNEL_WCET_SCALE;
+}
+
+static inline PURE ticks_t getMinBudgetTicks(void)
+{
+    return usToTicks(getMinBudgetUs());
+}
+
 /* The maximum period determines the point at which the scheduling logic
  * will no longer function correctly (UINT64_MAX - 5 * MAX_PERIOD), so
  * we keep the maximum period relatively small to ensure that the system
@@ -43,10 +52,27 @@
  *
  * Anything below getMaxUsToTicks() / 8 would ensure that time up to
  * 2^63 would still be be valid as 5 * (getMaxUsToTicks()) must be less
- * than 2^62. */
-#define MAX_PERIOD_US (getMaxUsToTicks() / 8)
-#endif /* CONFIG_KERNEL_STATIC_MAX_PERIOD_US != 0 */
-#define MAX_RELEASE_TIME (UINT64_MAX - 5 * usToTicks(MAX_PERIOD_US))
+ * than 2^62.
+ */
+static inline CONST time_t getMaxPeriodUs(void)
+{
+#if (CONFIG_KERNEL_STATIC_MAX_PERIOD_US != 0)
+    return CONFIG_KERNEL_STATIC_MAX_PERIOD_US;
+#else
+    return getMaxUsToTicks() / 8;
+#endif
+}
+
+static inline PURE ticks_t getMaxReleaseTimeTicks(void)
+{
+    return UINT64_MAX - 5 * usToTicks(getMaxPeriodUs());
+}
+
+/* ToDo: remove old defines from the code */
+#define MIN_BUDGET_US       getMinBudgetUs()
+#define MIN_BUDGET          getMinBudgetTicks()
+#define MAX_PERIOD_US       getMaxPeriodUs()
+#define MAX_RELEASE_TIME    getMaxReleaseTimeTicks()
 
 /* Short hand for accessing refill queue items */
 static inline refill_t *refill_index(sched_context_t *sc, word_t index)
@@ -115,7 +141,7 @@ static inline ticks_t refill_capacity(sched_context_t *sc, ticks_t usage)
  */
 static inline bool_t refill_sufficient(sched_context_t *sc, ticks_t usage)
 {
-    return refill_capacity(sc, usage) >= MIN_BUDGET;
+    return refill_capacity(sc, usage) >= getMinBudgetTicks();
 }
 
 /*
@@ -144,14 +170,13 @@ static inline bool_t sc_active(sched_context_t *sc)
  */
 static inline bool_t sc_released(sched_context_t *sc)
 {
-    if (sc_active(sc)) {
-        /* All refills must all be greater than MIN_BUDGET so this
-         * should be true for all active SCs */
-        assert(refill_sufficient(sc, 0));
-        return refill_ready(sc);
-    } else {
+    if (unlikely(!sc_active(sc))) {
         return false;
     }
+    /* All refills must all be greater than getMinBudgetTicks() so this
+     * should be true for all active SCs */
+    assert(refill_sufficient(sc, 0));
+    return refill_ready(sc);
 }
 
 /*
