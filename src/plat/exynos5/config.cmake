@@ -50,7 +50,7 @@ if(KernelPlatExynos5)
     endif()
 
     list(APPEND KernelDTSList "tools/dts/${KernelARMPlatform}.dts")
-    list(APPEND KernelDTSList "src/plat/exynos5/overlay-${KernelARMPlatform}.dts")
+    list(APPEND KernelDTSList "${CMAKE_CURRENT_LIST_DIR}/overlay-${KernelARMPlatform}.dts")
     declare_default_headers(
         TIMER_FREQUENCY 24000000
         MAX_IRQ 254

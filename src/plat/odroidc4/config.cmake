@@ -12,9 +12,10 @@ if(KernelPlatformOdroidc4)
     declare_seL4_arch(aarch64)
     set(KernelArmCortexA55 ON)
     set(KernelArchArmV8a ON)
-    config_set(KernelARMPlatform ARM_PLAT odroidc4)
+    config_set(KernelARMPlatform ARM_PLAT "${KernelPlatform}")
     set(KernelArmMachFeatureModifiers "+crc" CACHE INTERNAL "")
-    list(APPEND KernelDTSList "tools/dts/odroidc4.dts" "src/plat/odroidc4/overlay-odroidc4.dts")
+    list(APPEND KernelDTSList "tools/dts/${KernelPlatform}.dts")
+    list(APPEND KernelDTSList "${CMAKE_CURRENT_LIST_DIR}/overlay-${KernelPlatform}.dts")
     # MAX_IRQ is based on the section 7.10.2 of the S905X3 SoC manual
     declare_default_headers(
         TIMER_FREQUENCY 24000000

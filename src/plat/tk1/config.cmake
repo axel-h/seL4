@@ -13,10 +13,10 @@ if(KernelPlatformTK1)
     set(KernelArmCortexA15 ON)
     set(KernelArchArmV7a ON)
     set(KernelArchArmV7ve ON)
-    config_set(KernelARMPlatform ARM_PLAT tk1)
+    config_set(KernelARMPlatform ARM_PLAT "${KernelPlatform}")
     config_set(KernelArmMach MACH "nvidia")
-    list(APPEND KernelDTSList "tools/dts/tk1.dts")
-    list(APPEND KernelDTSList "src/plat/tk1/overlay-tk1.dts")
+    list(APPEND KernelDTSList "tools/dts/${KernelPlatform}.dts")
+    list(APPEND KernelDTSList "${CMAKE_CURRENT_LIST_DIR}/overlay-${KernelPlatform}.dts")
     declare_default_headers(
         TIMER_FREQUENCY 12000000
         MAX_IRQ 191

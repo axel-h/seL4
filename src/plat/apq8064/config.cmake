@@ -18,9 +18,9 @@ if(KernelPlatformAPQ8064)
     set(KernelArmCortexA15 ON)
     set(KernelArchArmV7a ON)
     set(KernelArchArmV7ve ON)
-    config_set(KernelARMPlatform ARM_PLAT apq8064)
-    list(APPEND KernelDTSList "tools/dts/apq8064.dts")
-    list(APPEND KernelDTSList "src/plat/apq8064/overlay-apq8064.dts")
+    config_set(KernelARMPlatform ARM_PLAT "${KernelPlatform}")
+    list(APPEND KernelDTSList "tools/dts/${KernelPlatform}.dts")
+    list(APPEND KernelDTSList "${CMAKE_CURRENT_LIST_DIR}/overlay-${KernelPlatform}.dts")
 
     declare_default_headers(
         TIMER_FREQUENCY 7000000

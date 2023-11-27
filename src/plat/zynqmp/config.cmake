@@ -39,20 +39,20 @@ if(KernelPlatformZynqmp)
 
     config_set(KernelArmMach MACH "zynq")
 
-    if(KernelPlatformZynqmpUltra96v2)
-        list(APPEND KernelDTSList "tools/dts/ultra96v2.dts")
-    elseif(KernelPlatformZynqmpUltra96)
-        list(APPEND KernelDTSList "tools/dts/ultra96.dts")
+    if(KernelPlatformZynqmpUltra96v2 OR KernelPlatformZynqmpUltra96)
+        list(APPEND KernelDTSList "tools/dts/${KernelARMPlatform}.dts")
     elseif(KernelPlatformZynqmpZcu102)
-        list(APPEND KernelDTSList "tools/dts/zynqmp.dts")
+        # The default board uses the platform name for the DTS and not the name
+        # of the actual board.
+        list(APPEND KernelDTSList "tools/dts/${KernelPlatform}.dts")
     else()
         message(FATAL_ERROR "unknown platform")
     endif()
 
     if(KernelSel4ArchAarch32)
-        list(APPEND KernelDTSList "src/plat/zynqmp/overlay-zynqmp32.dts")
+        list(APPEND KernelDTSList "${CMAKE_CURRENT_LIST_DIR}/overlay-${KernelPlatform}32.dts")
     else()
-        list(APPEND KernelDTSList "src/plat/zynqmp/overlay-zynqmp.dts")
+        list(APPEND KernelDTSList "${CMAKE_CURRENT_LIST_DIR}/overlay-${KernelPlatform}.dts")
     endif()
 
     declare_default_headers(

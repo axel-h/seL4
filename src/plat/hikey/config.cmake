@@ -13,10 +13,10 @@ if(KernelPlatformHikey)
     declare_seL4_arch(aarch32 aarch64)
     set(KernelArmCortexA53 ON)
     set(KernelArchArmV8a ON)
-    config_set(KernelARMPlatform ARM_PLAT hikey)
+    config_set(KernelARMPlatform ARM_PLAT "${KernelPlatform}")
     set(KernelArmMachFeatureModifiers "+crc" CACHE INTERNAL "")
-    list(APPEND KernelDTSList "tools/dts/hikey.dts")
-    list(APPEND KernelDTSList "src/plat/hikey/overlay-hikey.dts")
+    list(APPEND KernelDTSList "tools/dts/${KernelPlatform}.dts")
+    list(APPEND KernelDTSList "${CMAKE_CURRENT_LIST_DIR}/overlay-${KernelPlatform}.dts")
     declare_default_headers(
         TIMER_FREQUENCY 1200000
         MAX_IRQ 159
