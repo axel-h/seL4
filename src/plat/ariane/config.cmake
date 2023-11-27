@@ -11,12 +11,12 @@ declare_platform(ariane KernelPlatformAriane PLAT_ARIANE KernelArchRiscV)
 
 if(KernelPlatformAriane)
     declare_seL4_arch(riscv64)
-    config_set(KernelRiscVPlatform RISCV_PLAT "ariane")
+    config_set(KernelRiscVPlatform RISCV_PLAT "${KernelPlatform}")
     config_set(KernelPlatformFirstHartID FIRST_HART_ID 0)
     config_set(KernelOpenSBIPlatform OPENSBI_PLATFORM "fpga/ariane")
     set(KernelRiscvUseClintMtime ON)
-    list(APPEND KernelDTSList "tools/dts/ariane.dts")
-    list(APPEND KernelDTSList "src/plat/ariane/overlay-ariane.dts")
+    list(APPEND KernelDTSList "tools/dts/${KernelPlatform}.dts")
+    list(APPEND KernelDTSList "${CMAKE_CURRENT_LIST_DIR}/overlay-${KernelPlatform}.dts")
     # This is an experimental platform that supports accessing peripherals, but
     # the status of support for external interrupts via a PLIC is unclear and
     # may differ depending on the version that is synthesized. Declaring no

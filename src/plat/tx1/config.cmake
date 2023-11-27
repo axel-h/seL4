@@ -12,10 +12,10 @@ if(KernelPlatformTx1)
     declare_seL4_arch(aarch64)
     set(KernelArmCortexA57 ON)
     set(KernelArchArmV8a ON)
-    config_set(KernelARMPlatform ARM_PLAT tx1)
+    config_set(KernelARMPlatform ARM_PLAT "${KernelPlatform}")
     config_set(KernelArmMach MACH "nvidia")
-    list(APPEND KernelDTSList "tools/dts/tx1.dts")
-    list(APPEND KernelDTSList "src/plat/tx1/overlay-tx1.dts")
+    list(APPEND KernelDTSList "tools/dts/${KernelPlatform}.dts")
+    list(APPEND KernelDTSList "${CMAKE_CURRENT_LIST_DIR}/overlay-${KernelPlatform}.dts")
     declare_default_headers(
         TIMER_FREQUENCY 12000000
         MAX_IRQ 224

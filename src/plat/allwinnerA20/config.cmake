@@ -12,14 +12,14 @@ if(KernelPlatformAllwinnerA20)
     declare_seL4_arch(aarch32)
     set(KernelArmCortexA7 ON)
     set(KernelArchArmV7a ON)
-    config_set(KernelARMPlatform ARM_PLAT allwinnerA20)
+    config_set(KernelARMPlatform ARM_PLAT "${KernelPlatform}")
 
     # MCS is not supported on allwinnerA20. It requires a timer driver that
     # implements the tickless programming requirements.
     set(KernelPlatformSupportsMCS OFF)
 
-    list(APPEND KernelDTSList "tools/dts/allwinnerA20.dts")
-    list(APPEND KernelDTSList "src/plat/allwinnerA20/overlay-allwinnerA20.dts")
+    list(APPEND KernelDTSList "tools/dts/${KernelPlatform}.dts")
+    list(APPEND KernelDTSList "${CMAKE_CURRENT_LIST_DIR}/overlay-${KernelPlatform}.dts")
 
     declare_default_headers(
         TIMER_FREQUENCY 24000000

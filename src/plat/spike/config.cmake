@@ -12,16 +12,16 @@ declare_platform(spike KernelPlatformSpike PLAT_SPIKE KernelArchRiscV)
 
 if(KernelPlatformSpike)
     declare_seL4_arch(riscv64 riscv32)
-    config_set(KernelRiscVPlatform RISCV_PLAT "spike")
+    config_set(KernelRiscVPlatform RISCV_PLAT "${KernelPlatform}")
     config_set(KernelPlatformFirstHartID FIRST_HART_ID 0)
     config_set(KernelOpenSBIPlatform OPENSBI_PLATFORM "generic")
     set(KernelRiscvUseClintMtime ON)
     if(KernelSel4ArchRiscV32)
-        list(APPEND KernelDTSList "tools/dts/spike32.dts")
+        list(APPEND KernelDTSList "tools/dts/${KernelPlatform}32.dts")
     else()
-        list(APPEND KernelDTSList "tools/dts/spike.dts")
+        list(APPEND KernelDTSList "tools/dts/${KernelPlatform}.dts")
     endif()
-    list(APPEND KernelDTSList "src/plat/spike/overlay-spike.dts")
+    list(APPEND KernelDTSList "${CMAKE_CURRENT_LIST_DIR}/overlay-${KernelPlatform}.dts")
     declare_default_headers(
         TIMER_FREQUENCY 10000000
         MAX_IRQ 0
