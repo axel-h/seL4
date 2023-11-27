@@ -48,12 +48,9 @@ static inline CONST time_t getKernelWcetUs(void)
 #endif
 }
 
-/* get the expected wcet of the kernel for this platform */
-static PURE inline ticks_t getKernelWcetTicks(void)
-{
-    return usToTicks(getKernelWcetUs());
-}
-#else /* CONFIG_KERNEL_MCS */
+#else /* not CONFIG_KERNEL_MCS */
+
 static inline void resetTimer(void);
-#endif /* !CONFIG_KERNEL_MCS */
+
+#endif /* [not] CONFIG_KERNEL_MCS */
 
