@@ -54,7 +54,7 @@ if(KernelPlatImx6)
     list(APPEND KernelDTSList "src/plat/imx6/overlay-${KernelARMPlatform}.dts")
 
     if(KernelIsMCS)
-        if(KernelARMPlatform STREQUAL "nitrogen6sx")
+        if(KernelPlatformNitrogen6SX)
             list(APPEND KernelDTSList "src/plat/imx6/mcs-overlay-nitrogen6sx.dts")
         else()
             list(APPEND KernelDTSList "src/plat/imx6/mcs-overlay-imx6.dts")
