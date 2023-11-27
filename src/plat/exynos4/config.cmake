@@ -12,10 +12,10 @@ if(KernelPlatformExynos4)
     declare_seL4_arch(aarch32)
     set(KernelArmCortexA9 ON)
     set(KernelArchArmV7a ON)
-    config_set(KernelARMPlatform ARM_PLAT exynos4)
+    config_set(KernelARMPlatform ARM_PLAT "${KernelPlatform}")
     config_set(KernelArmMach MACH "exynos")
-    list(APPEND KernelDTSList "tools/dts/exynos4.dts")
-    list(APPEND KernelDTSList "src/plat/exynos4/overlay-exynos4.dts")
+    list(APPEND KernelDTSList "tools/dts/${KernelPlatform}.dts")
+    list(APPEND KernelDTSList "${CMAKE_CURRENT_LIST_DIR}/overlay-${KernelPlatform}.dts")
     declare_default_headers(
         TIMER_FREQUENCY 24000000
         MAX_IRQ 159

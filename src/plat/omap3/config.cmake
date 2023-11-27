@@ -13,10 +13,10 @@ if(KernelPlatformOMAP3)
     set(KernelArmCortexA8 ON)
     set(KernelArchArmV7a ON)
     set(KernelHardwareDebugAPIUnsupported ON CACHE INTERNAL "")
-    config_set(KernelARMPlatform ARM_PLAT omap3)
+    config_set(KernelARMPlatform ARM_PLAT "${KernelPlatform}")
     config_set(KernelArmMach MACH "omap")
-    list(APPEND KernelDTSList "tools/dts/omap3.dts")
-    list(APPEND KernelDTSList "src/plat/omap3/overlay-omap3.dts")
+    list(APPEND KernelDTSList "tools/dts/${KernelPlatform}.dts")
+    list(APPEND KernelDTSList "${CMAKE_CURRENT_LIST_DIR}/overlay-${KernelPlatform}.dts")
     declare_default_headers(
         TIMER_FREQUENCY 13000000
         MAX_IRQ 95
