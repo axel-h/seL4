@@ -71,7 +71,6 @@ irq_t ipi_get_irq(void)
 void ipi_clear_irq(irq_t irq)
 {
     ipiIrq[getCurrentCPUIndex()] = irqInvalid;
-    return;
 }
 
 /* this function is called with a single hart id. */
