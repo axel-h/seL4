@@ -58,7 +58,6 @@ typedef pte_t pde_t;
 #define PT_PTR(r) ((pte_t *)(r))
 #define PT_REF(p) ((word_t)(p))
 
-#define PTE_SIZE_BITS   seL4_PageTableEntryBits
 #define PT_INDEX_BITS   seL4_PageTableIndexBits
 
 static inline bool_t CONST cap_get_archCapIsPhysical(cap_t cap)
