@@ -70,6 +70,7 @@ RISCV_DTBS="
 sifive/hifive-unleashed-a00=hifive
 sifive/hifive-unmatched-a00=hifive-unmatched
 microchip/mpfs-icicle-kit.dts=mpfs_icicle
+allwinner/sun20i-d1-nezha=nezha
 "
 
 extract_dts() {
