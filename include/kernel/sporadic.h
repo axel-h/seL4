@@ -145,7 +145,7 @@ static inline bool_t sc_active(sched_context_t *sc)
 static inline bool_t sc_released(sched_context_t *sc)
 {
     if (sc_active(sc)) {
-        /* All refills must all be greater than MIN_BUDGET so this
+        /* All refills must be greater than the minimum required budget, so this
          * should be true for all active SCs */
         assert(refill_sufficient(sc, 0));
         return refill_ready(sc);
