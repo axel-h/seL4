@@ -237,7 +237,7 @@ static inline void updateTimestamp(void)
      * be a practical problem with 64-bit values. The timestamps must be sane,
      * and there must not have been a roll-over.
      */
-    assert(now < MAX_RELEASE_TIME);
+    assert(now < MAX_RELEASE_TICKS);
     assert(now >= prev);
     ticks_t consumed = now - prev;
     /* Practically, the consumed time is always greater zero as the timestamps
@@ -253,7 +253,7 @@ static inline void updateTimestamp(void)
          * condition here when modifying ksDomainTime. Otherwise this requires
          * holding the BKL.
          */
-        if ((consumed + MIN_BUDGET) >= ksDomainTime) {
+        if ((consumed + MIN_BUDGET_TICKS) >= ksDomainTime) {
             ksDomainTime = 0;
         } else {
             ksDomainTime -= consumed;
