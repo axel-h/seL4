@@ -103,6 +103,14 @@ exception_t handleUnknownSyscall(word_t w)
         return EXCEPTION_NONE;
     }
 
+    if (w == SysDebugCapAddr) {
+        word_t cptr = getRegister(NODE_STATE(ksCurThread), capRegister);
+        lookupCapAndSlot_ret_t lu_ret = lookupCapAndSlot(NODE_STATE(ksCurThread), cptr);
+        void *cap_addr = cap_get_capPtr(lu_ret.cap);
+        setRegister(NODE_STATE(ksCurThread), capRegister, pptr_to_paddr(cap_addr));
+        return EXCEPTION_NONE;
+    }
+
     if (w == SysDebugNameThread) {
         /* This is a syscall meant to aid debugging, so if anything goes wrong
          * then assume the system is completely misconfigured and halt */
