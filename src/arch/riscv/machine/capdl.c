@@ -85,8 +85,8 @@ void obj_vtable_print_slots(tcb_t *tcb)
 {
     cap_t cap = TCB_PTR_CTE_PTR(tcb, tcbVTable)->cap;
     if (isValidVTableRoot(cap) && !seen(cap)) {
-        pte_t *lvl1pt = PTE_PTR(pptr_of_cap(cap));
         add_to_seen(cap);
+        pte_t *lvl1pt = PTE_PTR(pptr_of_cap(cap));
         riscv_cap_pt_print_slots(lvl1pt, 0, CONFIG_PT_LEVELS);
     }
 }
