@@ -99,6 +99,10 @@ exception_t handleUnknownSyscall(word_t w)
     if (w == SysDebugCapIdentify) {
         word_t cptr = getRegister(NODE_STATE(ksCurThread), capRegister);
         lookupCapAndSlot_ret_t lu_ret = lookupCapAndSlot(NODE_STATE(ksCurThread), cptr);
+        if (unlikely(lu_ret.status != EXCEPTION_NONE)) {
+            userError("invalid cptr");
+            halt();
+        }
         word_t cap_type = cap_get_capType(lu_ret.cap);
         setRegister(NODE_STATE(ksCurThread), capRegister, cap_type);
         return EXCEPTION_NONE;
@@ -111,6 +115,10 @@ exception_t handleUnknownSyscall(word_t w)
         word_t len;
         word_t cptr = getRegister(NODE_STATE(ksCurThread), capRegister);
         lookupCapAndSlot_ret_t lu_ret = lookupCapAndSlot(NODE_STATE(ksCurThread), cptr);
+        if (unlikely(lu_ret.status != EXCEPTION_NONE)) {
+            userError("invalid cptr");
+            halt();
+        }
         /* ensure we got a TCB cap */
         word_t cap_type = cap_get_capType(lu_ret.cap);
         if (cap_type != cap_thread_cap) {
