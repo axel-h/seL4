@@ -117,12 +117,16 @@ exception_t handleUnknownSyscall(word_t w)
             userError("SysDebugNameThread: cap is not a TCB, halting");
             halt();
         }
-        /* Add 1 to the IPC buffer to skip the message info word */
-        name = (const char *)(lookupIPCBuffer(true, NODE_STATE(ksCurThread)) + 1);
-        if (!name) {
+        word_t *words = lookupIPCBuffer(true, NODE_STATE(ksCurThread)
+        if (!words) {
             userError("SysDebugNameThread: Failed to lookup IPC buffer, halting");
             halt();
         }
+        /*
+         * The first work in the IPC buffer is the message info, data follows
+         * afterwards.
+         */
+        name = (const char *)(&words[1]);
         /* ensure the name isn't too long */
         len = strnlen(name, seL4_MsgMaxLength * sizeof(word_t));
         if (len == seL4_MsgMaxLength * sizeof(word_t)) {
