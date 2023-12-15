@@ -342,19 +342,21 @@ void obj_cnode_print_slots(tcb_t *tcb)
     printf("%p_cnode {\n", (void *)cap_cnode_cap_get_capCNodePtr(root));
 
     for (uint32_t i = 0; i < (1 << radix); i++) {
-        lookupCapAndSlot_ret_t c = lookupCapAndSlot(tcb, i);
-        if (cap_get_capType(c.cap) != cap_null_cap) {
+        lookupCap_ret_t c = lookupCap(tcb, i);
+        cap_t cap = lu_ret.cap;
+        if (cap_get_capType(cap) != cap_null_cap) {
             printf("0x%x: ", i);
-            print_cap(c.cap);
+            print_cap(cap);
         }
     }
     printf("}\n");
 
     for (uint32_t i = 0; i < (1 << radix); i++) {
-        lookupCapAndSlot_ret_t c = lookupCapAndSlot(tcb, i);
-        if (cap_get_capType(c.cap) == cap_irq_handler_cap) {
+        lookupCap_ret_t c = lookupCap(tcb, i);
+        cap_t cap = lu_ret.cap;
+        if (cap_get_capType(cap) == cap_irq_handler_cap) {
             /* TBD: should instead print it from IRQNode */
-            obj_irq_print_slots(c.cap);
+            obj_irq_print_slots(cap);
         }
     }
 }

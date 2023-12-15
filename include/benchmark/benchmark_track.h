@@ -56,11 +56,15 @@ static inline void benchmark_track_start(void)
 static inline void benchmark_debug_syscall_start(word_t cptr, word_t msgInfo, word_t syscall)
 {
     seL4_MessageInfo_t info = messageInfoFromWord_raw(msgInfo);
-    lookupCapAndSlot_ret_t lu_ret = lookupCapAndSlot(NODE_STATE(ksCurThread), cptr);
+    seL4_Word tag = seL4_MessageInfo_get_label(info);
+
+    lookupCap_ret_t lu_ret = lookupCap(NODE_STATE(ksCurThread), cptr);
+    seL4_Word cap_type = unlikely(lu_ret.status != EXCEPTION_NONE) ? cap_null_cap : cap_get_capType(lu_ret.cap);
+
     ksKernelEntry.path = Entry_Syscall;
     ksKernelEntry.syscall_no = -syscall;
-    ksKernelEntry.cap_type = cap_get_capType(lu_ret.cap);
-    ksKernelEntry.invocation_tag = seL4_MessageInfo_get_label(info);
+    ksKernelEntry.cap_type = cap_type;
+    ksKernelEntry.invocation_tag = tag;
 }
 
 #endif /* CONFIG_DEBUG_BUILD || CONFIG_BENCHMARK_TRACK_KERNEL_ENTRIES */

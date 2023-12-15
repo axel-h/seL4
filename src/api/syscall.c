@@ -98,7 +98,7 @@ exception_t handleUnknownSyscall(word_t w)
     }
     if (w == SysDebugCapIdentify) {
         word_t cptr = getRegister(NODE_STATE(ksCurThread), capRegister);
-        lookupCapAndSlot_ret_t lu_ret = lookupCapAndSlot(NODE_STATE(ksCurThread), cptr);
+        lookupCap_ret_t lu_ret = lookupCap(NODE_STATE(ksCurThread), cptr);
         if (unlikely(lu_ret.status != EXCEPTION_NONE)) {
             userError("invalid cptr");
             halt();
@@ -114,7 +114,7 @@ exception_t handleUnknownSyscall(word_t w)
         const char *name;
         word_t len;
         word_t cptr = getRegister(NODE_STATE(ksCurThread), capRegister);
-        lookupCapAndSlot_ret_t lu_ret = lookupCapAndSlot(NODE_STATE(ksCurThread), cptr);
+        lookupCap_ret_t lu_ret = lookupCap(NODE_STATE(ksCurThread), cptr);
         if (unlikely(lu_ret.status != EXCEPTION_NONE)) {
             userError("invalid cptr");
             halt();

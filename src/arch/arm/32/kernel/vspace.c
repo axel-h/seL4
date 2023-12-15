@@ -2657,12 +2657,12 @@ exception_t decodeARMMMUInvocation(word_t invLabel, word_t length, cptr_t cptr,
 #ifdef CONFIG_KERNEL_LOG_BUFFER
 exception_t benchmark_arch_map_logBuffer(word_t frame_cptr)
 {
-    lookupCapAndSlot_ret_t lu_ret;
+    lookupCap_ret_t lu_ret;
     vm_page_size_t frameSize;
     pptr_t  frame_pptr;
 
     /* faulting section */
-    lu_ret = lookupCapAndSlot(NODE_STATE(ksCurThread), frame_cptr);
+    lu_ret = lookupCap(NODE_STATE(ksCurThread), frame_cptr);
 
     if (unlikely(lu_ret.status != EXCEPTION_NONE)) {
         userError("Invalid cap #%lu.", frame_cptr);
@@ -2671,14 +2671,16 @@ exception_t benchmark_arch_map_logBuffer(word_t frame_cptr)
         return EXCEPTION_SYSCALL_ERROR;
     }
 
-    if (cap_get_capType(lu_ret.cap) != cap_frame_cap) {
+    cap_t cap = lu_ret.cap;
+
+    if (cap_get_capType(cap) != cap_frame_cap) {
         userError("Invalid cap. Log buffer should be of a frame cap");
         current_fault = seL4_Fault_CapFault_new(frame_cptr, false);
 
         return EXCEPTION_SYSCALL_ERROR;
     }
 
-    frameSize = generic_frame_cap_get_capFSize(lu_ret.cap);
+    frameSize = generic_frame_cap_get_capFSize(cap);
 
     if (frameSize != ARMSection) {
         userError("Invalid frame size. The kernel expects 1M log buffer");
@@ -2687,7 +2689,7 @@ exception_t benchmark_arch_map_logBuffer(word_t frame_cptr)
         return EXCEPTION_SYSCALL_ERROR;
     }
 
-    frame_pptr = generic_frame_cap_get_capFBasePtr(lu_ret.cap);
+    frame_pptr = generic_frame_cap_get_capFBasePtr(cap);
 
     ksUserLogBuffer = pptr_to_paddr((void *) frame_pptr);
 
