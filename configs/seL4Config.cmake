@@ -56,11 +56,40 @@ macro(declare_seL4_arch)
         "ia32;KernelSel4ArchIA32;ARCH_IA32"
     )
 
-    if(KernelSel4ArchArmHyp)
-        # arm-hyp is basically aarch32. This should be cleaned up and aligned
-        # with other architectures, where hypervisor support is an additional
-        # flag. The main blocker here is updating the verification flow.
+    # Ideally, the generic way to enable running the kernel as hypervisor would
+    # be selecting an architecture and then enabling KernelHypervisorSupport.
+    # Practically, the handling on the architectures differs:
+    # - x86: KernelVTX
+    # - riscv: no hypervisor support yet
+    # - arm: KernelArmHypervisorSupport. But for historical reasons (and because
+    #        verification still requires this), on ARM/AARCH32 hypervisor
+    #        support requires selecting the dedicated architecture 'arm_hyp'. As
+    #        a step towards deprecating setting 'arm_hyp' explicitly, this is
+    #        activated automatically if the combination KernelSel4ArchAarch32
+    #        and KernelArmHypervisorSupport is set.
+    # Note that CMake iterates over all scripts multiple times until a stable
+    # configuration is reached. Thus we may pass here multiple times. To avoid
+    # seeing the same messages multiple times, we just print them when the
+    # condition is not met. But we always set the configuration to ensure we are
+    # in a well defined state.
+    if(KernelSel4ArchAarch32 AND KernelArmHypervisorSupport)
+        set(KernelSel4Arch "arm_hyp" CACHE STRING "" FORCE)
+        config_set(KernelSel4ArchArmHyp ARCH_ARM_HYP ON)
+        message(STATUS "changing KernelSel4ArchAarch32/aarch32 to KernelSel4ArchArmHyp/arm_hyp")
+    elseif(KernelSel4ArchArmHyp)
+        # Since 'arm_hyp' is a superset of AARCH32, ensure KernelSel4ArchAarch32
+        # is enabled, too. Note that config_choice() above has set this to OFF
+        # (applies for all other architectures also) explicitly, so we
+        # overwrite this again now.
+        if(NOT KernelSel4ArchAarch32)
+            message(STATUS "KernelSel4ArchArmHyp: enabling KernelSel4ArchAarch32/aarch32 also")
+        endif()
         config_set(KernelSel4ArchAarch32 ARCH_AARCH32 ON)
+        # Ensure KernelArmHypervisorSupport is set and enabled.
+        if(KernelArmHypervisorSupport)
+            message(STATUS "KernelSel4ArchArmHyp: enabling KernelArmHypervisorSupport")
+        endif()
+        set(KernelArmHypervisorSupport ON CACHE BOOL "" FORCE)
     endif()
 
     config_choice(
