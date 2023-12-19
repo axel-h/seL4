@@ -27,6 +27,10 @@ HEADER_TEMPLATE = '''/*
 
 #pragma once
 
+/* This is the physical address of the lowest memory region that is available
+ * from all regions listed in avail_p_regs. Platform may use this address
+ * instead of zero to start mapping memory.
+ */
 #define PHYS_BASE_RAW {{ "0x{:x}".format(physBase) }}
 
 #ifndef __ASSEMBLER__
