@@ -9,7 +9,7 @@
 # ============================
 
 from importlib.metadata import version
-from jinja2 import Environment, BaseLoader
+import jinja2
 import argparse
 import sys
 import xml.dom.minidom
@@ -155,20 +155,17 @@ def parse_xml(xml_file):
 
 
 def generate(args, invocations):
-    header_title = "API"
-    if args.libsel4:
-        header_title = "LIBSEL4"
+    template_str = ARCH_INVOCATION_TEMPLATE if args.arch else \
+        SEL4_ARCH_INVOCATION_TEMPLATE if args.sel4_arch else \
+        INVOCATION_TEMPLATE
 
-    if args.arch:
-        template = Environment(loader=BaseLoader).from_string(ARCH_INVOCATION_TEMPLATE)
+    render_params = {
+        'header_title': "LIBSEL4" if args.libsel4 else "API",
+        'libsel4': args.libsel4,
+        'invocations': invocations
+    }
 
-    elif args.sel4_arch:
-        template = Environment(loader=BaseLoader).from_string(SEL4_ARCH_INVOCATION_TEMPLATE)
-    else:
-        template = Environment(loader=BaseLoader).from_string(INVOCATION_TEMPLATE)
-
-    data = template.render({'header_title': header_title, 'libsel4': args.libsel4,
-                            'invocations': invocations})
+    data = jinja2.Template(template_str).render(render_params)
     args.dest.write(data)
 
     args.dest.close()
