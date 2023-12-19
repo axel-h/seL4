@@ -73,6 +73,19 @@ config_option(
     DEPENDS "KernelArchARM"
 )
 
+if(NOT DEFINED KernelSel4ArchArmHyp)
+    # the current CMake scripts ensure that KernelSel4ArchArmHyp is always set
+    # to either ON or OFF. If it is not set, something is either broken or the
+    # CMake files are used wrongly. Or support for KernelSel4ArchArmHyp has
+    # finally been removed - and then this check here should be removed and the
+    # KernelArmHypervisorSupport below can be OFF by default.
+    message(FATAL_ERROR "KernelSel4ArchArmHyp must be ON or OFF")
+endif()
+if(KernelSel4ArchArmHyp AND NOT KernelArmHypervisorSupport)
+    # KernelArmHypervisorSupport is the generic flag on ARM, so this must be set
+    # when KernelSel4ArchArmHyp is set.
+    message(FATAL_ERROR "KernelSel4ArchArmHyp set, but not KernelArmHypervisorSupport")
+endif()
 config_option(
     KernelArmHypervisorSupport ARM_HYPERVISOR_SUPPORT
     "Build as Hypervisor. Utilise ARM virtualisation extensions to build the kernel as a hypervisor"

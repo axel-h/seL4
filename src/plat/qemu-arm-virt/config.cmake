@@ -76,6 +76,13 @@ if(KernelPlatformQEMUArmVirt)
         message(FATAL_ERROR "Unsupported ARM_CPU: '${ARM_CPU}'")
     endif()
 
+    # Check configuration sanity
+    if(KernelSel4ArchArmHyp AND NOT KernelArmHypervisorSupport)
+        message(FATAL_ERROR "KernelSel4ArchArmHyp set, but not KernelArmHypervisorSupport")
+    elseif(KernelSel4ArchArmHyp AND NOT KernelSel4ArchAarch32)
+         message(FATAL_ERROR "KernelSel4ArchArmHyp and notKernelSel4ArchAarch32 is invalid")
+    endif()
+
     config_set(KernelARMPlatform ARM_PLAT qemu-arm-virt)
 
     # If neither QEMU_DTS nor QEMU_DTB is set explicitly, the device tree is
