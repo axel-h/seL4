@@ -202,15 +202,6 @@ def map_syscalls_neg(syscalls):
 
 
 def generate_kernel_file(kernel_header, api, debug):
-    # We require jinja2 to be at least version 2.10,
-    # In the past we used the 'namespace' feature from that version.
-    # other versions of jinja, particularly `minijinja`, don't support
-    # namespaces. However in case `namespace` is needed in the future require a
-    # version which supports it.
-    jinja2_version = version("jinja2")
-    if jinja2_version < "2.10":
-        raise Warning("Jinja2 should be >= 2.10")
-
     template = Environment(loader=BaseLoader, trim_blocks=False,
                            lstrip_blocks=False).from_string(KERNEL_HEADER_TEMPLATE)
     data = template.render({'assembler': map_syscalls_neg(api),
