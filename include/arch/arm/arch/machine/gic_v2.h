@@ -15,8 +15,7 @@
 #include <stdint.h>
 #include <util.h>
 #include <linker.h>
-#include <mode/smp/smp.h>
-#include <model/statedata.h>
+#include <model/smp.h>
 
 #include "gic_common.h"
 

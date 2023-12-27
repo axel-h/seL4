@@ -22,8 +22,6 @@
 #define SMP_STATE_DEFINE(_type, _state)         _type _state
 #define UP_STATE_DEFINE(_type, _state)
 
-#define CURRENT_CPU_INDEX() getCurrentCPUIndex()
-
 #else /* not ENABLE_SMP_SUPPORT */
 
 #define NODE_STATE_BEGIN(_name)
@@ -34,8 +32,6 @@
 
 #define SMP_STATE_DEFINE(_name, _state)
 #define UP_STATE_DEFINE(_type, _state)          _type _state
-
-#define CURRENT_CPU_INDEX() SEL4_WORD_CONST(0)
 
 #endif /* [not] ENABLE_SMP_SUPPORT */
 

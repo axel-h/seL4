@@ -24,7 +24,6 @@
 #define HAVE_SET_TRIGGER 1
 
 #include <model/smp.h>
-#include <model/statedata.h>
 #include <plat/machine/devices_gen.h>
 #include <arch/machine/plic.h>
 
