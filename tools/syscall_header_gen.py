@@ -202,8 +202,7 @@ def map_syscalls_neg(syscalls):
 
 
 def generate_kernel_file(kernel_header, api, debug):
-    template = Environment(loader=BaseLoader, trim_blocks=False,
-                           lstrip_blocks=False).from_string(KERNEL_HEADER_TEMPLATE)
+    template = Environment(loader=BaseLoader).from_string(KERNEL_HEADER_TEMPLATE)
     data = template.render({'assembler': map_syscalls_neg(api),
                             'enum': map_syscalls_neg(api + debug),
                             'upper': convert_to_assembler_format,
@@ -212,8 +211,7 @@ def generate_kernel_file(kernel_header, api, debug):
 
 
 def generate_libsel4_file(libsel4_header, syscalls):
-    template = Environment(loader=BaseLoader, trim_blocks=False,
-                           lstrip_blocks=False).from_string(LIBSEL4_HEADER_TEMPLATE)
+    template = Environment(loader=BaseLoader).from_string(LIBSEL4_HEADER_TEMPLATE)
     data = template.render({'enum': map_syscalls_neg(syscalls)})
     libsel4_header.write(data)
 
