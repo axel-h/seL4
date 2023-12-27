@@ -43,6 +43,11 @@ BOOT_CODE p_region_t get_p_reg_kernel_img(void)
     };
 }
 
+BOOT_CODE static inline bool_t is_reg_empty(const region_t reg)
+{
+    return (reg.start == reg.end);
+}
+
 BOOT_CODE static void merge_regions(void)
 {
     /* Walk through reserved regions and see if any can be merged */
