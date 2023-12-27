@@ -724,6 +724,20 @@ BOOT_CODE static bool_t create_untypeds_for_region(
     seL4_SlotPos first_untyped_slot
 )
 {
+    if (!is_reg_empty(reg)) {
+        /* If LSB of end address is set, we consider this as an inclusive
+         * address, otherwise it's considered an exclusive address and we
+         * subtract one
+         */
+        printf("provide caps for PA [%"SEL4_PRIx_word"..%"SEL4_PRIx_word"], "
+               "VA [%"SEL4_PRIx_word"..%"SEL4_PRIx_word"] (%s memory)\n",
+               pptr_to_paddr((void *)reg.start),
+               pptr_to_paddr((void *)(reg.end - (~reg.end & 1))),
+               reg.start,
+               reg.end - (~reg.end & 1),
+               device_memory ? "device" : "untyped");
+    }
+
     /* This code works with regions that wrap (where end < start), because the loop cuts up the
        region into size-aligned chunks, one for each cap. Memory chunks that are size-aligned cannot
        themselves overflow, so they satisfy alignment, size, and overflow conditions. The region
@@ -767,6 +781,7 @@ BOOT_CODE bool_t create_untypeds(cap_t root_cnode_cap)
 {
     seL4_SlotPos first_untyped_slot = ndks_boot.slot_pos_cur;
 
+    printf("create device untypeds\n");
     paddr_t start = 0;
     for (word_t i = 0; i < ndks_boot.resv_count; i++) {
         if (start < ndks_boot.reserved[i].start) {
@@ -801,6 +816,7 @@ BOOT_CODE bool_t create_untypeds(cap_t root_cnode_cap)
      * boot process. We can create UT objects for these frames, so the memory
      * can be reused.
      */
+    printf("create memory untypeds\n");
     region_t boot_mem_reuse_reg = paddr_to_pptr_reg(get_p_reg_kernel_img_boot());
     if (!create_untypeds_for_region(root_cnode_cap, false, boot_mem_reuse_reg, first_untyped_slot)) {
         printf("ERROR: creation of untypeds for recycled boot memory"
@@ -823,10 +839,16 @@ BOOT_CODE bool_t create_untypeds(cap_t root_cnode_cap)
         }
     }
 
+    printf("untyped slots usage %d/%d\n",
+           (int)(ndks_boot.bi_frame->untyped.end - ndks_boot.bi_frame->untyped.start),
+           (int)CONFIG_MAX_NUM_BOOTINFO_UNTYPED_CAPS);
+
     ndks_boot.bi_frame->untyped = (seL4_SlotRegion) {
         .start = first_untyped_slot,
         .end   = ndks_boot.slot_pos_cur
     };
+
+    printf("create untypeds done\n");
 
     return true;
 }
