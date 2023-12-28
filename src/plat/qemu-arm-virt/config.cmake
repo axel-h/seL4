@@ -178,6 +178,12 @@ if(KernelPlatformQEMUArmVirt)
                 set(QEMU_SMP_OPTION "1")
             endif()
 
+            if(KernelArmGicV3)
+                set(QEMU_GIC_OPTION "gic-version=3")
+            else()
+                set(QEMU_GIC_OPTION "gic-version=2")
+            endif()
+
             # Run QEMU to get the device tree binary. Remember the command, so
             # it can be added to the DTS as reference. Every parameter must be
             # a separate string, as CMake will make it a dedicated argument
@@ -187,7 +193,7 @@ if(KernelPlatformQEMUArmVirt)
                 QEMU_CMD
                 "${QEMU_BINARY}"
                 "-machine"
-                "${QEMU_MACHINE}"
+                "${QEMU_MACHINE},${QEMU_GIC_OPTION}"
                 "-cpu"
                 "${ARM_CPU}"
                 "-smp"
@@ -264,12 +270,20 @@ if(KernelPlatformQEMUArmVirt)
         list(APPEND KernelDTSList "${CMAKE_CURRENT_LIST_DIR}/overlay-reserve-vm-memory.dts")
     endif()
 
+    if(KernelArmGicV3)
+        set(INTERRUPT_CONTROLLER_HEADER arch/machine/gic_v3.h)
+        set(INTERRUPT_CONTROLLER_SOURCES src/arch/arm/machine/gic_v3.c)
+    else()
+        set(INTERRUPT_CONTROLLER_HEADER arch/machine/gic_v2.h)
+        set(INTERRUPT_CONTROLLER_SOURCES src/arch/arm/machine/gic_v2.c)
+    endif()
+
     declare_default_headers(
         TIMER_FREQUENCY 62500000
         MAX_IRQ 159
         NUM_PPI 32
         TIMER drivers/timer/arm_generic.h
-        INTERRUPT_CONTROLLER arch/machine/gic_v2.h
+        INTERRUPT_CONTROLLER ${INTERRUPT_CONTROLLER_HEADER}
         CLK_MAGIC 4611686019llu
         CLK_SHIFT 58u
         KERNEL_WCET 10u
@@ -279,7 +293,7 @@ endif()
 
 add_sources(
     DEP "KernelPlatformQEMUArmVirt"
-    CFILES src/arch/arm/machine/gic_v2.c src/arch/arm/machine/l2c_nop.c
+    CFILES ${INTERRUPT_CONTROLLER_SOURCES} src/arch/arm/machine/l2c_nop.c
 )
 
 config_string(
