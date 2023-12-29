@@ -26,7 +26,6 @@
 #include <model/smp.h>
 #include <model/statedata.h>
 #include <plat/machine/devices_gen.h>
-#include <arch/model/smp.h>
 #include <arch/machine/plic.h>
 
 /* The memory map is based on the PLIC section in

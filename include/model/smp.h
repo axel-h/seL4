@@ -8,6 +8,7 @@
 
 #include <config.h>
 #include <types.h>
+#include <arch/model/smp.h>
 
 #ifdef ENABLE_SMP_SUPPORT
 

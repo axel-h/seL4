@@ -6,9 +6,9 @@
 
 #pragma once
 
+#include <model/smp.h>
 #include <model/statedata.h>
 #include <arch/machine/cpu_registers.h>
-#include <arch/model/smp.h>
 #include <arch/machine.h>
 
 /* Address space control */

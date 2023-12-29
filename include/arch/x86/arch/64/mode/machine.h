@@ -8,9 +8,9 @@
 
 #include <config.h>
 #include <hardware.h>
+#include <model/smp.h>
 #include <arch/model/statedata.h>
 #include <arch/machine/cpu_registers.h>
-#include <arch/model/smp.h>
 #include <arch/machine.h>
 
 /*

@@ -7,7 +7,7 @@
 #pragma once
 
 #include <util.h>
-#include <arch/model/smp.h>
+#include <model/smp.h>
 #include <stdint.h>
 #include <plat/machine/devices_gen.h>
 
