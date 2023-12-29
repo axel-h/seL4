@@ -11,7 +11,6 @@
 
 /* ARM generic timer implementation */
 #ifdef CONFIG_KERNEL_MCS
-#include <model/statedata.h>
 #include <api/types.h>
 /** DONT_TRANSLATE **/
 static inline ticks_t getCurrentTime(void)
