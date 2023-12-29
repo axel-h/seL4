@@ -21,3 +21,8 @@ static inline CONST cpu_id_t getCurrentCPUIndex(void);
 
 #define CURRENT_CPU_INDEX() \
     SMP_TERNARY(getCurrentCPUIndex(), SEL4_WORD_CONST(0))
+
+static inline bool_t isCurrentCore(word_t core)
+{
+    return SMP_TERNARY(core == CURRENT_CPU_INDEX(), true)
+}

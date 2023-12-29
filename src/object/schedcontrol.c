@@ -9,6 +9,7 @@
 #include <object/schedcontext.h>
 #include <object/schedcontrol.h>
 #include <kernel/sporadic.h>
+#include <model/smp.h>
 
 static exception_t invokeSchedControl_ConfigureFlags(sched_context_t *target, word_t core, ticks_t budget,
                                                      ticks_t period, word_t max_refills, word_t badge, word_t flags)
@@ -57,7 +58,7 @@ static exception_t invokeSchedControl_ConfigureFlags(sched_context_t *target, wo
     assert(target->scRefillMax > 0);
     if (target->scTcb) {
         schedContext_resume(target);
-        if (SMP_TERNARY(core == CURRENT_CPU_INDEX(), true)) {
+        if (isCurrentCore(target->scCore)) {
             if (isRunnable(target->scTcb) && target->scTcb != NODE_STATE(ksCurThread)) {
                 possibleSwitchTo(target->scTcb);
             }
