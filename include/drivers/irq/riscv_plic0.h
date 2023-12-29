@@ -23,6 +23,8 @@
 /* tell the kernel we have the set trigger feature */
 #define HAVE_SET_TRIGGER 1
 
+#include <model/smp.h>
+#include <model/statedata.h>
 #include <plat/machine/devices_gen.h>
 #include <arch/model/smp.h>
 #include <arch/machine/plic.h>

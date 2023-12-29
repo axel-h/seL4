@@ -11,6 +11,9 @@
 #include <object/structures.h>
 #include <machine/interrupt.h>
 #include <plat/machine.h>
+#ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
+#include <arch/object/vcpu.h>
+#endif
 
 exception_t Arch_decodeIRQControlInvocation(word_t invLabel, word_t length,
                                             cte_t *srcSlot, word_t *buffer);

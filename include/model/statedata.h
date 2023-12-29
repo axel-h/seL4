@@ -11,6 +11,7 @@
 #include <util.h>
 #include <object/structures.h>
 #include <object/tcb.h>
+#include <arch/model/statedata.h>
 
 #ifdef ENABLE_SMP_SUPPORT
 #define NODE_STATE_BEGIN(_name)                 typedef struct _name {
@@ -20,10 +21,6 @@
 
 #define SMP_STATE_DEFINE(_type, _state)         _type _state
 #define UP_STATE_DEFINE(_type, _state)
-
-#define MODE_NODE_STATE_ON_CORE(_state, _core)  ksSMP[(_core)].cpu.mode._state
-#define ARCH_NODE_STATE_ON_CORE(_state, _core)  ksSMP[(_core)].cpu._state
-#define NODE_STATE_ON_CORE(_state, _core)       ksSMP[(_core)].system._state
 
 #define CURRENT_CPU_INDEX() getCurrentCPUIndex()
 
@@ -38,13 +35,11 @@
 #define SMP_STATE_DEFINE(_name, _state)
 #define UP_STATE_DEFINE(_type, _state)          _type _state
 
-#define MODE_NODE_STATE_ON_CORE(_state, _core) _state
-#define ARCH_NODE_STATE_ON_CORE(_state, _core) _state
-#define NODE_STATE_ON_CORE(_state, _core)      _state
-
 #define CURRENT_CPU_INDEX() SEL4_WORD_CONST(0)
 
 #endif /* [not] ENABLE_SMP_SUPPORT */
+
+#include <arch/model/statedata.h> /* this needs NODE_STATE_DECLARE() */
 
 #define NUM_READY_QUEUES (CONFIG_NUM_DOMAINS * CONFIG_NUM_PRIORITIES)
 #define L2_BITMAP_SIZE ((CONFIG_NUM_PRIORITIES + wordBits - 1) / wordBits)
@@ -88,6 +83,32 @@ NODE_STATE_END(nodeState);
 
 extern word_t ksNumCPUs;
 
+#ifdef ENABLE_SMP_SUPPORT
+
+typedef struct smpStatedata {
+    archNodeState_t cpu;
+    nodeState_t system;
+    PAD_TO_NEXT_CACHE_LN(sizeof(archNodeState_t) + sizeof(nodeState_t));
+} smpStatedata_t;
+
+extern smpStatedata_t ksSMP[CONFIG_MAX_NUM_NODES];
+
+#define MODE_NODE_STATE_ON_CORE(_state, _core)  ksSMP[(_core)].cpu.mode._state
+#define ARCH_NODE_STATE_ON_CORE(_state, _core)  ksSMP[(_core)].cpu._state
+#define NODE_STATE_ON_CORE(_state, _core)       ksSMP[(_core)].system._state
+
+#else /* not ENABLE_SMP_SUPPORT */
+
+#define MODE_NODE_STATE_ON_CORE(_state, _core) _state
+#define ARCH_NODE_STATE_ON_CORE(_state, _core) _state
+#define NODE_STATE_ON_CORE(_state, _core)      _state
+
+#endif /* [not] ENABLE_SMP_SUPPORT */
+
+#define MODE_NODE_STATE(_state)    MODE_NODE_STATE_ON_CORE(_state, getCurrentCPUIndex())
+#define ARCH_NODE_STATE(_state)    ARCH_NODE_STATE_ON_CORE(_state, getCurrentCPUIndex())
+#define NODE_STATE(_state)         NODE_STATE_ON_CORE(_state, getCurrentCPUIndex())
+
 #if defined ENABLE_SMP_SUPPORT && defined CONFIG_ARCH_ARM
 #define INT_STATE_ARRAY_SIZE ((CONFIG_MAX_NUM_NODES - 1) * NUM_PPI + maxIRQ + 1)
 #else
@@ -120,8 +141,3 @@ extern paddr_t ksUserLogBuffer;
 
 #define SchedulerAction_ResumeCurrentThread ((tcb_t*)0)
 #define SchedulerAction_ChooseNewThread ((tcb_t*) 1)
-
-#define MODE_NODE_STATE(_state)    MODE_NODE_STATE_ON_CORE(_state, getCurrentCPUIndex())
-#define ARCH_NODE_STATE(_state)    ARCH_NODE_STATE_ON_CORE(_state, getCurrentCPUIndex())
-#define NODE_STATE(_state)         NODE_STATE_ON_CORE(_state, getCurrentCPUIndex())
-

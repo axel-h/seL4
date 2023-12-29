@@ -10,6 +10,7 @@
 
 #ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
 
+#include <plat/platform_gen.h> /* Ensure correct GIC header is included */
 #include <api/failures.h>
 #include <linker.h>
 
