@@ -393,8 +393,6 @@ add_custom_command(
     VERBATIM
 )
 
-add_custom_target(kernel_all_c_wrapper DEPENDS ${KERNEL_ALL_C})
-
 #
 # Header Generation
 #
@@ -523,7 +521,7 @@ cppfile(
     -CC
     "-I${CMAKE_CURRENT_BINARY_DIR}/generated_prune"
     EXTRA_DEPS
-    kernel_all_c_wrapper
+    ${KERNEL_ALL_C}
     dummy_header_wrapper
     xml_headers_target
     kernel_config_headers
@@ -635,7 +633,7 @@ cppfile(
     kernel_i_wrapper
     ${KERNEL_ALL_C}
     EXTRA_DEPS
-    kernel_all_c_wrapper
+    ${KERNEL_ALL_C}
     kernel_headers
     ${gen_files_list}
     EXTRA_FLAGS
