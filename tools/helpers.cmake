@@ -58,6 +58,7 @@ function(cppfile output output_target input)
     endif()
     get_absolute_source_or_binary(input "${input}")
     set(file_copy_name "${output_target}_temp.c")
+
     add_custom_command(
         OUTPUT ${file_copy_name}
         COMMAND
@@ -68,18 +69,19 @@ function(cppfile output output_target input)
     add_custom_target(${output_target}_copy_in DEPENDS ${file_copy_name})
     # Now generate an object library to persuade cmake to just do compilation and not try
     # and link our 'object' files
-    add_library(${output_target}_temp_lib OBJECT ${file_copy_name})
-    add_dependencies(${output_target}_temp_lib ${output_target}_copy_in)
+    set(target_temp_lib "${output_target}_temp_lib")
+    add_library(${target_temp_lib} OBJECT ${file_copy_name})
+    add_dependencies(${target_temp_lib} ${output_target}_copy_in)
     # Give the preprecess flag
-    target_compile_options(${output_target}_temp_lib PRIVATE -E)
+    target_compile_options(${target_temp_lib} PRIVATE -E)
     # Give any other flags from the user
-    target_compile_options(${output_target}_temp_lib PRIVATE ${CPP_EXTRA_FLAGS})
+    target_compile_options(${target_temp_lib} PRIVATE ${CPP_EXTRA_FLAGS})
     # Now copy from the random name cmake gave our object file into the one desired by the user
     add_custom_command(
         OUTPUT ${output}
         COMMAND
-            ${CMAKE_COMMAND} -E copy $<TARGET_OBJECTS:${output_target}_temp_lib> ${output}
-        DEPENDS ${output_target}_temp_lib $<TARGET_OBJECTS:${output_target}_temp_lib>
+            ${CMAKE_COMMAND} -E copy $<TARGET_OBJECTS:${target_temp_lib}> ${output}
+        DEPENDS ${target_temp_lib} $<TARGET_OBJECTS:${target_temp_lib}>
     )
     add_custom_target(${output_target} DEPENDS ${output})
 endfunction(cppfile)
