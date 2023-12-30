@@ -52,17 +52,12 @@ endfunction()
 #  * Input is assumed to be in CMAKE_CURRENT_SOURCE_DIR if it resolves to a file that exists
 #    otherwise it is assumed to be in CMAKE_CURRENT_BINARY_DIR
 function(cppfile output output_target input)
-    cmake_parse_arguments(PARSE_ARGV 3 "CPP" "" "EXACT_NAME" "EXTRA_DEPS;EXTRA_FLAGS")
+    cmake_parse_arguments(PARSE_ARGV 3 "CPP" "" "" "EXTRA_DEPS;EXTRA_FLAGS")
     if(NOT "${CPP_UNPARSED_ARGUMENTS}" STREQUAL "")
         message(FATAL_ERROR "Unknown arguments to cppfile: ${CPP_UNPARSED_ARGUMENTS}")
     endif()
     get_absolute_source_or_binary(input "${input}")
     set(file_copy_name "${output_target}_temp.c")
-    # If EXACT_NAME then we copy the input file to the name given by the caller. Otherwise
-    # generate a rule for copying the input file to a default name.
-    if(CPP_EXACT_NAME)
-        set(file_copy_name ${CPP_EXACT_NAME})
-    endif()
     add_custom_command(
         OUTPUT ${file_copy_name}
         COMMAND
