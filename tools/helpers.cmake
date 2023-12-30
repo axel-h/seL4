@@ -53,7 +53,7 @@ endfunction()
 #    otherwise it is assumed to be in CMAKE_CURRENT_BINARY_DIR
 function(cppfile output output_target input)
     cmake_parse_arguments(PARSE_ARGV 3 "CPP" "" "" "EXTRA_DEPS;EXTRA_FLAGS")
-    if(NOT "${CPP_UNPARSED_ARGUMENTS}" STREQUAL "")
+    if(CPP_UNPARSED_ARGUMENTS)
         message(FATAL_ERROR "Unknown arguments to cppfile: ${CPP_UNPARSED_ARGUMENTS}")
     endif()
     get_absolute_source_or_binary(input "${input}")
@@ -160,10 +160,8 @@ endfunction(GenThyBFTarget)
 
 # Generate hol definitions from a bitfield specification
 function(GenDefsBFTarget target_name target_file pbf_path pbf_target prunes deps)
-    set(args "")
-    list(APPEND args --hol_defs)
     GenThyBFTarget(
-        "${args}"
+        "--hol_defs"
         "${target_name}"
         "${target_file}"
         "${pbf_path}"
