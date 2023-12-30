@@ -621,9 +621,6 @@ set(CPPExtraFlags "-I${CMAKE_CURRENT_BINARY_DIR}/generated")
 
 cppfile(
     kernel_all.i kernel_i_wrapper ${KERNEL_ALL_C}
-    # The circular_includes script relies upon parsing out exactly 'kernel_all_copy.c' as
-    # a special case so we must ask cppfile to use this input name
-    EXACT_NAME kernel_all_copy.c
     EXTRA_DEPS ${KERNEL_ALL_C} kernel_headers ${gen_files_list}
     EXTRA_FLAGS -CC "${CPPExtraFlags}"
 )
@@ -649,7 +646,7 @@ cppfile(
 
 add_custom_command(
     OUTPUT circular_includes_valid
-    COMMAND ${PYTHON3} ${CIRCULAR_INCLUDES} --ignore kernel_all_copy.c < kernel_all.i
+    COMMAND ${PYTHON3} ${CIRCULAR_INCLUDES} --ignore kernel_i_wrapper_temp.c < kernel_all.i
     COMMAND touch circular_includes_valid
     DEPENDS kernel_i_wrapper kernel_all.i
 )
