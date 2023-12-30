@@ -16,7 +16,7 @@
 
 static inline CONST time_t getKernelWcetUs(void)
 {
-    return  10u;
+    return 10u;
 }
 
 static inline PURE ticks_t usToTicks(time_t us)
