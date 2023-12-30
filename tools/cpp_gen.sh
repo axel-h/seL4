@@ -5,13 +5,8 @@
 # SPDX-License-Identifier: BSD-2-Clause
 #
 
-#
-# Concatinate files together, adding in appropriate "#line" directives.
-#
-
 while [ $# -ge 1 ]; do
-    echo "#line 1 \"$1\""
-    cat "$1"
+    echo "#include \"$1\""
     shift
 done
 
