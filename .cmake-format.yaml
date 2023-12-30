@@ -43,16 +43,16 @@ additional_commands:
       PREFIX: '*'
   declare_default_headers:
     kwargs:
-        TIMER_FREQUENCY: '*'
-        MAX_IRQ: '*'
-        NUM_PPI: '*'
-        INTERRUPT_CONTROLLER: '*'
-        TIMER: '*'
-        KERNEL_WCET: '*'
-        CLK_MAGIC: '*'
-        CLK_SHIFT: '*'
-        TIMER_PRECISION: '*'
-        TIMER_OVERHEAD_TICKS: '*'
-        SMMU: '*'
-        MAX_SID: '*'
-        MAX_CB: '*'
+        TIMER_FREQUENCY: 1
+        MAX_IRQ: 1
+        NUM_PPI: 1
+        INTERRUPT_CONTROLLER: 1
+        TIMER: 1
+        KERNEL_WCET: 1
+        CLK_MAGIC: 1
+        CLK_SHIFT: 1
+        TIMER_PRECISION: 1
+        TIMER_OVERHEAD_TICKS: 1
+        SMMU: 1
+        MAX_SID: 1
+        MAX_CB: 1
