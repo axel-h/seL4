@@ -5,6 +5,13 @@
 #
 
 additional_commands:
+  cppfile:
+    pargs:
+      nargs: 3
+    kwargs:
+      EXACT_NAME: '?'
+      EXTRA_DEPS: '*'
+      EXTRA_FLAGS: '*'
   add_sources:
     kwargs:
       ASMFILES: '*'

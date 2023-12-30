@@ -514,18 +514,14 @@ add_custom_command(
 add_custom_target(dummy_header_wrapper DEPENDS ${dummy_headers})
 
 cppfile(
-    kernel_all_pp_prune.c
-    kernel_all_pp_prune_wrapper
-    ${KERNEL_ALL_C}
-    EXTRA_FLAGS
-    -CC
-    "-I${CMAKE_CURRENT_BINARY_DIR}/generated_prune"
+    kernel_all_pp_prune.c kernel_all_pp_prune_wrapper ${KERNEL_ALL_C}
+    EXTRA_FLAGS -CC "-I${CMAKE_CURRENT_BINARY_DIR}/generated_prune"
     EXTRA_DEPS
-    ${KERNEL_ALL_C}
-    dummy_header_wrapper
-    xml_headers_target
-    kernel_config_headers
-    ${gen_files_list}
+        ${KERNEL_ALL_C}
+        dummy_header_wrapper
+        xml_headers_target
+        kernel_config_headers
+        ${gen_files_list}
 )
 
 #
@@ -570,14 +566,9 @@ foreach(bf_dec ${bf_declarations})
     set(pbf_name "generated/${bf_gen_dir}/${bf_name}.pbf")
     set(pbf_target "${bf_gen_target}_pbf")
     cppfile(
-        "${pbf_name}"
-        "${pbf_target}"
-        "${bf_file}"
-        EXTRA_FLAGS
-        -P
-        EXTRA_DEPS
-        kernel_config_headers
-        ${gen_files_list}
+        "${pbf_name}" "${pbf_target}" "${bf_file}"
+        EXTRA_FLAGS -P
+        EXTRA_DEPS kernel_config_headers ${gen_files_list}
     )
     GenHBFTarget(
         ""
@@ -629,19 +620,12 @@ set(CPPExtraFlags "-I${CMAKE_CURRENT_BINARY_DIR}/generated")
 #
 
 cppfile(
-    kernel_all.i
-    kernel_i_wrapper
-    ${KERNEL_ALL_C}
-    EXTRA_DEPS
-    ${KERNEL_ALL_C}
-    kernel_headers
-    ${gen_files_list}
-    EXTRA_FLAGS
-    -CC
-    "${CPPExtraFlags}"
+    kernel_all.i kernel_i_wrapper ${KERNEL_ALL_C}
     # The circular_includes script relies upon parsing out exactly 'kernel_all_copy.c' as
     # a special case so we must ask cppfile to use this input name
     EXACT_NAME kernel_all_copy.c
+    EXTRA_DEPS ${KERNEL_ALL_C} kernel_headers ${gen_files_list}
+    EXTRA_FLAGS -CC "${CPPExtraFlags}"
 )
 
 # Explain to cmake that our object file is actually a C input file
@@ -658,16 +642,9 @@ set(linker_lds_path "${CMAKE_CURRENT_BINARY_DIR}/linker.lds_pp")
 
 # Preprocess the linker script
 cppfile(
-    "${linker_lds_path}"
-    linker_ld_wrapper
-    "${linker_source}"
-    EXTRA_DEPS
-    kernel_headers
-    ${gen_files_list}
-    EXTRA_FLAGS
-    -CC
-    -P
-    "${CPPExtraFlags}"
+    "${linker_lds_path}" linker_ld_wrapper "${linker_source}"
+    EXTRA_DEPS kernel_headers ${gen_files_list}
+    EXTRA_FLAGS -CC -P "${CPPExtraFlags}"
 )
 
 add_custom_command(
