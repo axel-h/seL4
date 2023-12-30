@@ -66,9 +66,11 @@ function(cppfile output output_target input)
         COMMENT "Creating C input file for preprocessor"
         DEPENDS ${CPP_EXTRA_DEPS} ${input}
     )
+    # We must create a target here that add_dependencies() can use, we can't
+    # use ${file_copy_name} here directly.
     add_custom_target(${output_target}_copy_in DEPENDS ${file_copy_name})
-    # Now generate an object library to persuade cmake to just do compilation and not try
-    # and link our 'object' files
+    # Now generate an object library to persuade cmake to just do compilation
+    # and not try to link our 'object' files.
     set(target_temp_lib "${output_target}_temp_lib")
     add_library(${target_temp_lib} OBJECT ${file_copy_name})
     add_dependencies(${target_temp_lib} ${output_target}_copy_in)
