@@ -382,16 +382,18 @@ list(APPEND gen_files_list "${gen_files2}")
 # Kernel compiles all C sources as a single C file, this provides
 # rules for doing the concatenation
 
+set(KERNEL_ALL_C "kernel_all.c")
+
 add_custom_command(
-    OUTPUT kernel_all.c
+    OUTPUT ${KERNEL_ALL_C}
     COMMAND
-        "${CPP_GEN_PATH}" ${c_sources} > kernel_all.c
+        "${CPP_GEN_PATH}" ${c_sources} > ${KERNEL_ALL_C}
     DEPENDS "${CPP_GEN_PATH}" ${c_sources}
     COMMENT "Concatenating C files"
     VERBATIM
 )
 
-add_custom_target(kernel_all_c_wrapper DEPENDS kernel_all.c)
+add_custom_target(kernel_all_c_wrapper DEPENDS ${KERNEL_ALL_C})
 
 #
 # Header Generation
@@ -516,7 +518,7 @@ add_custom_target(dummy_header_wrapper DEPENDS ${dummy_headers})
 cppfile(
     kernel_all_pp_prune.c
     kernel_all_pp_prune_wrapper
-    kernel_all.c
+    ${KERNEL_ALL_C}
     EXTRA_FLAGS
     -CC
     "-I${CMAKE_CURRENT_BINARY_DIR}/generated_prune"
@@ -631,7 +633,7 @@ set(CPPExtraFlags "-I${CMAKE_CURRENT_BINARY_DIR}/generated")
 cppfile(
     kernel_all.i
     kernel_i_wrapper
-    kernel_all.c
+    ${KERNEL_ALL_C}
     EXTRA_DEPS
     kernel_all_c_wrapper
     kernel_headers
@@ -690,7 +692,7 @@ add_custom_target(kernel_all_pp_wrapper DEPENDS kernel_all_pp.c)
 add_custom_target(kernel_theories DEPENDS ${theories_deps})
 
 # Declare final kernel output
-add_executable(kernel.elf EXCLUDE_FROM_ALL ${asm_sources} kernel_all.c)
+add_executable(kernel.elf EXCLUDE_FROM_ALL ${asm_sources} ${KERNEL_ALL_C})
 target_include_directories(kernel.elf PRIVATE ${config_dir})
 target_include_directories(kernel.elf PRIVATE include)
 target_include_directories(kernel.elf PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/generated")
