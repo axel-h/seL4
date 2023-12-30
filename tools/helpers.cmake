@@ -74,10 +74,8 @@ function(cppfile output output_target input)
     set(target_temp_lib "${output_target}_temp_lib")
     add_library(${target_temp_lib} OBJECT ${file_copy_name})
     add_dependencies(${target_temp_lib} ${output_target}_copy_in)
-    # Give the preprecess flag
-    target_compile_options(${target_temp_lib} PRIVATE -E)
-    # Give any other flags from the user
-    target_compile_options(${target_temp_lib} PRIVATE ${CPP_EXTRA_FLAGS})
+    # Give the preprecess flag and any other flags from the user
+    target_compile_options(${target_temp_lib} PRIVATE -E ${CPP_EXTRA_FLAGS})
     # Now copy from the random name cmake gave our object file into the one desired by the user
     add_custom_command(
         OUTPUT ${output}
