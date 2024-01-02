@@ -10,18 +10,17 @@ import argparse
 import logging
 import yaml
 import hardware
-
-from hardware.outputs import c_header, compat_strings, yaml as yaml_out, json as json_out, elfloader
+import hardware.outputs
 
 
 # Create an sorted dict. With Python 3.7, dicts are guaranteed to preserve the
 # order, older version require using OrderedDict explicitly.
 OUTPUTS = collections.OrderedDict(sorted({
-    'c_header': c_header,
-    'compat_strings': compat_strings,
-    'elfloader': elfloader,
-    'yaml': yaml_out,
-    'json': json_out,
+    'c_header': hardware.outputs.c_header,
+    'compat_strings': hardware.outputs.compat_strings,
+    'elfloader': hardware.outputs.elfloader,
+    'yaml': hardware.outputs.yaml,
+    'json': hardware.outputs.json,
 }.items()))
 
 
