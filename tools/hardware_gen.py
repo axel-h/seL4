@@ -35,7 +35,7 @@ def validate_rules(rules, schema):
         return True
 
 
-def main(args: argparse.Namespace):
+def hardware_gen(args: argparse.Namespace):
     ''' Parse the DT and hardware config YAML and run each
     selected output method. '''
     cfg = hardware.config.get_arch_config(args.sel4arch, args.addrspace_max)
@@ -50,8 +50,7 @@ def main(args: argparse.Namespace):
         if arg_dict[key]:
             task.run(parsed_dt, hw_yaml, cfg, args)
 
-
-if __name__ == '__main__':
+def parse_args():
     parser = argparse.ArgumentParser(
         description='transform device tree input to seL4 build configuration artefacts'
     )
@@ -77,8 +76,17 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
+    return args
+
+def main():
+    args = parse_args()
     if args.enable_profiling:
         import cProfile
-        cProfile.run('main(args)', sort='cumtime')
+        with cProfile.Profile() as pr:
+            hardware_gen(args)
+            pr.print_stats(sort='cumtime')
     else:
-        main(args)
+        hardware_gen(args)
+
+if __name__ == '__main__':
+    main()
