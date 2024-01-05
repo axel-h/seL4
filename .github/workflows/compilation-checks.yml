@@ -21,9 +21,18 @@ jobs:
       matrix:
         arch: [ARM, ARM_HYP, AARCH64, RISCV32, RISCV64, IA32, X64]
         compiler: [gcc, clang]
+        mcs: [true, false]
+        hyp: [true, false]
+        exclude:
+          - arch: ARM_HYP
+            hyp: false
+          - arch: [IA32, RISCV32, RISCV64]
+            hyp: true
     steps:
     - uses: actions/checkout@v4
     - uses: axel-h/ci-actions/standalone-kernel@patch-axel-6
       with:
         ARCH: ${{ matrix.arch }}
         COMPILER: ${{ matrix.compiler }}
+        MCS: ${{ matrix.mcs }}
+        HYP: ${{ matrix.hyp }}
