@@ -261,12 +261,12 @@ BOOT_CODE word_t arch_get_n_paging(v_region_t it_v_reg)
  * This includes page directory and page tables */
 BOOT_CODE cap_t create_it_address_space(cap_t root_cnode_cap, v_region_t it_v_reg)
 {
-    cap_t      lvl1pt_cap;
+    cap_t      vspace_cap;
     vptr_t     pt_vptr;
 
     copyGlobalMappings(PTE_PTR(rootserver.vspace));
 
-    lvl1pt_cap =
+    vspace_cap =
         cap_page_table_cap_new(
             IT_ASID,                     /* capPTMappedASID    */
             (word_t) rootserver.vspace,  /* capPTBasePtr       */
@@ -275,7 +275,7 @@ BOOT_CODE cap_t create_it_address_space(cap_t root_cnode_cap, v_region_t it_v_re
         );
 
     seL4_SlotPos slot_pos_before = ndks_boot.slot_pos_cur;
-    write_slot(SLOT_PTR(pptr_of_cap(root_cnode_cap), seL4_CapInitThreadVSpace), lvl1pt_cap);
+    write_slot(SLOT_PTR(pptr_of_cap(root_cnode_cap), seL4_CapInitThreadVSpace), vspace_cap);
 
     /* create all n level PT caps necessary to cover userland image in 4KiB pages */
     for (int i = 0; i < CONFIG_PT_LEVELS - 1; i++) {
@@ -284,7 +284,7 @@ BOOT_CODE cap_t create_it_address_space(cap_t root_cnode_cap, v_region_t it_v_re
              pt_vptr < it_v_reg.end;
              pt_vptr += RISCV_GET_LVL_PGSIZE(i)) {
             if (!provide_cap(root_cnode_cap,
-                             create_it_pt_cap(lvl1pt_cap, it_alloc_paging(), pt_vptr, IT_ASID))
+                             create_it_pt_cap(vspace_cap, it_alloc_paging(), pt_vptr, IT_ASID))
                ) {
                 return cap_null_cap_new();
             }
@@ -297,7 +297,7 @@ BOOT_CODE cap_t create_it_address_space(cap_t root_cnode_cap, v_region_t it_v_re
         slot_pos_before, slot_pos_after
     };
 
-    return lvl1pt_cap;
+    return vspace_cap;
 }
 
 BOOT_CODE void activate_kernel_vspace(void)
