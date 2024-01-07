@@ -55,30 +55,93 @@ static inline bool_t isPTEPageTable(pte_t *pte)
            !(pte_ptr_get_read(pte) || pte_ptr_get_write(pte) || pte_ptr_get_execute(pte));
 }
 
-/** Helper function meant only to be used for mapping the kernel
- * window.
- *
- * Maps all pages with full RWX and supervisor perms by default.
- */
-static pte_t pte_next(word_t phys_addr, bool_t is_leaf)
+static pte_t make_invalid_pte(void)
 {
-    word_t ppn = (word_t)(phys_addr >> 12);
+    /* A PTE is considered invalid if the 'valid' bit is 0. */
+    return (pte_t) {
+        0
+    };
+}
 
-    uint8_t read = is_leaf ? 1 : 0;
-    uint8_t write = read;
-    uint8_t exec = read;
+static pte_t make_pte_page(word_t phys_addr, bool_t is_user, bool_t is_executable,
+                           bool_t is_write, bool_t is_read)
+{
+    /* Non-readable pages are quite unusual, but still legal. Neither readable
+     * nor writable nor executble is an invalid combination, because that is
+     * used to indicate a table.
+     */
+    if (!is_executable && !is_write && !is_read) {
+        return make_invalid_pte();
+    }
 
-    return pte_new(ppn,
-                   0,     /* sw */
-                   is_leaf ? 1 : 0,     /* dirty (leaf)/reserved (non-leaf) */
-                   is_leaf ? 1 : 0,     /* accessed (leaf)/reserved (non-leaf) */
-                   1,     /* global */
-                   is_leaf ? 0 : 0,     /* user (leaf)/reserved (non-leaf) */
-                   exec,  /* execute */
-                   write, /* write */
-                   read,  /* read */
-                   1      /* valid */
-                  );
+    return pte_new(
+               phys_addr >> seL4_PageBits, /* ppn */
+               0, /* sw */
+               1, /* dirty */
+               1, /* accessed */
+               is_user ? 0 : 1,  /* global */
+               is_user ? 1 : 0,  /* user */
+               is_executable ? 1 : 0,  /* execute */
+               is_write ? 1 : 0, /* write */
+               is_read ? 1 : 0,  /* read */
+               1  /* valid */
+           );
+}
+
+static pte_t make_pte_table(word_t phys_addr, bool_t is_user)
+{
+    return pte_new(
+               phys_addr >> seL4_PageBits,
+               0, /* sw */
+               0, /* (dirty) reserved for tables */
+               0, /* (accessed) reserved for tables */
+               is_user ? 0 : 1, /* global */
+               0, /* (user page) reserved for tables */
+               0, /* (execute) RWX = 0 indicates table */
+               0, /* (write) RWX = 0 indicates table */
+               0, /* (read) RWX = 0 indicates table */
+               1  /* valid */
+           );
+}
+
+static inline pte_t CONST make_pte_page_kernel_window(word_t phys_addr)
+{
+    /* kernel window pages are mapped with RWX access rights. */
+    pte_t pte = make_pte_page(
+                    phys_addr,
+                    false, /* user */
+                    true,  /* executable */
+                    true,  /* writeable */
+                    true   /* readable */
+                );
+    /* this must create a valid PTE */
+    assert(pte_ptr_get_valid(&pte));
+    return pte;
+}
+
+static inline pte_t CONST make_pte_table_kernel_window(word_t phys_addr)
+{
+    pte_t pte = make_pte_table(phys_addr, false);
+    /* this must create a valid PTE */
+    assert(pte_ptr_get_valid(&pte));
+    return pte;
+}
+
+static inline pte_t CONST make_pte_table_user(word_t phys_addr)
+{
+    pte_t pte = make_pte_table(phys_addr, true);
+    /* this must create a valid PTE */
+    assert(pte_ptr_get_valid(&pte));
+    return pte;
+}
+
+static inline pte_t CONST make_pte_page_user(paddr_t paddr, bool_t is_executable,
+                                             bool_t is_write, bool_t is_read)
+{
+    pte_t pte = make_pte_page(paddr, true, is_executable, is_write, is_read);
+    /* this must create a valid PTE */
+    assert(pte_ptr_get_valid(&pte));
+    return pte;
 }
 
 /* ==================== BOOT CODE STARTS HERE ==================== */
@@ -88,17 +151,17 @@ BOOT_CODE void map_kernel_frame(paddr_t paddr, pptr_t vaddr, vm_rights_t vm_righ
 #if __riscv_xlen == 32
     paddr = ROUND_DOWN(paddr, RISCV_GET_LVL_PGSIZE_BITS(0));
     assert((paddr % RISCV_GET_LVL_PGSIZE(0)) == 0);
-    kernel_root_pageTable[RISCV_GET_PT_INDEX(vaddr, 0)] = pte_next(paddr, true);
+    kernel_root_pageTable[RISCV_GET_PT_INDEX(vaddr, 0)] = make_pte_page_kernel_window(paddr);
 #else
     if (vaddr >= KDEV_BASE) {
         /* Map devices in 2nd-level page table */
         paddr = ROUND_DOWN(paddr, RISCV_GET_LVL_PGSIZE_BITS(1));
         assert((paddr % RISCV_GET_LVL_PGSIZE(1)) == 0);
-        kernel_image_level2_dev_pt[RISCV_GET_PT_INDEX(vaddr, 1)] = pte_next(paddr, true);
+        kernel_image_level2_dev_pt[RISCV_GET_PT_INDEX(vaddr, 1)] = make_pte_page_kernel_window(paddr);
     } else {
         paddr = ROUND_DOWN(paddr, RISCV_GET_LVL_PGSIZE_BITS(0));
         assert((paddr % RISCV_GET_LVL_PGSIZE(0)) == 0);
-        kernel_root_pageTable[RISCV_GET_PT_INDEX(vaddr, 0)] = pte_next(paddr, true);
+        kernel_root_pageTable[RISCV_GET_PT_INDEX(vaddr, 0)] = make_pte_page_kernel_window(paddr);
     }
 #endif
 }
@@ -118,7 +181,7 @@ BOOT_CODE VISIBLE void map_kernel_window(void)
         assert(IS_ALIGNED(pptr, RISCV_GET_LVL_PGSIZE_BITS(0)));
         assert(IS_ALIGNED(paddr, RISCV_GET_LVL_PGSIZE_BITS(0)));
 
-        kernel_root_pageTable[RISCV_GET_PT_INDEX(pptr, 0)] = pte_next(paddr, true);
+        kernel_root_pageTable[RISCV_GET_PT_INDEX(pptr, 0)] = make_pte_page_kernel_window(paddr);
 
         pptr += RISCV_GET_LVL_PGSIZE(0);
         paddr += RISCV_GET_LVL_PGSIZE(0);
@@ -129,12 +192,12 @@ BOOT_CODE VISIBLE void map_kernel_window(void)
     paddr = ROUND_DOWN(KERNEL_ELF_PADDR_BASE, RISCV_GET_LVL_PGSIZE_BITS(0));
 
 #if __riscv_xlen == 32
-    kernel_root_pageTable[RISCV_GET_PT_INDEX(pptr, 0)] = pte_next(paddr, true);
+    kernel_root_pageTable[RISCV_GET_PT_INDEX(pptr, 0)] = make_pte_page_kernel_window(paddr);
     pptr += RISCV_GET_LVL_PGSIZE(0);
     paddr += RISCV_GET_LVL_PGSIZE(0);
 #ifdef CONFIG_KERNEL_LOG_BUFFER
     kernel_root_pageTable[RISCV_GET_PT_INDEX(KS_LOG_PPTR, 0)] =
-        pte_next(kpptr_to_paddr(kernel_image_level2_log_buffer_pt), false);
+        make_pte_table_kernel_window(kpptr_to_paddr(kernel_image_level2_log_buffer_pt));
 #endif
 #else
     word_t index = 0;
@@ -142,11 +205,11 @@ BOOT_CODE VISIBLE void map_kernel_window(void)
      * root page table, pointing them to the same second level page table.
      */
     kernel_root_pageTable[RISCV_GET_PT_INDEX(KERNEL_ELF_PADDR_BASE + PPTR_BASE_OFFSET, 0)] =
-        pte_next(kpptr_to_paddr(kernel_image_level2_pt), false);
+        make_pte_table_kernel_window(kpptr_to_paddr(kernel_image_level2_pt));
     kernel_root_pageTable[RISCV_GET_PT_INDEX(pptr, 0)] =
-        pte_next(kpptr_to_paddr(kernel_image_level2_pt), false);
+        make_pte_table_kernel_window(kpptr_to_paddr(kernel_image_level2_pt));
     while (pptr < PPTR_TOP + RISCV_GET_LVL_PGSIZE(0)) {
-        kernel_image_level2_pt[index] = pte_next(paddr, true);
+        kernel_image_level2_pt[index] = make_pte_page_kernel_window(paddr);
         index++;
         pptr += RISCV_GET_LVL_PGSIZE(1);
         paddr += RISCV_GET_LVL_PGSIZE(1);
@@ -154,7 +217,7 @@ BOOT_CODE VISIBLE void map_kernel_window(void)
 
     /* Map kernel device page table */
     kernel_root_pageTable[RISCV_GET_PT_INDEX(KDEV_BASE, 0)] =
-        pte_next(kpptr_to_paddr(kernel_image_level2_dev_pt), false);
+        make_pte_table_kernel_window(kpptr_to_paddr(kernel_image_level2_dev_pt));
 #endif
 
     /* There should be 1GiB free where we put device mapping */
@@ -171,21 +234,9 @@ BOOT_CODE void map_it_frame_cap(cap_t vspace_cap, cap_t frame_cap, bool_t execut
     /* We deal with a frame as 4KiB */
     lookupPTSlot_ret_t lu_ret = lookupPTSlot(lvl1pt, frame_vptr);
     assert(lu_ret.ptBitsLeft == seL4_PageBits);
-
-    pte_t *targetSlot = lu_ret.ptSlot;
-
-    *targetSlot = pte_new(
-                      (pptr_to_paddr(frame_pptr) >> seL4_PageBits),
-                      0, /* sw */
-                      1, /* dirty (leaf) */
-                      1, /* accessed (leaf) */
-                      0, /* global */
-                      1, /* user (leaf) */
-                      executable ? 1 : 0, /* execute */
-                      1, /* write */
-                      1, /* read */
-                      1  /* valid */
-                  );
+    /* ToDo: don't map executable pages writable. */
+    *(lu_ret.ptSlot) = make_pte_page_user(pptr_to_paddr(frame_pptr), executable,
+                                          true, true);
     sfence();
 }
 
@@ -248,18 +299,7 @@ BOOT_CODE cap_t create_it_address_space(cap_t root_cnode_cap, v_region_t it_v_re
              */
             word_t phys_addr = addrFromPPtr(PTE_PTR(pptr_of_cap(cap_pt)));
             lookupPTSlot_ret_t lu_ret = lookupPTSlot(lvl1pt, pt_vptr);
-            *(lu_ret.ptSlot) = pte_new(
-                                   phys_addr >> seL4_PageBits,
-                                   0, /* sw */
-                                   0, /* dirty (reserved non-leaf) */
-                                   0, /* accessed (reserved non-leaf) */
-                                   0, /* global */
-                                   0, /* user (reserved non-leaf) */
-                                   0, /* execute */
-                                   0, /* write */
-                                   0, /* read */
-                                   1  /* valid */
-                               );
+            *(lu_ret.ptSlot) = make_pte_table_user(phys_addr);
             sfence(); /* ensure the page table change becomes visible */
 
             if (!provide_cap(root_cnode_cap, cap_pt)) {
@@ -505,26 +545,8 @@ void unmapPageTable(asid_t asid, vptr_t vptr, pte_t *target_pt)
     }
     /* If we found a pt then ptSlot won't be null */
     assert(ptSlot != NULL);
-    *ptSlot = pte_new(
-                  0,  /* phy_address */
-                  0,  /* sw */
-                  0,  /* dirty (reserved non-leaf) */
-                  0,  /* accessed (reserved non-leaf) */
-                  0,  /* global */
-                  0,  /* user (reserved non-leaf) */
-                  0,  /* execute */
-                  0,  /* write */
-                  0,  /* read */
-                  0  /* valid */
-              );
+    *ptSlot = make_invalid_pte();
     sfence();
-}
-
-static pte_t pte_pte_invalid_new(void)
-{
-    return (pte_t) {
-        0
-    };
 }
 
 void unmapPage(vm_page_size_t page_size, asid_t asid, vptr_t vptr, pptr_t pptr)
@@ -546,7 +568,7 @@ void unmapPage(vm_page_size_t page_size, asid_t asid, vptr_t vptr, pptr_t pptr)
         return;
     }
 
-    lu_ret.ptSlot[0] = pte_pte_invalid_new();
+    lu_ret.ptSlot[0] = make_invalid_pte();
     sfence();
 }
 
@@ -627,29 +649,6 @@ vm_rights_t CONST maskVMRights(vm_rights_t vm_rights, seL4_CapRights_t cap_right
 }
 
 /* The rest of the file implements the RISCV object invocations */
-
-static pte_t CONST makeUserPTE(paddr_t paddr, bool_t executable, vm_rights_t vm_rights)
-{
-    word_t write = RISCVGetWriteFromVMRights(vm_rights);
-    word_t read = RISCVGetReadFromVMRights(vm_rights);
-    if (unlikely(!read && !write && !executable)) {
-        return pte_pte_invalid_new();
-    } else {
-        return pte_new(
-                   paddr >> seL4_PageBits,
-                   0, /* sw */
-                   1, /* dirty (leaf) */
-                   1, /* accessed (leaf) */
-                   0, /* global */
-                   1, /* user (leaf) */
-                   executable, /* execute */
-                   RISCVGetWriteFromVMRights(vm_rights), /* write */
-                   RISCVGetReadFromVMRights(vm_rights), /* read */
-                   1 /* valid */
-               );
-    }
-}
-
 static inline bool_t CONST checkVPAlignment(vm_page_size_t sz, word_t w)
 {
     return (w & MASK(pageBitsForSize(sz))) == 0;
@@ -751,19 +750,9 @@ static exception_t decodeRISCVPageTableInvocation(word_t label, word_t length,
     /* Get the slot to install the PT in */
     pte_t *ptSlot = lu_ret.ptSlot;
 
-    paddr_t paddr = addrFromPPtr(
-                        PTE_PTR(cap_page_table_cap_get_capPTBasePtr(cap)));
-    pte_t pte = pte_new((paddr >> seL4_PageBits),
-                        0, /* sw */
-                        0, /* dirty (reserved non-leaf) */
-                        0, /* accessed (reserved non-leaf) */
-                        0,  /* global */
-                        0,  /* user (reserved non-leaf) */
-                        0,  /* execute */
-                        0,  /* write */
-                        0,  /* read */
-                        1 /* valid */
-                       );
+    pte_t pte = make_pte_table_user(
+                    addrFromPPtr(
+                        PTE_PTR(cap_page_table_cap_get_capPTBasePtr(cap))));
 
     cap = cap_page_table_cap_set_capPTIsMapped(cap, 1);
     cap = cap_page_table_cap_set_capPTMappedASID(cap, asid);
@@ -875,9 +864,10 @@ static exception_t decodeRISCVFrameInvocation(word_t label, word_t length,
         paddr_t frame_paddr = addrFromPPtr((void *) cap_frame_cap_get_capFBasePtr(cap));
         cap = cap_frame_cap_set_capFMappedASID(cap, asid);
         cap = cap_frame_cap_set_capFMappedAddress(cap,  vaddr);
-
-        bool_t executable = !vm_attributes_get_riscvExecuteNever(attr);
-        pte_t pte = makeUserPTE(frame_paddr, executable, vmRights);
+        pte_t pte = make_pte_page_user(frame_paddr,
+                                       !vm_attributes_get_riscvExecuteNever(attr),
+                                       RISCVGetWriteFromVMRights(vmRights),
+                                       RISCVGetReadFromVMRights(vmRights));
         setThreadState(NODE_STATE(ksCurThread), ThreadState_Restart);
         return performPageInvocationMapPTE(cap, cte, pte, lu_ret.ptSlot);
     }
@@ -1202,12 +1192,12 @@ exception_t benchmark_arch_map_logBuffer(word_t frame_cptr)
 #if __riscv_xlen == 32
     paddr_t physical_address = ksUserLogBuffer;
     for (word_t i = 0; i < BIT(PT_INDEX_BITS); i += 1) {
-        kernel_image_level2_log_buffer_pt[i] = pte_next(physical_address, true);
+        kernel_image_level2_log_buffer_pt[i] = make_pte_page_kernel_window(physical_address);
         physical_address += BIT(PAGE_BITS);
     }
     assert(physical_address - ksUserLogBuffer == BIT(seL4_LargePageBits));
 #else
-    kernel_image_level2_dev_pt[RISCV_GET_PT_INDEX(KS_LOG_PPTR, 1)] = pte_next(ksUserLogBuffer, true);
+    kernel_image_level2_dev_pt[RISCV_GET_PT_INDEX(KS_LOG_PPTR, 1)] = make_pte_page_kernel_window(ksUserLogBuffer);
 #endif
 
     sfence();
