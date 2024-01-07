@@ -84,6 +84,15 @@ static inline fastpath_context_t fastpath_get_context(tcb_t *dest)
     };
 }
 
+static inline bool_t fastpath_check_debug(tcb_t *thread)
+{
+#if defined(CONFIG_HARDWARE_DEBUG_API) && defined(CONFIG_ARCH_IA32)
+    return thread->tcbArch.tcbContext.breakpointState.single_step_enabled;
+#endif
+
+    return false;
+}
+
 #ifdef CONFIG_ARCH_ARM
 static inline
 FORCE_INLINE
@@ -123,21 +132,19 @@ void NORETURN fastpath_call(word_t cptr, word_t msgInfo)
     /* Get the endpoint address */
     ep_ptr = EP_PTR(cap_endpoint_cap_get_capEPPtr(ep_cap));
 
-    /* Get the destination thread, which is only going to be valid
-     * if the endpoint is valid. */
-    dest = TCB_PTR(endpoint_ptr_get_epQueue_head(ep_ptr));
-
     /* Check that there's a thread waiting to receive */
     if (unlikely(endpoint_ptr_get_state(ep_ptr) != EPState_Recv)) {
         slowpath(SysCall);
     }
 
-    /* ensure we are not single stepping the destination in ia32 */
-#if defined(CONFIG_HARDWARE_DEBUG_API) && defined(CONFIG_ARCH_IA32)
-    if (unlikely(dest->tcbArch.tcbContext.breakpointState.single_step_enabled)) {
+    /* Get the destination thread, which is only going to be valid
+     * if the endpoint is valid. */
+    dest = TCB_PTR(endpoint_ptr_get_epQueue_head(ep_ptr));
+
+    /* ensure we are not debugging the destination */
+    if (unlikely(fastpath_check_debug(dest))) {
         slowpath(SysCall);
     }
-#endif
 
     /* Get destination thread context.*/
     fastpath_context_t dest_ctx = fastpath_get_context(dest);
@@ -343,12 +350,10 @@ void NORETURN fastpath_reply_recv(word_t cptr, word_t msgInfo)
     caller = TCB_PTR(cap_reply_cap_get_capTCBPtr(callerCap));
 #endif
 
-    /* ensure we are not single stepping the caller in ia32 */
-#if defined(CONFIG_HARDWARE_DEBUG_API) && defined(CONFIG_ARCH_IA32)
-    if (unlikely(caller->tcbArch.tcbContext.breakpointState.single_step_enabled)) {
-        slowpath(SysReplyRecv);
+    /* ensure we are not debugging the caller */
+    if (unlikely(fastpath_check_debug(caller))) {
+        slowpath(SysCall);
     }
-#endif
 
     /* Check that the caller has not faulted, in which case a fault
        reply is generated instead. */
@@ -598,6 +603,11 @@ void NORETURN fastpath_signal(word_t cptr, word_t msgInfo)
         break;
     default:
         fail("Invalid notification state");
+    }
+
+    /* ensure we are not debugging the destination */
+    if (unlikely(fastpath_check_debug(dest))) {
+        slowpath(SysCall);
     }
 
     /* Get the bound SC of the signalled thread */
