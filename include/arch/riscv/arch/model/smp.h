@@ -51,6 +51,26 @@ static inline bool_t try_arch_atomic_exchange_rlx(void *ptr, void *new_val, void
 
 static inline CONST cpu_id_t getCurrentCPUIndex(void)
 {
+    /* RISC-V has no dedicated S-Mode register for the current hart ID, this
+     * information is passed from the bootloader to the kernel, which is
+     * supposed to store it somewhere. We explicitly store it, but keep it
+     * implicitly in the core specific stack pointer, which is kept in SSCRATCH.
+     * Thus, we can derive the hart ID from the hart's stack pointer. Each
+     * core's stack's size is BIT(CONFIG_KERNEL_STACK_BITS). All stacks are in
+     * the memory region of the array 'kernel_stack_alloc'.
+     *
+     *                    +---------------+  <- SSCRATCH for Hart #n
+     *                    | Stack Hart #n |
+     *                    +---------------+  <- SSCRATCH for Hart #n-1
+     *                    :               :
+     *                    :               :
+     *                    +---------------+  <- SSCRATCH for Hart #1
+     *                    | Stack Hart #1 |
+     *                    +---------------+  <- SSCRATCH for Hart #0
+     *                    | Stack Hart #0 |
+     *                    +---------------+  <- kernel_stack_alloc
+     *
+     */
     word_t sp;
     asm volatile("csrr %0, sscratch" : "=r"(sp));
     sp -= (word_t)kernel_stack_alloc;
