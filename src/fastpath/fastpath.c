@@ -93,6 +93,38 @@ static inline bool_t fastpath_check_debug(tcb_t *thread)
     return false;
 }
 
+//
+// ToDo: check if this function is useful. Seems not.
+//
+// static inline FORCE_INLINE void NORETURN fastpath_ret(tcb_t *dst, tcb_t *src
+//                                                       fastpath_context_t ctx,
+//                                                       word_t badge, word_t msgInfo)
+// {
+//     assert(NODE_STATE(ksCurThread) == src);
+//
+//     seL4_MessageInfo_t info = messageInfoFromWord_raw(msgInfo);
+//
+//     fastpath_copy_mrs(
+//         seL4_MessageInfo_get_length(info),
+//         src,
+//         dst);
+//
+//     word_t msgInfo_ret = wordFromMessageInfo(seL4_MessageInfo_set_capsUnwrapped(info, 0))
+//
+//     setRegister(dst, badgeRegister, badge);
+//     setRegister(dst, msgInfoRegister, msgInfo_ret);
+//
+//     /* destination thread is set Running, but not queued. */
+//     thread_state_ptr_set_tsType_np(&dst->tcbState, ThreadState_Running);
+//     switchToThread_fp(dst, ctx.vspace_root, ctx.asid);
+//     assert(NODE_STATE(ksCurThread) == dst);
+//
+//     // No need to call fastpath_restore(badge, msgInfo_ret, dest), because we
+//     // we have update the dest register context above already, so we can simply
+//     // restore things.
+//     restore_user_context();
+// }
+
 #ifdef CONFIG_ARCH_ARM
 static inline
 FORCE_INLINE
@@ -246,6 +278,8 @@ void NORETURN fastpath_call(word_t cptr, word_t msgInfo)
     mdb_node_ptr_mset_mdbNext_mdbRevocable_mdbFirstBadged(
         &replySlot->cteMDBNode, CTE_REF(callerSlot), 1, 1);
 #endif
+
+    // ToDo: call fastpath_ret(dest, dest_ctx, badge, msgInfo);
 
     fastpath_copy_mrs(length, NODE_STATE(ksCurThread), dest);
 
@@ -508,6 +542,8 @@ void NORETURN fastpath_reply_recv(word_t cptr, word_t msgInfo)
     } else {
 #endif
         /* There's no fault, so straight to the transfer. */
+
+        // ToDo: call fastpath_ret(caller, dest_ctx, 0, msgInfo);
 
         /* Replies don't have a badge. */
         badge = 0;
