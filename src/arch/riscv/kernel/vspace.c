@@ -162,7 +162,7 @@ BOOT_CODE VISIBLE void map_kernel_window(void)
     map_kernel_devices();
 }
 
-BOOT_CODE void map_it_pt_cap(cap_t vspace_cap, cap_t pt_cap)
+static BOOT_CODE void map_it_pt_cap(cap_t vspace_cap, cap_t pt_cap)
 {
     lookupPTSlot_ret_t pt_ret;
     pte_t *targetSlot;
