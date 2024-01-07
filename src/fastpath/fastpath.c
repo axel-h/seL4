@@ -12,6 +12,78 @@
 #endif
 #include <benchmark/benchmark_utilisation.h>
 
+typedef struct {
+    vspace_root_t *vspace_root;
+    pde_t         asid;
+} fastpath_context_t;
+
+#define FASTPATH_CTX_FAIL ((fastpath_context_t) {0})
+
+static inline fastpath_context_t fastpath_get_context(tcb_t *dest)
+{
+    /* Get destination thread.*/
+    cap_t newVTable = TCB_PTR_CTE_PTR(dest, tcbVTable)->cap;
+
+    /* Ensure that the destination has a valid VTable. */
+    if (unlikely(!isValidVTableRoot_fp(newVTable))) {
+        return FASTPATH_CTX_FAIL;
+    }
+
+    /* Get vspace root. */
+    vspace_root_t *vspace_root = cap_vtable_cap_get_vspace_root_fp(newVTable);
+
+    /* get the ASID */
+    pde_t hw_asid;
+
+#if defined(CONFIG_ARCH_IA32)
+    /* hw_asid is unused on ia32 fastpath, but gets passed into a function below. */
+    hw_asid.words[0] = 0;
+
+#elif defined(CONFIG_ARCH_X86_64)
+    /* borrow the hw_asid for PCID */
+    hw_asid.words[0] = cap_pml4_cap_get_capPML4MappedASID_fp(newVTable);
+
+#elif defined(CONFIG_ARCH_AARCH32)
+    /* Get HW ASID */
+    hw_asid = vspace_root[PD_ASID_SLOT];
+    if (unlikely(!pde_pde_invalid_get_stored_asid_valid(hw_asid))) {
+        return FASTPATH_CTX_FAIL;
+    }
+
+#elif defined(CONFIG_ARCH_AARCH64)
+    /* Need to test that the ASID is still valid */
+    asid_t asid = cap_vspace_cap_get_capVSMappedASID(newVTable);
+    asid_map_t asid_map = findMapForASID(asid);
+    if (unlikely(asid_map_get_type(asid_map) != asid_map_asid_map_vspace ||
+                 VSPACE_PTR(asid_map_asid_map_vspace_get_vspace_root(asid_map)) != vspace_root)) {
+        return FASTPATH_CTX_FAIL;
+    }
+
+#ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
+    /* Ensure the vmid is valid. */
+    if (unlikely(!asid_map_asid_map_vspace_get_stored_vmid_valid(asid_map))) {
+        return FASTPATH_CTX_FAIL;
+    }
+    /* vmids are the tags used instead of hw_asids in hyp mode */
+    hw_asid.words[0] = asid_map_asid_map_vspace_get_stored_hw_vmid(asid_map);
+#else
+    hw_asid.words[0] = asid;
+#endif
+
+#elif defined(CONFIG_ARCH_RISCV)
+    /* Get HW ASID */
+    hw_asid.words[0] = cap_page_table_cap_get_capPTMappedASID(newVTable);
+
+#else
+#error "unsupported architecture"
+#endif
+
+    return (fastpath_context_t) {
+        .vspace_root = vspace_root,
+        .asid = hw_asid,
+    };
+}
+
 #ifdef CONFIG_ARCH_ARM
 static inline
 FORCE_INLINE
@@ -24,9 +96,6 @@ void NORETURN fastpath_call(word_t cptr, word_t msgInfo)
     word_t length;
     tcb_t *dest;
     word_t badge;
-    cap_t newVTable;
-    vspace_root_t *cap_pd;
-    pde_t stored_hw_asid;
     word_t fault_type;
     dom_t dom;
 
@@ -70,55 +139,11 @@ void NORETURN fastpath_call(word_t cptr, word_t msgInfo)
     }
 #endif
 
-    /* Get destination thread.*/
-    newVTable = TCB_PTR_CTE_PTR(dest, tcbVTable)->cap;
-
-    /* Get vspace root. */
-    cap_pd = cap_vtable_cap_get_vspace_root_fp(newVTable);
-
-    /* Ensure that the destination has a valid VTable. */
-    if (unlikely(! isValidVTableRoot_fp(newVTable))) {
+    /* Get destination thread context.*/
+    fastpath_context_t dest_ctx = fastpath_get_context(dest);
+    if (unlikely(!dest_ctx.vspace_root)) {
         slowpath(SysCall);
     }
-
-#ifdef CONFIG_ARCH_AARCH32
-    /* Get HW ASID */
-    stored_hw_asid = cap_pd[PD_ASID_SLOT];
-#endif
-
-#ifdef CONFIG_ARCH_X86_64
-    /* borrow the stored_hw_asid for PCID */
-    stored_hw_asid.words[0] = cap_pml4_cap_get_capPML4MappedASID_fp(newVTable);
-#endif
-
-#ifdef CONFIG_ARCH_IA32
-    /* stored_hw_asid is unused on ia32 fastpath, but gets passed into a function below. */
-    stored_hw_asid.words[0] = 0;
-#endif
-#ifdef CONFIG_ARCH_AARCH64
-    /* Need to test that the ASID is still valid */
-    asid_t asid = cap_vspace_cap_get_capVSMappedASID(newVTable);
-    asid_map_t asid_map = findMapForASID(asid);
-    if (unlikely(asid_map_get_type(asid_map) != asid_map_asid_map_vspace ||
-                 VSPACE_PTR(asid_map_asid_map_vspace_get_vspace_root(asid_map)) != cap_pd)) {
-        slowpath(SysCall);
-    }
-#ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
-    /* Ensure the vmid is valid. */
-    if (unlikely(!asid_map_asid_map_vspace_get_stored_vmid_valid(asid_map))) {
-        slowpath(SysCall);
-    }
-    /* vmids are the tags used instead of hw_asids in hyp mode */
-    stored_hw_asid.words[0] = asid_map_asid_map_vspace_get_stored_hw_vmid(asid_map);
-#else
-    stored_hw_asid.words[0] = asid;
-#endif
-#endif
-
-#ifdef CONFIG_ARCH_RISCV
-    /* Get HW ASID */
-    stored_hw_asid.words[0] = cap_page_table_cap_get_capPTMappedASID(newVTable);
-#endif
 
     /* let gcc optimise this out for 1 domain */
     dom = maxDom ? ksCurDomain : 0;
@@ -135,11 +160,6 @@ void NORETURN fastpath_call(word_t cptr, word_t msgInfo)
         slowpath(SysCall);
     }
 
-#ifdef CONFIG_ARCH_AARCH32
-    if (unlikely(!pde_pde_invalid_get_stored_asid_valid(stored_hw_asid))) {
-        slowpath(SysCall);
-    }
-#endif
 
     /* Ensure the original caller is in the current domain and can be scheduled directly. */
     if (unlikely(dest->tcbDomain != ksCurDomain && 0 < maxDom)) {
@@ -225,7 +245,7 @@ void NORETURN fastpath_call(word_t cptr, word_t msgInfo)
     /* Dest thread is set Running, but not queued. */
     thread_state_ptr_set_tsType_np(&dest->tcbState,
                                    ThreadState_Running);
-    switchToThread_fp(dest, cap_pd, stored_hw_asid);
+    switchToThread_fp(dest, dest_ctx.vspace_root, dest_ctx.asid);
 
     msgInfo = wordFromMessageInfo(seL4_MessageInfo_set_capsUnwrapped(info, 0));
 
@@ -250,10 +270,6 @@ void NORETURN fastpath_reply_recv(word_t cptr, word_t msgInfo)
     word_t badge;
     tcb_t *endpointTail;
     word_t fault_type;
-
-    cap_t newVTable;
-    vspace_root_t *cap_pd;
-    pde_t stored_hw_asid;
     dom_t dom;
 
     /* Get message info and length */
@@ -349,66 +365,17 @@ void NORETURN fastpath_reply_recv(word_t cptr, word_t msgInfo)
     }
 #endif
 
-    /* Get destination thread.*/
-    newVTable = TCB_PTR_CTE_PTR(caller, tcbVTable)->cap;
-
-    /* Get vspace root. */
-    cap_pd = cap_vtable_cap_get_vspace_root_fp(newVTable);
-
-    /* Ensure that the destination has a valid MMU. */
-    if (unlikely(! isValidVTableRoot_fp(newVTable))) {
+    /* Get destination thread context.*/
+    fastpath_context_t caller_ctx = fastpath_get_context(caller);
+    if (unlikely(!caller_ctx.vspace_root)) {
         slowpath(SysReplyRecv);
     }
-
-#ifdef CONFIG_ARCH_AARCH32
-    /* Get HWASID. */
-    stored_hw_asid = cap_pd[PD_ASID_SLOT];
-#endif
-
-#ifdef CONFIG_ARCH_X86_64
-    stored_hw_asid.words[0] = cap_pml4_cap_get_capPML4MappedASID_fp(newVTable);
-#endif
-#ifdef CONFIG_ARCH_IA32
-    /* stored_hw_asid is unused on ia32 fastpath, but gets passed into a function below. */
-    stored_hw_asid.words[0] = 0;
-#endif
-#ifdef CONFIG_ARCH_AARCH64
-    /* Need to test that the ASID is still valid */
-    asid_t asid = cap_vspace_cap_get_capVSMappedASID(newVTable);
-    asid_map_t asid_map = findMapForASID(asid);
-    if (unlikely(asid_map_get_type(asid_map) != asid_map_asid_map_vspace ||
-                 VSPACE_PTR(asid_map_asid_map_vspace_get_vspace_root(asid_map)) != cap_pd)) {
-        slowpath(SysReplyRecv);
-    }
-#ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
-    /* Ensure the vmid is valid. */
-    if (unlikely(!asid_map_asid_map_vspace_get_stored_vmid_valid(asid_map))) {
-        slowpath(SysReplyRecv);
-    }
-
-    /* vmids are the tags used instead of hw_asids in hyp mode */
-    stored_hw_asid.words[0] = asid_map_asid_map_vspace_get_stored_hw_vmid(asid_map);
-#else
-    stored_hw_asid.words[0] = asid;
-#endif
-#endif
-
-#ifdef CONFIG_ARCH_RISCV
-    stored_hw_asid.words[0] = cap_page_table_cap_get_capPTMappedASID(newVTable);
-#endif
 
     /* Ensure the original caller can be scheduled directly. */
     dom = maxDom ? ksCurDomain : 0;
     if (unlikely(!isHighestPrio(dom, caller->tcbPriority))) {
         slowpath(SysReplyRecv);
     }
-
-#ifdef CONFIG_ARCH_AARCH32
-    /* Ensure the HWASID is valid. */
-    if (unlikely(!pde_pde_invalid_get_stored_asid_valid(stored_hw_asid))) {
-        slowpath(SysReplyRecv);
-    }
-#endif
 
     /* Ensure the original caller is in the current domain and can be scheduled directly. */
     if (unlikely(caller->tcbDomain != ksCurDomain && 0 < maxDom)) {
@@ -529,7 +496,7 @@ void NORETURN fastpath_reply_recv(word_t cptr, word_t msgInfo)
 
         /* Dest thread is set Running, but not queued. */
         thread_state_ptr_set_tsType_np(&caller->tcbState, ThreadState_Running);
-        switchToThread_fp(caller, cap_pd, stored_hw_asid);
+        switchToThread_fp(caller, caller_ctx.vspace_root, caller_ctx.asid);
 
         /* The badge/msginfo do not need to be not sent - this is not necessary for exceptions */
         restore_user_context();
@@ -544,7 +511,7 @@ void NORETURN fastpath_reply_recv(word_t cptr, word_t msgInfo)
 
         /* Dest thread is set Running, but not queued. */
         thread_state_ptr_set_tsType_np(&caller->tcbState, ThreadState_Running);
-        switchToThread_fp(caller, cap_pd, stored_hw_asid);
+        switchToThread_fp(caller, caller_ctx.vspace_root, caller_ctx.asid);
 
         msgInfo = wordFromMessageInfo(seL4_MessageInfo_set_capsUnwrapped(info, 0));
 
@@ -727,12 +694,9 @@ void NORETURN fastpath_vm_fault(vm_fault_type_t type)
     cap_t handler_cap;
     endpoint_t *ep_ptr;
     tcb_t *dest;
-    cap_t newVTable;
-    vspace_root_t *cap_pd;
     word_t badge;
     seL4_MessageInfo_t info;
     word_t msgInfo;
-    pde_t stored_hw_asid;
     dom_t dom;
 
     /* Get the fault handler endpoint */
@@ -766,37 +730,11 @@ void NORETURN fastpath_vm_fault(vm_fault_type_t type)
         vm_fault_slowpath(type);
     }
 
-    /* Get destination thread.*/
-    newVTable = TCB_PTR_CTE_PTR(dest, tcbVTable)->cap;
-
-    /* Get vspace root. */
-    cap_pd = cap_vtable_cap_get_vspace_root_fp(newVTable);
-
-    /* Ensure that the destination has a valid VTable. */
-    if (unlikely(! isValidVTableRoot_fp(newVTable))) {
+    /* Get destination thread context.*/
+    fastpath_context_t dest_ctx = fastpath_get_context(dest);
+    if (unlikely(!dest_ctx.vspace_root)) {
         vm_fault_slowpath(type);
     }
-
-#ifdef CONFIG_ARCH_AARCH64
-    /* Need to test that the ASID is still valid */
-    asid_t asid = cap_vspace_cap_get_capVSMappedASID(newVTable);
-    asid_map_t asid_map = findMapForASID(asid);
-    if (unlikely(asid_map_get_type(asid_map) != asid_map_asid_map_vspace ||
-                 VSPACE_PTR(asid_map_asid_map_vspace_get_vspace_root(asid_map)) != cap_pd)) {
-        vm_fault_slowpath(type);
-    }
-#ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
-    /* Ensure the vmid is valid. */
-    if (unlikely(!asid_map_asid_map_vspace_get_stored_vmid_valid(asid_map))) {
-        vm_fault_slowpath(type);
-    }
-
-    /* vmids are the tags used instead of hw_asids in hyp mode */
-    stored_hw_asid.words[0] = asid_map_asid_map_vspace_get_stored_hw_vmid(asid_map);
-#else
-    stored_hw_asid.words[0] = asid;
-#endif
-#endif
 
     /* let gcc optimise this out for 1 domain */
     dom = maxDom ? ksCurDomain : 0;
@@ -896,7 +834,7 @@ void NORETURN fastpath_vm_fault(vm_fault_type_t type)
 
     /* Set the fault handler to running */
     thread_state_ptr_set_tsType_np(&dest->tcbState, ThreadState_Running);
-    switchToThread_fp(dest, cap_pd, stored_hw_asid);
+    switchToThread_fp(dest, dest_ctx.vspace_root, dest_ctx.asid);
     msgInfo = wordFromMessageInfo(seL4_MessageInfo_set_capsUnwrapped(info, 0));
 
     fastpath_restore(badge, msgInfo, NODE_STATE(ksCurThread));
