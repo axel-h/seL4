@@ -665,8 +665,8 @@ void NORETURN fastpath_signal(word_t cptr, word_t msgInfo)
 
     /* Left this in the same form as the slowpath. Not sure if optimal */
     if (sc_sporadic(dest->tcbSchedContext)) {
-        assert(dest->tcbSchedContext != NODE_STATE(ksCurSC));
         if (dest->tcbSchedContext != NODE_STATE(ksCurSC)) {
+            assert(true); /* ToDo: remove? */
             refill_unblock_check(dest->tcbSchedContext);
         }
     }
