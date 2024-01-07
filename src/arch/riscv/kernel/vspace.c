@@ -182,11 +182,11 @@ BOOT_CODE void map_it_pt_cap(cap_t vspace_cap, cap_t pt_cap)
                       0, /* sw */
                       0, /* dirty (reserved non-leaf) */
                       0, /* accessed (reserved non-leaf) */
-                      0,  /* global */
-                      0,  /* user (reserved non-leaf) */
-                      0,  /* execute */
-                      0,  /* write */
-                      0,  /* read */
+                      0, /* global */
+                      0, /* user (reserved non-leaf) */
+                      0, /* execute */
+                      0, /* write */
+                      0, /* read */
                       1 /* valid */
                   );
     sfence();
@@ -209,12 +209,12 @@ BOOT_CODE void map_it_frame_cap(cap_t vspace_cap, cap_t frame_cap)
                       0, /* sw */
                       1, /* dirty (leaf) */
                       1, /* accessed (leaf) */
-                      0,  /* global */
-                      1,  /* user (leaf) */
-                      1,  /* execute */
-                      1,  /* write */
-                      1,  /* read */
-                      1   /* valid */
+                      0, /* global */
+                      1, /* user (leaf) */
+                      1, /* execute */
+                      1, /* write */
+                      1, /* read */
+                      1  /* valid */
                   );
     sfence();
 }
@@ -268,9 +268,9 @@ BOOT_CODE cap_t create_it_address_space(cap_t root_cnode_cap, v_region_t it_v_re
 
     lvl1pt_cap =
         cap_page_table_cap_new(
-            IT_ASID,               /* capPTMappedASID    */
+            IT_ASID,                     /* capPTMappedASID    */
             (word_t) rootserver.vspace,  /* capPTBasePtr       */
-            1,                     /* capPTIsMapped      */
+            1,                           /* capPTIsMapped      */
             (word_t) rootserver.vspace   /* capPTMappedAddress */
         );
 
