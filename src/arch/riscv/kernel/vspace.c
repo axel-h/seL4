@@ -226,7 +226,7 @@ BOOT_CODE cap_t create_unmapped_it_frame_cap(pptr_t pptr, bool_t use_large)
                     pptr,                            /* capFBasePtr          */
                     0,                               /* capFSize             */
                     0,                               /* capFVMRights         */
-                    0,
+                    0,                               /* capFIsDevice         */
                     0                                /* capFMappedAddress    */
                 );
 
