@@ -66,8 +66,7 @@ static inline CONST cpu_id_t getCurrentCPUIndex(void)
      *                    +---------------+  <- kernel_stack_alloc
      *
      */
-    word_t sp;
-    asm volatile("csrr %0, sscratch" : "=r"(sp));
+    word_t sp = read_sscratch();
     sp -= (word_t)kernel_stack_alloc;
     sp -= 8;
     return (sp >> CONFIG_KERNEL_STACK_BITS);
