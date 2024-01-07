@@ -194,8 +194,8 @@ BOOT_CODE void map_it_pt_cap(cap_t vspace_cap, cap_t pt_cap)
 
 BOOT_CODE void map_it_frame_cap(cap_t vspace_cap, cap_t frame_cap)
 {
-    pte_t *lvl1pt   = PTE_PTR(pptr_of_cap(vspace_cap));
-    pte_t *frame_pptr   = PTE_PTR(pptr_of_cap(frame_cap));
+    pte_t *lvl1pt = PTE_PTR(pptr_of_cap(vspace_cap));
+    pte_t *frame_pptr = PTE_PTR(pptr_of_cap(frame_cap));
     vptr_t frame_vptr = cap_frame_cap_get_capFMappedAddress(frame_cap);
 
     /* We deal with a frame as 4KiB */
