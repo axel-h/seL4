@@ -113,6 +113,15 @@ static inline void NORETURN FORCE_INLINE fastpath_restore(word_t badge, word_t m
     set_tcb_fs_state(cur_thread, isFpuEnable());
 #endif
 
+    /* The RISC-V A-Extension defines the LR/SC instruction pair for conditional
+     * stores using a reservation. Explicitly clearing any reservations is
+     * considered not necessary on the fastpath for functional correctness,
+     * since user threads are not supposed to perform IPC/Signal operations in
+     * the middle of LR/SC sequences. Clearing should not be needed there for
+     * dataflow reasons either, as the reservation can be considered a message
+     * register (although impossible to use gainfully on most implementations).
+     */
+
     register word_t badge_reg asm("a0") = badge;
     register word_t msgInfo_reg asm("a1") = msgInfo;
     register word_t cur_thread_reg asm("t0") = cur_thread_regs;

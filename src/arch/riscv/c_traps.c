@@ -40,13 +40,36 @@ void VISIBLE NORETURN restore_user_context(void)
     asm volatile(
         "mv t0, %[cur_thread]       \n"
         LOAD_S " ra, (0*%[REGSIZE])(t0)  \n"
+
+        /* The RISC-V A-Extension defines the LR/SC instruction pair for
+         * conditional stores using a reservation. We have to clear any existing
+         * reservation here, because we don't know where the user thread got
+         * interrupted. Clearing does not happen automatically, the following
+         * core-specific implementation behavior is known:
+         * - SAIL Model: The current (May/2024) model clears the reservation
+         *      on traps, xRET and WFI. There is a discussion to remove this and
+         *      align it with the common RISC-V silicon implementations, where
+         *      only an explict sc.w instruction clears the reservation.
+         * - SiFive U54/U74, Codasip A700, Ariane:
+         *      Only an explicit sc.w instruction is guaranteed to clear any
+         *      reservations.
+         * - XuanTie C906/C920: ??
+         * - RocketChip: Reservations time out after at most 80 cycles. Since
+         *      there is no path through the scheduler that takes less time than
+         *      that, no manual maintenance is be necessary, because no issues
+         *      are observable.
+         *
+         * Explictly clear any outstanding reservations with a dummy sc.w on
+         * ra/t0. The code above has put cur_thread[0] into ra, so simply
+         * write it back. This store operation is very likely to fail, because
+         * there is no reservation. But if it succeeds, it does no harm.
+         */
+        "sc.w zero, ra, (t0)\n"
+
         LOAD_S "  sp, (1*%[REGSIZE])(t0)  \n"
         LOAD_S "  gp, (2*%[REGSIZE])(t0)  \n"
         LOAD_S "  tp, (3*%[REGSIZE])(t0)  \n"
         /* skip t0/x5, t1/x6, they are restored later */
-        /* no-op store conditional to clear monitor state */
-        /* this may succeed in implementations with very large reservations, but the saved ra is dead */
-        "sc.w zero, zero, (t0)\n"
         LOAD_S "  t2, (6*%[REGSIZE])(t0)  \n"
         LOAD_S "  s0, (7*%[REGSIZE])(t0)  \n"
         LOAD_S "  s1, (8*%[REGSIZE])(t0)  \n"
