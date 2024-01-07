@@ -162,36 +162,6 @@ BOOT_CODE VISIBLE void map_kernel_window(void)
     map_kernel_devices();
 }
 
-static BOOT_CODE void map_it_pt_cap(cap_t vspace_cap, cap_t pt_cap)
-{
-    lookupPTSlot_ret_t pt_ret;
-    pte_t *targetSlot;
-    vptr_t vptr = cap_page_table_cap_get_capPTMappedAddress(pt_cap);
-    pte_t *lvl1pt = PTE_PTR(pptr_of_cap(vspace_cap));
-
-    /* pt to be mapped */
-    pte_t *pt   = PTE_PTR(pptr_of_cap(pt_cap));
-
-    /* Get PT slot to install the address in */
-    pt_ret = lookupPTSlot(lvl1pt, vptr);
-
-    targetSlot = pt_ret.ptSlot;
-
-    *targetSlot = pte_new(
-                      (addrFromPPtr(pt) >> seL4_PageBits),
-                      0, /* sw */
-                      0, /* dirty (reserved non-leaf) */
-                      0, /* accessed (reserved non-leaf) */
-                      0, /* global */
-                      0, /* user (reserved non-leaf) */
-                      0, /* execute */
-                      0, /* write */
-                      0, /* read */
-                      1 /* valid */
-                  );
-    sfence();
-}
-
 BOOT_CODE void map_it_frame_cap(cap_t vspace_cap, cap_t frame_cap)
 {
     pte_t *lvl1pt = PTE_PTR(pptr_of_cap(vspace_cap));
@@ -233,21 +203,6 @@ BOOT_CODE cap_t create_unmapped_it_frame_cap(pptr_t pptr, bool_t use_large)
     return cap;
 }
 
-/* Create a page table for the initial thread */
-static BOOT_CODE cap_t create_it_pt_cap(cap_t vspace_cap, pptr_t pptr, vptr_t vptr, asid_t asid)
-{
-    cap_t cap;
-    cap = cap_page_table_cap_new(
-              asid,   /* capPTMappedASID      */
-              pptr,   /* capPTBasePtr         */
-              1,      /* capPTIsMapped        */
-              vptr    /* capPTMappedAddress   */
-          );
-
-    map_it_pt_cap(vspace_cap, cap);
-    return cap;
-}
-
 BOOT_CODE word_t arch_get_n_paging(v_region_t it_v_reg)
 {
     word_t n = 0;
@@ -273,20 +228,46 @@ BOOT_CODE cap_t create_it_address_space(cap_t root_cnode_cap, v_region_t it_v_re
     seL4_SlotPos slot_pos_before = ndks_boot.slot_pos_cur;
     write_slot(SLOT_PTR(pptr_of_cap(root_cnode_cap), seL4_CapInitThreadVSpace), vspace_cap);
 
+    pte_t *lvl1pt = PTE_PTR(pptr_of_cap(vspace_cap));
+
     /* create all n level PT caps necessary to cover userland image in 4KiB pages */
     for (int i = 0; i < CONFIG_PT_LEVELS - 1; i++) {
-
         for (vptr_t pt_vptr = ROUND_DOWN(it_v_reg.start, RISCV_GET_LVL_PGSIZE_BITS(i));
              pt_vptr < it_v_reg.end;
              pt_vptr += RISCV_GET_LVL_PGSIZE(i)) {
-            if (!provide_cap(root_cnode_cap,
-                             create_it_pt_cap(vspace_cap, it_alloc_paging(), pt_vptr, IT_ASID))
-               ) {
+
+            cap_t cap_pt = cap_page_table_cap_new(
+                               IT_ASID,           /* capPTMappedASID    */
+                               it_alloc_paging(), /* capPTBasePtr       */
+                               1,                 /* capPTIsMapped      */
+                               pt_vptr            /* capPTMappedAddress */
+                           );
+            /* mapping the new page table into the initial thread's vspace is
+             * done by setting the PTE for a new user page table in the parent
+             * page table
+             */
+            word_t phys_addr = addrFromPPtr(PTE_PTR(pptr_of_cap(cap_pt)));
+            lookupPTSlot_ret_t lu_ret = lookupPTSlot(lvl1pt, pt_vptr);
+            *(lu_ret.ptSlot) = pte_new(
+                                   phys_addr >> seL4_PageBits,
+                                   0, /* sw */
+                                   0, /* dirty (reserved non-leaf) */
+                                   0, /* accessed (reserved non-leaf) */
+                                   0, /* global */
+                                   0, /* user (reserved non-leaf) */
+                                   0, /* execute */
+                                   0, /* write */
+                                   0, /* read */
+                                   1  /* valid */
+                               );
+            sfence(); /* ensure the page table change becomes visible */
+
+            if (!provide_cap(root_cnode_cap, cap_pt)) {
                 return cap_null_cap_new();
             }
-        }
+        } /* loop for each page table */
 
-    }
+    } /* loop for each page table level */
 
     seL4_SlotPos slot_pos_after = ndks_boot.slot_pos_cur;
     ndks_boot.bi_frame->userImagePaging = (seL4_SlotRegion) {
