@@ -162,7 +162,7 @@ BOOT_CODE VISIBLE void map_kernel_window(void)
     map_kernel_devices();
 }
 
-BOOT_CODE void map_it_frame_cap(cap_t vspace_cap, cap_t frame_cap)
+BOOT_CODE void map_it_frame_cap(cap_t vspace_cap, cap_t frame_cap, bool_t executable)
 {
     pte_t *lvl1pt = PTE_PTR(pptr_of_cap(vspace_cap));
     pte_t *frame_pptr = PTE_PTR(pptr_of_cap(frame_cap));
@@ -181,7 +181,7 @@ BOOT_CODE void map_it_frame_cap(cap_t vspace_cap, cap_t frame_cap)
                       1, /* accessed (leaf) */
                       0, /* global */
                       1, /* user (leaf) */
-                      1, /* execute */
+                      executable ? 1 : 0, /* execute */
                       1, /* write */
                       1, /* read */
                       1  /* valid */
