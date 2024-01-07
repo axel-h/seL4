@@ -58,6 +58,24 @@ static inline word_t read_sscratch(void);
 
 static inline CONST cpu_id_t getCurrentCPUIndex(void)
 {
+    /* RISC-V has no dedicated S-Mode register for the current hart ID, the OS
+     * gets passed this information from the bootloader and has to store it
+     * somewhere. We can derive the hart ID from the hart's stack pointer, which
+     * is kept in SSCRATCH. The stack's size is BIT(CONFIG_KERNEL_STACK_BITS).
+     * All stacks are in the memory region of the array 'kernel_stack_alloc'.
+     *
+     *                    +---------------+  <- SSCRATCH for Hart #n
+     *                    | Stack Hart #n |
+     *                    +---------------+  <- SSCRATCH for Hart #n-1
+     *                    :               :
+     *                    :               :
+     *                    +---------------+  <- SSCRATCH for Hart #1
+     *                    | Stack Hart #1 |
+     *                    +---------------+  <- SSCRATCH for Hart #0
+     *                    | Stack Hart #0 |
+     *                    +---------------+  <- kernel_stack_alloc
+     *
+     */
     word_t sp = read_sscratch();
     sp -= (word_t)kernel_stack_alloc;
     sp -= 8;
