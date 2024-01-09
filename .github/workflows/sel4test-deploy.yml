@@ -58,7 +58,7 @@ jobs:
         compiler: [gcc, clang]
     steps:
     - name: Build
-      uses: seL4/ci-actions/sel4test-hw@master
+      uses: axel-h/ci-actions/sel4test-hw@patch-axel-1
       with:
         xml: ${{ needs.code.outputs.xml }}
         march: ${{ matrix.march }}
