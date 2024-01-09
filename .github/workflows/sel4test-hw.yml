@@ -33,11 +33,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        march: [armv7a, armv8a, nehalem]
+        march: [armv7a, armv8a, nehalem, rv32imac, rv64imac]
         compiler: [gcc, clang]
-        include:
-          - march: rv64imac
-            compiler: gcc
     steps:
     - name: Build
       uses: axel-h/ci-actions/sel4test-hw@patch-axel-1
