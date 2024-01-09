@@ -19,8 +19,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # RISCV32 and IA32 are left out, as they have no verified config
-        arch: [ARM, ARM_HYP, AARCH64, RISCV64, X64]
+        arch: [ARM, ARM_HYP, AARCH64, RISCV32, RISCV64, IA32, X64]
         compiler: [gcc, llvm]
     steps:
     - uses: actions/checkout@v4
