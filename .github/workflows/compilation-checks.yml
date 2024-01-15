@@ -20,7 +20,7 @@ jobs:
       fail-fast: false
       matrix:
         arch: [ARM, ARM_HYP, AARCH64, RISCV32, RISCV64, IA32, X64]
-        compiler: [gcc, llvm]
+        compiler: [gcc, clang]
     steps:
     - uses: actions/checkout@v4
     - uses: axel-h/ci-actions/standalone-kernel@patch-axel-6
