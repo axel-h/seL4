@@ -123,7 +123,6 @@ typedef seL4_Uint64 seL4_Word;
 #define SEL4_PRIi_word  _macro_str_concat(_seL4_word_fmt, i)
 #define SEL4_PRIu_word  _macro_str_concat(_seL4_word_fmt, u)
 #define SEL4_PRIx_word  _macro_str_concat(_seL4_word_fmt, x)
-#define SEL4_PRI_word   SEL4_PRIu_word
 
 typedef seL4_Word seL4_CPtr;
 

@@ -47,7 +47,6 @@ compile_assert(wordRadix_is_sane, BIT(wordRadix) == CONFIG_WORD_SIZE)
 /* Define printf() format strings */
 #define SEL4_PRIu_word  _macro_str_concat(_seL4_word_fmt, u)
 #define SEL4_PRIx_word  _macro_str_concat(_seL4_word_fmt, x)
-#define SEL4_PRI_word   SEL4_PRIu_word
 
 /* The C parser from the verification toolchain requires declaring word_t
  * constants without casting integer values to word_t. Since the printf() format
