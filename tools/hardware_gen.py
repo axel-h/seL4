@@ -50,7 +50,7 @@ def add_task_args(outputs: dict, parser: argparse.ArgumentParser):
 def main(args: argparse.Namespace):
     ''' Parse the DT and hardware config YAML and run each
     selected output method. '''
-    cfg = hardware.config.get_arch_config(args.sel4arch, args.addrspace_max)
+    cfg = hardware.config.get_arch_config(args.sel4arch, args.phys_addr_space_bits)
     parsed_dt = FdtParser(args.dtb)
     rules = yaml.load(args.hardware_config, Loader=yaml.FullLoader)
     schema = yaml.load(args.hardware_schema, Loader=yaml.FullLoader)
@@ -76,9 +76,11 @@ if __name__ == '__main__':
                         required=True, type=argparse.FileType('r'))
     parser.add_argument('--sel4arch', help='seL4 architecture to generate for',
                         required=True)
-    parser.add_argument('--addrspace-max',
-                        help='maximum address that is available as device untyped', type=int, default=32)
-
+    # ToDO: This should become a required parameter. but then we have to find a
+    #       solution how to use this for the ElfLoader.
+    parser.add_argument('--phys-addr-space-bits',
+                        help='size of the physical address space, which is available as device untyped',
+                        type=int, default=0)
     parser.add_argument('--enable-profiling', help='enable profiling',
                         action='store_const', const=True, default=False)
 

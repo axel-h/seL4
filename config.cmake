@@ -210,8 +210,8 @@ if(DEFINED KernelDTSList AND (NOT "${KernelDTSList}" STREQUAL ""))
                 --compat-strings-out "${compatibility_outfile}" --c-header --header-out
                 "${device_dest}" --hardware-config "${config_file}" --hardware-schema
                 "${config_schema}" --yaml --yaml-out "${platform_yaml}" --sel4arch
-                "${KernelSel4Arch}" --addrspace-max "${KernelPaddrUserTop}" --json --json-out
-                "${platform_json}"
+                "${KernelSel4Arch}" --phys-addr-space-bits "${KernelPhysAddressSpaceBits}"
+                --json --json-out "${platform_json}"
             RESULT_VARIABLE error
         )
         if(error)
@@ -233,7 +233,13 @@ endif()
 
 # Enshrine common variables in the config
 config_set(KernelHaveFPU HAVE_FPU "${KernelHaveFPU}")
-config_set(KernelPaddrUserTop PADDR_USER_DEVICE_TOP "${KernelPaddrUserTop}")
+
+config_set(KernelPhysAddressSpaceBits PHYS_ADDR_SPACE_BITS "${KernelPhysAddressSpaceBits}")
+# Calculate the highest address that this still in the physical address space
+# here in CMake, so we derive integers that are inside the target's C inter
+# range.
+math(EXPR KernelPhysAddrTop "(1 << ${KernelPhysAddressSpaceBits}) - 1")
+config_set(KernelPhysAddrTop PHYS_ADDR_TOP "${KernelPhysAddrTop}")
 
 # System parameters
 config_string(

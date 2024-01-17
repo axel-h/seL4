@@ -6,6 +6,8 @@
 
 #pragma once
 
+#include <sel4/config.h>
+
 #define seL4_ARM_PageDirectory seL4_ARM_PageTable;
 #define seL4_ARM_PageDirectory_Map seL4_ARM_PageTable_Map
 #define seL4_ARM_PageDirectory_Unmap seL4_ARM_PageTable_Unmap
@@ -19,7 +21,7 @@
 
 #define seL4_PUDEntryBits 3
 
-#if defined(CONFIG_ARM_HYPERVISOR_SUPPORT) && defined (CONFIG_ARM_PA_SIZE_BITS_40)
+#ifdef AARCH64_VSPACE_S2_START_L1
 
 #define seL4_PGDBits 0
 #define seL4_PGDEntryBits 0
@@ -29,7 +31,7 @@
 #define seL4_PUDIndexBits 10
 #define seL4_ARM_PageUpperDirectoryObject seL4_ARM_VSpaceObject
 
-#else
+#else /* start at level 0 */
 
 #define seL4_PGDBits 12
 #define seL4_PGDEntryBits 3

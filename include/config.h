@@ -14,7 +14,13 @@
 #endif
 
 #ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
-#ifdef CONFIG_ARM_PA_SIZE_BITS_40
+#ifdef CONFIG_ARCH_AARCH64
+#if (CONFIG_PHYS_ADDR_SPACE_BITS == 40)
 #define AARCH64_VSPACE_S2_START_L1
-#endif /* CONFIG_ARM_PA_SIZE_BITS_40 */
+#elif (CONFIG_PHYS_ADDR_SPACE_BITS == 44)
+/* translation tables start at level 0 */
+#else
+#error "unknown CONFIG_PHYS_ADDR_SPACE_BITS"
+#endif
+#endif /* CONFIG_ARCH_AARCH64 */
 #endif /* CONFIG_ARM_HYPERVISOR_SUPPORT */
