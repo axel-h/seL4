@@ -12,6 +12,12 @@
 #include <util.h>
 #include <assert.h>
 
+/* Ensure that the integer definitions are sane. They are usually defined in
+ * stdint.h and this check is supposed to catch toolchain or porting issues.
+ */
+compile_assert(uint32_is_32_bit, 4 == sizeof(uint32_t))
+compile_assert(uint64_is_64_bit, 8 == sizeof(uint64_t))
+
 /* On RISC-V, the proofs expect wordBits to be a UL_CONST(), on other
  * architectures there is no such assumption. One day, the proofs should be
  * updated to expect a SEL4_WORD_CONST() everywhere.
