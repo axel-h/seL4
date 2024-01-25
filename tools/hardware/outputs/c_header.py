@@ -56,12 +56,6 @@ static inline CONST word_t physBase(void)
     return PHYS_BASE_RAW;
 }
 
-/*
- * PADDR_BASE is the first physical address to map into the kernel's physical
- * memory window.
- */
-#define PADDR_BASE physBase()
-
 /* INTERRUPTS */
 {% for irq in kernel_irqs %}
 /* {{ irq.desc }} */
