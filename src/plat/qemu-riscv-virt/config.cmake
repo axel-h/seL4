@@ -79,7 +79,12 @@ if(KernelPlatformQEMURiscVVirt)
             endif()
 
             if(NOT DEFINED QEMU_CPU)
-                set(QEMU_CPU "rv${KernelWordSize}")
+                if(KernelSel4ArchRiscV32 OR KernelSel4ArchRiscV64)
+                    set(QEMU_CPU "rv${KernelWordSize}")
+                else()
+                    message(FATAL_ERROR "unsupported seL4 architecture: '${KernelSel4Arch}'")
+                endif()
+                message(STATUS "QEMU_CPU not set, defaulting to ${QEMU_CPU}")
             endif()
 
             if(NOT DEFINED QEMU_MEMORY)
@@ -90,11 +95,13 @@ if(KernelPlatformQEMURiscVVirt)
                     # the 32-bit version of seL4 can access physical addresses
                     # in the 32-bit range only.
                     set(QEMU_MEMORY "2048")
-                else()
+                elseif(KernelSel4ArchRiscV64)
                     # Having 3 GiB of memory as default seems a good trade-off.
                     # It's sufficient for test/demo systems, but still something
                     # the host can provide without running short on resources.
                     set(QEMU_MEMORY "3072")
+                else()
+                    message(FATAL_ERROR "unsupported seL4 architecture: '${KernelSel4Arch}'")
                 endif()
             endif()
 
