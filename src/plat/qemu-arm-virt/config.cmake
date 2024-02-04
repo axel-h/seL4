@@ -19,6 +19,11 @@ if(KernelPlatformQEMUArmVirt)
         # If both ARM_CPU and KernelSel4Arch are set, conflicting values will be
         # detected eventually. Note that the KernelSel4Archxxx variables are not
         # set up here, because declare_seL4_arch() has not been called yet.
+        # The QEMU virt platform has some limitations:
+        # - only specific ARMv7 and ARMv8 cores can be used.
+        # - ARMv8 cores can't be started in AARCH32 mode
+        # - Cortex-A32 that implements AARCH32 only is not supported
+        # See https://www.qemu.org/docs/master/system/arm/virt.html for details.
         find_in_map(
             RESULT_VAR ARM_CPU
             KEY_VAR KernelSel4Arch
