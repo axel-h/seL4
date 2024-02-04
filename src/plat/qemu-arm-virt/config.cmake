@@ -11,30 +11,6 @@ declare_platform(qemu-arm-virt KernelPlatformQEMUArmVirt PLAT_QEMU_ARM_VIRT Kern
 
 set(qemu_user_top 0xa0000000)
 
-macro(setup_qemu_armv7)
-    cmake_parse_arguments(ARMV7_OPTIONS "ve" "" "" ${ARGN})
-    if(ARMV7_OPTIONS_UNPARSED_ARGUMENTS)
-        message(FATAL_ERROR "Unknown arguments: ${ARMV7_OPTIONS_UNPARSED_ARGUMENTS}")
-    endif()
-    set(QEMU_ARCH "arm")
-    set(KernelArchArmV7a ON)
-    if(ARMV7_OPTIONS_ve)
-        declare_seL4_arch(aarch32 arm_hyp)
-        set(KernelArchArmV7ve ON)
-        if(KernelSel4ArchArmHyp)
-            set(qemu_user_top 0xe0000000)
-        endif()
-    else()
-        declare_seL4_arch(aarch32)
-    endif()
-endmacro()
-
-macro(setup_qemu_armv8)
-    declare_seL4_arch(aarch64)
-    set(QEMU_ARCH "aarch64")
-    set(KernelArchArmV8a ON)
-endmacro()
-
 if(KernelPlatformQEMUArmVirt)
 
     if(NOT ARM_CPU)
@@ -56,23 +32,50 @@ if(KernelPlatformQEMUArmVirt)
         message(STATUS "ARM_CPU not set, defaulting to ${ARM_CPU}")
     endif()
 
-    if("${ARM_CPU}" STREQUAL "cortex-a7")
-        setup_qemu_armv7()
-        set(KernelArmCortexA7 ON)
-    elseif("${ARM_CPU}" STREQUAL "cortex-a15")
-        setup_qemu_armv7(ve)
-        set(KernelArmCortexA15 ON)
-    elseif("${ARM_CPU}" STREQUAL "cortex-a53")
-        setup_qemu_armv8()
-        set(KernelArmCortexA53 ON)
-    elseif("${ARM_CPU}" STREQUAL "cortex-a57")
-        setup_qemu_armv8()
-        set(KernelArmCortexA57 ON)
-    elseif("${ARM_CPU}" STREQUAL "cortex-a72")
-        setup_qemu_armv8()
-        set(KernelArmCortexA72 ON)
+    find_in_map(
+        RESULT_VAR QEMU_ARCH
+        KEY_VAR ARM_CPU
+        MAP
+            "cortex-a7:arm"
+            "cortex-a15:arm+ve"
+            "cortex-a53:aarch64"
+            "cortex-a57:aarch64"
+            "cortex-a72:aarch64"
+        # without a DEFAULT, no match causes a FATAL_ERROR
+    )
+
+    set(QEMU_ARCH_EXT "")
+    if("${QEMU_ARCH}" MATCHES "(.*)\\+(.*)")
+        set(QEMU_ARCH "${CMAKE_MATCH_1}")
+        set(QEMU_ARCH_EXT "${CMAKE_MATCH_2}")
+    endif()
+
+    if("${QEMU_ARCH}" STREQUAL "arm")
+        if(NOT QEMU_ARCH_EXT)
+            declare_seL4_arch(aarch32)
+            set(KernelArchArmV7a ON)
+        elseif("${QEMU_ARCH_EXT}" STREQUAL "ve")
+            declare_seL4_arch(aarch32 arm_hyp)
+            set(KernelArchArmV7a ON)
+            set(KernelArchArmV7ve ON)
+            if(KernelSel4ArchArmHyp)
+                set(qemu_user_top 0xe0000000)
+            endif()
+        else()
+            message(FATAL_ERROR "Unsupported QEMU_ARCH_EXT: ${QEMU_ARCH_EXT}")
+        endif()
+
+    elseif("${QEMU_ARCH}" STREQUAL "aarch64")
+        declare_seL4_arch(aarch64)
+        set(KernelArchArmV8a ON)
+    elseif()
+        message(FATAL_ERROR "Unknown QEMU_ARCH: ${QEMU_ARCH}")
+    endif()
+
+    if("${ARM_CPU}" MATCHES "cortex-a(.*)")
+        set(KernelArmCortexA${CMAKE_MATCH_1} ON)
     else()
-        message(FATAL_ERROR "Unsupported ARM_CPU: '${ARM_CPU}'")
+        message(FATAL_ERROR "Unsupported ARM_CPU: ${ARM_CPU}")
     endif()
 
     config_set(KernelARMPlatform ARM_PLAT qemu-arm-virt)
