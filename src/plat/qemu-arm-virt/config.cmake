@@ -43,17 +43,16 @@ if(KernelPlatformQEMUArmVirt)
         # If both ARM_CPU and KernelSel4Arch are set, conflicting values will be
         # detected eventually. Note that the KernelSel4Archxxx variables are not
         # set up here, because declare_seL4_arch() has not been called yet.
-        set(
-            arch_cpu_mapping # element format: "KernelSel4Arch:ARM_CPU"
-            ":cortex-a53" # used if KernelSel4Arch is empty or not set
-            "aarch64:cortex-a53"
-            "arm_hyp:cortex-a15"
-            "aarch32:cortex-a15"
+        find_in_map(
+            RESULT_VAR ARM_CPU
+            KEY_VAR KernelSel4Arch
+            MAP
+                ":cortex-a53" # used if KernelSel4Arch is empty or not set
+                "aarch64:cortex-a53"
+                "arm_hyp:cortex-a15"
+                "aarch32:cortex-a15"
+            # without a DEFAULT, no match causes a FATAL_ERROR
         )
-        if(NOT ";${arch_cpu_mapping};" MATCHES ";${KernelSel4Arch}:([^;]*);")
-            message(FATAL_ERROR "unsupported KernelSel4Arch: '${KernelSel4Arch}'")
-        endif()
-        set(ARM_CPU "${CMAKE_MATCH_1}")
         message(STATUS "ARM_CPU not set, defaulting to ${ARM_CPU}")
     endif()
 
