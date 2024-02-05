@@ -37,6 +37,18 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  info:
+    name: Info
+    runs-on: ubuntu-latest
+    steps:
+    - name: show-info
+      env:
+        GITHUB_EVENT_NAME: ${{ toJson(github.event_name) }}
+        GITHUB_EVENT: ${{ toJson(github.event) }}
+      run: |
+        echo "github.event_name: ${GITHUB_EVENT_NAME}"
+        echo "github.event: ${GITHUB_EVENT}"
+
   hw-build:
     name: HW Build
     runs-on: ubuntu-latest
