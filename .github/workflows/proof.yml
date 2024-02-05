@@ -6,18 +6,27 @@ name: Proofs
 
 on:
   pull_request_target:
-    types: [opened, reopened, synchronize, labeled]
+    # For all events the property "github.event.pull_request" holds the details
+    # of the PR.
+    types:
+    - opened
+    - reopened
+    - synchronize  # push on PR's branch
+    - labeled  # label added to PR (there is "unlabled" also)
 
 jobs:
   cproof:
     name: C Proofs
     runs-on: ubuntu-latest
-    # run on any normal trigger when the label exists, and run when the label is added
-    # don't run again when other labels are added
-    if: ${{ github.repository_owner == 'seL4' &&
-            (github.event.action != 'labeled' &&
-               contains(github.event.pull_request.labels.*.name, 'proof-test') ||
-             github.event.action == 'labeled' && github.event.label.name == 'proof-test') }}
+    # Run if
+    # - one of the labels is added
+    # - a (re-)open/push happened and the label was present.
+    # Do not run when other labels are added.
+    if: ${{ (github.repository_owner == 'seL4') &&
+            ((github.event.action != 'labeled') &&
+             contains(github.event.pull_request.labels.*.name, 'proof-test')) ||
+            ((github.event.action == 'labeled') &&
+             (github.event.label.name == 'proof-test')) }}
     strategy:
       fail-fast: false
       matrix:
