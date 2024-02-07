@@ -18,13 +18,6 @@ set(KernelDTSList "")
 include(${KERNEL_ROOT_DIR}/tools/internal.cmake)
 include(${KERNEL_ROOT_DIR}/tools/helpers.cmake)
 
-# helper macro to unify messages printed out
-# Usage example: print_message_multiple_options_helper("architectures" aarch32)
-macro(print_message_multiple_options_helper str_type default_str)
-    message(STATUS "platform ${KernelPlatform} supports multiple ${str_type}, none was given")
-    message(STATUS "  defaulting to: ${default_str}")
-endmacro()
-
 # This macro is used by platforms to declare which seL4 architecture(s) they
 # support. It takes a list and sets up the one selected by KernelSel4Arch. If
 # KernelSel4Arch is not set, the architecture specified by the first list
@@ -37,7 +30,9 @@ macro(declare_seL4_arch)
     if(NOT KernelSel4Arch)
         # Use first architecture from list as default.
         list(GET _arch_list 0 _default_KernelSel4Arch)
-        print_message_multiple_options_helper("architectures" "${_default_KernelSel4Arch}")
+        message(STATUS "no specific architecture selected for KernelPlatform '${KernelPlatform}'")
+        message(STATUS "  defaulting to: ${_default_KernelSel4Arch}")
+
         set(KernelSel4Arch "${_default_KernelSel4Arch}" CACHE STRING "" FORCE)
     elseif(NOT "${KernelSel4Arch}" IN_LIST _arch_list)
         message(FATAL_ERROR "KernelSel4Arch '${KernelSel4Arch}' not in '${_arch_list}'")
@@ -111,7 +106,8 @@ endmacro()
 # Usage example: check_platform_and_fallback_to_default(KernelARMPlatform "sabre")
 macro(check_platform_and_fallback_to_default var_cmake_kernel_plat default_sub_plat)
     if("${${var_cmake_kernel_plat}}" STREQUAL "")
-        print_message_multiple_options_helper("sub platforms" ${default_sub_plat})
+        message(STATUS "no specific platform selected for KernelPlatform '${KernelPlatform}'")
+        message(STATUS "  defaulting to: ${default_sub_plat}")
         set(${var_cmake_kernel_plat} ${default_sub_plat})
     endif()
 endmacro()
