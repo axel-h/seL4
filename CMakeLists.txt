@@ -183,6 +183,7 @@ add_compile_options(
     -Wundef
     -Wpointer-arith
     -Wno-nonnull
+    -Wshadow
 
     -Wformat
     -Wformat-nonliteral
