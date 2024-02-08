@@ -81,12 +81,17 @@ if(NOT DEFINED KernelSel4ArchArmHyp)
     # KernelArmHypervisorSupport below can be OFF by default.
     message(FATAL_ERROR "KernelSel4ArchArmHyp must be ON or OFF")
 endif()
+if(KernelSel4ArchArmHyp AND NOT KernelArmHypervisorSupport)
+    # KernelArmHypervisorSupport is the generic flag on ARM, so this must be set
+    # when KernelSel4ArchArmHyp is set.
+    message(FATAL_ERROR "KernelSel4ArchArmHyp set, but not KernelArmHypervisorSupport")
+endif()
 config_option(
     KernelArmHypervisorSupport ARM_HYPERVISOR_SUPPORT
     "Build as Hypervisor. Utilise ARM virtualisation extensions to build the kernel as a hypervisor"
     DEFAULT ${KernelSel4ArchArmHyp}
     DEPENDS
-        "KernelArmCortexA15 OR KernelArmCortexA35 OR KernelArmCortexA57 OR KernelArmCortexA53 OR KernelArmCortexA55 OR KernelArmCortexA72"
+        "KernelArmCortexA7 OR KernelArmCortexA15 OR KernelArmCortexA35 OR KernelArmCortexA57 OR KernelArmCortexA53 OR KernelArmCortexA55 OR KernelArmCortexA72"
 )
 
 config_option(KernelArmGicV3 ARM_GIC_V3_SUPPORT "Build support for GICv3" DEFAULT OFF)

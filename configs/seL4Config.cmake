@@ -56,11 +56,40 @@ macro(declare_seL4_arch)
         "ia32;KernelSel4ArchIA32;ARCH_IA32"
     )
 
-    if(KernelSel4ArchArmHyp)
-        # arm-hyp is basically aarch32. This should be cleaned up and aligned
-        # with other architectures, where hypervisor support is an additional
-        # flag. The main blocker here is updating the verification flow.
+    # Ideally, the generic way to enable running the kernel as hypervisor would
+    # be selecting an architecture and then enabling KernelHypervisorSupport.
+    # Practically, the handling on the architectures differs:
+    # - x86: KernelVTX
+    # - riscv: no hypervisor support yet
+    # - arm: KernelArmHypervisorSupport. But for historical reasons (and because
+    #        verification still requires this), on ARM/AARCH32 hypervisor
+    #        support requires selecting the dedicated architecture 'arm_hyp'. As
+    #        a step towards deprecating setting 'arm_hyp' explicitly, this is
+    #        activated automatically if the combination KernelSel4ArchAarch32
+    #        and KernelArmHypervisorSupport is set.
+    # Note that CMake iterates over all scripts multiple times until a stable
+    # configuration is reached. Thus we may pass here multiple times. To avoid
+    # seeing the same messages multiple times, we just print them when the
+    # condition is not met. But we always set the configuration to ensure we are
+    # in a well defined state.
+    if(KernelSel4ArchAarch32 AND KernelArmHypervisorSupport)
+        set(KernelSel4Arch "arm_hyp" CACHE STRING "" FORCE)
+        config_set(KernelSel4ArchArmHyp ARCH_ARM_HYP ON)
+        message(STATUS "changing KernelSel4ArchAarch32/aarch32 to KernelSel4ArchArmHyp/arm_hyp")
+    elseif(KernelSel4ArchArmHyp)
+        # Since 'arm_hyp' is a superset of AARCH32, ensure KernelSel4ArchAarch32
+        # is enabled, too. Note that config_choice() above has set this to OFF
+        # (applies for all other architectures also) explicitly, so we
+        # overwrite this again now.
+        if(NOT KernelSel4ArchAarch32)
+            message(STATUS "KernelSel4ArchArmHyp: enabling KernelSel4ArchAarch32/aarch32 also")
+        endif()
         config_set(KernelSel4ArchAarch32 ARCH_AARCH32 ON)
+        # Ensure KernelArmHypervisorSupport is set and enabled.
+        if(KernelArmHypervisorSupport)
+            message(STATUS "KernelSel4ArchArmHyp: enabling KernelArmHypervisorSupport")
+        endif()
+        set(KernelArmHypervisorSupport ON CACHE BOOL "" FORCE)
     endif()
 
     config_choice(
@@ -184,52 +213,71 @@ endif()
 
 config_choice(KernelPlatform PLAT "Select the platform" ${kernel_platforms})
 
-# Now enshrine all the common variables in the config
-config_set(KernelArmCortexA7 ARM_CORTEX_A7 "${KernelArmCortexA7}")
-config_set(KernelArmCortexA8 ARM_CORTEX_A8 "${KernelArmCortexA8}")
-config_set(KernelArmCortexA9 ARM_CORTEX_A9 "${KernelArmCortexA9}")
-config_set(KernelArmCortexA15 ARM_CORTEX_A15 "${KernelArmCortexA15}")
-config_set(KernelArmCortexA35 ARM_CORTEX_A35 "${KernelArmCortexA35}")
-config_set(KernelArmCortexA53 ARM_CORTEX_A53 "${KernelArmCortexA53}")
-config_set(KernelArmCortexA55 ARM_CORTEX_A55 "${KernelArmCortexA55}")
-config_set(KernelArmCortexA57 ARM_CORTEX_A57 "${KernelArmCortexA57}")
-config_set(KernelArmCortexA72 ARM_CORTEX_A72 "${KernelArmCortexA72}")
-config_set(KernelArchArmV7a ARCH_ARM_V7A "${KernelArchArmV7a}")
-config_set(KernelArchArmV7ve ARCH_ARM_V7VE "${KernelArchArmV7ve}")
-config_set(KernelArchArmV8a ARCH_ARM_V8A "${KernelArchArmV8a}")
-config_set(KernelAArch64SErrorIgnore AARCH64_SERROR_IGNORE "${KernelAArch64SErrorIgnore}")
-
-# Check for v7ve before v7a as v7ve is a superset and we want to set the
-# actual armv to that, but leave armv7a config enabled for anything that
-# checks directly against it
-if(KernelArchArmV7ve)
-    set(KernelArmArmV "armv7ve" CACHE INTERNAL "")
-elseif(KernelArchArmV7a)
-    set(KernelArmArmV "armv7-a" CACHE INTERNAL "")
-elseif(KernelArchArmV8a)
-    set(KernelArmArmV "armv8-a" CACHE INTERNAL "")
-endif()
-if(KernelArmCortexA7)
-    set(KernelArmCPU "cortex-a7" CACHE INTERNAL "")
-elseif(KernelArmCortexA8)
-    set(KernelArmCPU "cortex-a8" CACHE INTERNAL "")
-elseif(KernelArmCortexA9)
-    set(KernelArmCPU "cortex-a9" CACHE INTERNAL "")
-elseif(KernelArmCortexA15)
-    set(KernelArmCPU "cortex-a15" CACHE INTERNAL "")
-elseif(KernelArmCortexA35)
-    set(KernelArmCPU "cortex-a35" CACHE INTERNAL "")
-elseif(KernelArmCortexA53)
-    set(KernelArmCPU "cortex-a53" CACHE INTERNAL "")
-elseif(KernelArmCortexA55)
-    set(KernelArmCPU "cortex-a55" CACHE INTERNAL "")
-elseif(KernelArmCortexA57)
-    set(KernelArmCPU "cortex-a57" CACHE INTERNAL "")
-elseif(KernelArmCortexA72)
-    set(KernelArmCPU "cortex-a72" CACHE INTERNAL "")
-endif()
 if(KernelArchARM)
+
+    # ToDo: KernelArmArmV is use for two things.
+    #
+    #       - It's the values passed to "-march=" for the compiler.
+    #         This is also use in
+    #         - seL4/rumprun/CMakeLists.txt
+    #
+    #       - It's the subfolder to include.
+    #         This is also use in
+    #         - seL4_libs/libsel4bench/CMakeLists.txt
+    #         - seL4/seL4_tools/elfloader-tool/CMakeLists.txt
+    #         But it turns out, that "armv7ve" is just an alias for "armv7-a"
+    #         everywhere.
+
+    if(KernelArchArmV7ve)
+        set(KernelArchArmV7a ON) # ARMv7-ve is a superset of ARMv7-a.
+        set(KernelArmArmV "armv7ve")
+    elseif(KernelArchArmV7a)
+        set(KernelArmArmV "armv7-a")
+    elseif(KernelArchArmV8a)
+        set(KernelArmArmV "armv8-a")
+    else()
+        message(FATAL_ERROR "unsupported ARM architecture")
+    endif()
+    set(KernelArmArmV "${KernelArmArmV}" CACHE INTERNAL "")
+
+    # Now enshrine all the common variables in the config
+    config_set(KernelArmCortexA7 ARM_CORTEX_A7 "${KernelArmCortexA7}")
+    config_set(KernelArmCortexA8 ARM_CORTEX_A8 "${KernelArmCortexA8}")
+    config_set(KernelArmCortexA9 ARM_CORTEX_A9 "${KernelArmCortexA9}")
+    config_set(KernelArmCortexA15 ARM_CORTEX_A15 "${KernelArmCortexA15}")
+    config_set(KernelArmCortexA35 ARM_CORTEX_A35 "${KernelArmCortexA35}")
+    config_set(KernelArmCortexA53 ARM_CORTEX_A53 "${KernelArmCortexA53}")
+    config_set(KernelArmCortexA55 ARM_CORTEX_A55 "${KernelArmCortexA55}")
+    config_set(KernelArmCortexA57 ARM_CORTEX_A57 "${KernelArmCortexA57}")
+    config_set(KernelArmCortexA72 ARM_CORTEX_A72 "${KernelArmCortexA72}")
+    config_set(KernelArchArmV7a ARCH_ARM_V7A "${KernelArchArmV7a}")
+    config_set(KernelArchArmV7ve ARCH_ARM_V7VE "${KernelArchArmV7ve}")
+    config_set(KernelArchArmV8a ARCH_ARM_V8A "${KernelArchArmV8a}")
+    config_set(KernelArchArmV8a ARCH_ARM_V8A "${KernelArchArmV8a}")
+    config_set(KernelAArch64SErrorIgnore AARCH64_SERROR_IGNORE "${KernelAArch64SErrorIgnore}")
+
+    if(KernelArmCortexA7)
+        set(KernelArmCPU "cortex-a7" CACHE INTERNAL "")
+    elseif(KernelArmCortexA8)
+        set(KernelArmCPU "cortex-a8" CACHE INTERNAL "")
+    elseif(KernelArmCortexA9)
+        set(KernelArmCPU "cortex-a9" CACHE INTERNAL "")
+    elseif(KernelArmCortexA15)
+        set(KernelArmCPU "cortex-a15" CACHE INTERNAL "")
+    elseif(KernelArmCortexA35)
+        set(KernelArmCPU "cortex-a35" CACHE INTERNAL "")
+    elseif(KernelArmCortexA53)
+        set(KernelArmCPU "cortex-a53" CACHE INTERNAL "")
+    elseif(KernelArmCortexA55)
+        set(KernelArmCPU "cortex-a55" CACHE INTERNAL "")
+    elseif(KernelArmCortexA57)
+        set(KernelArmCPU "cortex-a57" CACHE INTERNAL "")
+    elseif(KernelArmCortexA72)
+        set(KernelArmCPU "cortex-a72" CACHE INTERNAL "")
+    endif()
+
     config_set(KernelArmMach ARM_MACH "${KernelArmMach}")
+
 endif()
 
 if("${TRIPLE}" STREQUAL "")

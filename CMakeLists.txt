@@ -72,9 +72,21 @@ if(KernelArchX86)
     endif()
 
 elseif(KernelArchARM)
-    set(arm_march "${KernelArmArmV}${KernelArmMachFeatureModifiers}")
-    string(APPEND c_common_flags " -march=${arm_march}")
-    string(APPEND asm_common_flags " -march=${arm_march}")
+
+    # Check for v7ve before v7a, because it is a superset
+    if(KernelArchArmV7ve)
+        set(march "armv7ve")
+    elseif(KernelArchArmV7a)
+        set(march "armv7-a")
+    elseif(KernelArchArmV8a)
+        set(march "armv8-a")
+    else()
+        message(FATAL_ERROR "unsupported ARM architecture")
+    endif()
+
+    string(APPEND march "${KernelArmMachFeatureModifiers}")
+    string(APPEND c_common_flags " -march=${march}")
+    string(APPEND asm_common_flags " -march=${march}")
 
     if(KernelSel4ArchAarch64)
         # nothing special
@@ -324,10 +336,8 @@ include_directories(
 )
 
 if(KernelArchARM)
-    include_directories(
-        "include/arch/arm/armv/${KernelArmArmV}"
-        "include/arch/arm/armv/${KernelArmArmV}/${KernelWordSize}"
-    )
+    # handle a legacy quirk that
+    include_directories("include/arch/${KernelArch}/${KernelSel4Arch}/armv")
 endif()
 
 if(KernelArmMach STREQUAL "exynos")
