@@ -72,14 +72,14 @@ void *VISIBLE memcpy(void *ptr_dst, const void *ptr_src, unsigned long n)
     return ptr_dst;
 }
 
-int PURE strncmp(const char *s1, const char *s2, int n)
+int PURE strncmp(const char *str1, const char *str2, int n)
 {
     word_t i;
     int diff;
 
     for (i = 0; i < n; i++) {
-        diff = ((unsigned char *)s1)[i] - ((unsigned char *)s2)[i];
-        if (diff != 0 || s1[i] == '\0') {
+        diff = ((unsigned char *)str1)[i] - ((unsigned char *)str2)[i];
+        if (diff != 0 || str1[i] == '\0') {
             return diff;
         }
     }
