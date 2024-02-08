@@ -184,6 +184,19 @@ add_compile_options(
     -Wundef
     -Wpointer-arith
     -Wno-nonnull
+
+    -Wformat
+    -Wformat-nonliteral
+    # Using "-Wformat" with "-ffreestanding" requires explicitly annotating
+    # function, see https://gcc.gnu.org/onlinedocs/gcc/Warning-Options.html and
+    # https://gcc.gnu.org/onlinedocs/gcc/Common-Function-Attributes.html
+    # function attributes:
+    #   format(<archetype>, <string-index>, <first-to-check>)
+    #      archetype: printf, scanf, strftime, gnu_printf, gnu_scanf, gnu_strftime or strfmon
+    #      string-index: format string parameter
+    #      first-to-check: format arguments start
+    #   format_arg(<string-index>)
+
     #-----------------------------------
     # Configure compiler settings.
     #-----------------------------------
