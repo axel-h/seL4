@@ -186,6 +186,31 @@ config_choice(KernelPlatform PLAT "Select the platform" ${kernel_platforms})
 
 if(KernelArchARM)
 
+    # ToDo: KernelArmArmV is use for two things.
+    #
+    #       - It's the values passed to "-march=" for the compiler.
+    #         This is also use in
+    #         - seL4/rumprun/CMakeLists.txt
+    #
+    #       - It's the subfolder to include.
+    #         This is also use in
+    #         - seL4_libs/libsel4bench/CMakeLists.txt
+    #         - seL4/seL4_tools/elfloader-tool/CMakeLists.txt
+    #         But it turns out, that "armv7ve" is just an alias for "armv7-a"
+    #         everywhere.
+
+    if(KernelArchArmV7ve)
+        set(KernelArchArmV7a ON) # ARMv7-ve is a superset of ARMv7-a.
+        set(KernelArmArmV "armv7ve")
+    elseif(KernelArchArmV7a)
+        set(KernelArmArmV "armv7-a")
+    elseif(KernelArchArmV8a)
+        set(KernelArmArmV "armv8-a")
+    else()
+        message(FATAL_ERROR "unsupported ARM architecture")
+    endif()
+    set(KernelArmArmV "${KernelArmArmV}" CACHE INTERNAL "")
+
     # Now enshrine all the common variables in the config
     config_set(KernelArmCortexA7 ARM_CORTEX_A7 "${KernelArmCortexA7}")
     config_set(KernelArmCortexA8 ARM_CORTEX_A8 "${KernelArmCortexA8}")
@@ -199,18 +224,9 @@ if(KernelArchARM)
     config_set(KernelArchArmV7a ARCH_ARM_V7A "${KernelArchArmV7a}")
     config_set(KernelArchArmV7ve ARCH_ARM_V7VE "${KernelArchArmV7ve}")
     config_set(KernelArchArmV8a ARCH_ARM_V8A "${KernelArchArmV8a}")
+    config_set(KernelArchArmV8a ARCH_ARM_V8A "${KernelArchArmV8a}")
     config_set(KernelAArch64SErrorIgnore AARCH64_SERROR_IGNORE "${KernelAArch64SErrorIgnore}")
 
-    # Check for v7ve before v7a as v7ve is a superset and we want to set the
-    # actual armv to that, but leave armv7a config enabled for anything that
-    # checks directly against it
-    if(KernelArchArmV7ve)
-        set(KernelArmArmV "armv7ve" CACHE INTERNAL "")
-    elseif(KernelArchArmV7a)
-        set(KernelArmArmV "armv7-a" CACHE INTERNAL "")
-    elseif(KernelArchArmV8a)
-        set(KernelArmArmV "armv8-a" CACHE INTERNAL "")
-    endif()
     if(KernelArmCortexA7)
         set(KernelArmCPU "cortex-a7" CACHE INTERNAL "")
     elseif(KernelArmCortexA8)
