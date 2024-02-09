@@ -12,6 +12,22 @@ on:
       - master
   pull_request:
 
+# To reduce the load we cancel any older runs of this workflow for the current
+# PR. Such runs exist, if there were new pushes to the PR's branch without
+# waiting for the workflow to finish. As a side effect, pushing new commits now
+# becomes a convenient way to cancel all the older runs, e.g. if they are stuck
+# and would only be stopped by the timeout eventually.
+# For deployment to the master branch, the workflow will run on each push, no
+# skipping or cancellation will happen. This works, becuase the concurrency
+# group uses "github.run_id", which is a unique number for every workflow run
+# within the whole repository.
+# Note that "${{ <cond> && <ret_true> || <ret_false> }}" is the designated
+# github expression to emualte a ternary operator, where <ret_true> must be
+# somthing that does not evaluate to 'false' so <ret_false> is returned always.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event_name == 'pull_request' && github.event.number || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   standalone_kernel:
     name: kernel
