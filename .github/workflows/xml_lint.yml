@@ -10,6 +10,7 @@ on:
   push:
     branches:
       - master
+      - main
     paths:
       - 'libsel4/**/sel4*.xml'
       - 'libsel4/**/sel4*.xsd'

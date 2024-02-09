@@ -9,6 +9,7 @@ on:
   push:
     branches:
       - master
+      - mains
   pull_request:
 
 # To reduce the load we cancel any older runs of this workflow for the current

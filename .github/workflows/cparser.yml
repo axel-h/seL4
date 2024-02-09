@@ -10,7 +10,7 @@ name: C-Parser
 
 on:
   push:
-    branches: [master]
+    branches: [master, main]
   pull_request:
 
 # To reduce the load we cancel any older runs of this workflow for the current
