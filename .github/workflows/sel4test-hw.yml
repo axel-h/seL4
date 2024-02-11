@@ -34,15 +34,16 @@ jobs:
   hw-build:
     name: HW Build
     runs-on: ubuntu-latest
-    if: ${{ github.event_name == 'push' ||
-            github.event_name == 'pull_request_target' &&
-              github.event.action != 'labeled' &&
-              (contains(github.event.pull_request.labels.*.name, 'hw-build') ||
-               contains(github.event.pull_request.labels.*.name, 'hw-test')) ||
-            github.event_name == 'pull_request_target' &&
-              github.event.action == 'labeled' &&
-              (github.event.label.name == 'hw-build' ||
-               github.event.label.name == 'hw-test') }}
+    # Run if
+    # - one of the labels is added
+    # - a (re-)open/push happened and one of the labels was present.
+    # Do not run when other labels are added.
+    if: ${{ ((github.event.action != 'labeled') &&
+             (contains(github.event.pull_request.labels.*.name, 'hw-build') ||
+              contains(github.event.pull_request.labels.*.name, 'hw-test'))) ||
+            ((github.event.action == 'labeled') &&
+             ((github.event.label.name == 'hw-build') ||
+              (github.event.label.name == 'hw-test'))) }}
     strategy:
       fail-fast: false
       matrix:
@@ -81,14 +82,12 @@ jobs:
     name: HW Run
     runs-on: ubuntu-latest
     needs: the_matrix
-    if: ${{ github.repository_owner == 'seL4' &&
-            (github.event_name == 'push' ||
-             github.event_name == 'pull_request_target' &&
-               github.event.action != 'labeled' &&
-               contains(github.event.pull_request.labels.*.name, 'hw-test') ||
-             github.event_name == 'pull_request_target' &&
-               github.event.action == 'labeled' &&
-               github.event.label.name == 'hw-test') }}
+    # The checks at the dependent step "hw-build" already filtered a lot, so we
+    # can use a much simpler check here. Run this step only if the 'hw-test' is
+    # present (the labeling event has also added it). Do not run on forks,
+    # because they can't access the hardware test farm.
+    if: ${{ (github.repository_owner == 'seL4') &&
+             contains(github.event.pull_request.labels.*.name, 'hw-test') }}
     strategy:
       fail-fast: false
       matrix: ${{ fromJson(needs.the_matrix.outputs.matrix) }}
