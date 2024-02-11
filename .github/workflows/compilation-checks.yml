@@ -33,7 +33,7 @@ jobs:
           - arch: IA32 # no verified config
     steps:
     - uses: actions/checkout@v4
-    - uses: seL4/ci-actions/standalone-kernel@master
+    - uses: axel-h/ci-actions/standalone-kernel@patch-axel-7
       with:
         ARCH: ${{ matrix.arch }}
         COMPILER: ${{ matrix.compiler }}
