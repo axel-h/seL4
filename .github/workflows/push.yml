@@ -23,13 +23,13 @@ concurrency:
 jobs:
   checks:
     name: Checks
-    uses: seL4/ci-actions/.github/workflows/push.yml@master
+    uses: axel-h/ci-actions/.github/workflows/push.yml@patch-axel-7
 
   cparser:
     name: C Parser
     runs-on: ubuntu-latest
     steps:
-    - uses: seL4/ci-actions/cparser-run@master
+    - uses: axel-h/ci-actions/cparser-run@patch-axel-7
 
   standalone_kernel:
     name: kernel
@@ -42,7 +42,7 @@ jobs:
         compiler: [gcc, llvm]
     steps:
     - uses: actions/checkout@v4
-    - uses: seL4/ci-actions/standalone-kernel@master
+    - uses: axel-h/ci-actions/standalone-kernel@patch-axel-7
       with:
         ARCH: ${{ matrix.arch }}
         COMPILER: ${{ matrix.compiler }}
@@ -51,7 +51,7 @@ jobs:
     name: Build PDF
     runs-on: ubuntu-latest
     steps:
-    - uses: seL4/ci-actions/seL4-manual@master
+    - uses: axel-h/ci-actions/seL4-manual@patch-axel-7
     - uses: actions/upload-artifact@v4
       with:
         name: PDF
