@@ -10,6 +10,7 @@ on:
     branches:
       - master
   pull_request:
+  workflow_dispatch:
 
 # To reduce the load we cancel any older runs of this workflow for the current
 # PR. Such runs exist, if there were new pushes to the PR's branch without
@@ -28,14 +29,6 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
-  check:
-    name: License Check
-    runs-on: ubuntu-latest
-    steps:
-    - uses: axel-h/ci-actions/license-check@patch-axel-7
-
-  links:
-    name: Links
-    runs-on: ubuntu-latest
-    steps:
-      - uses: axel-h/ci-actions/link-check@patch-axel-7
+  checks:
+    name: Checks
+    uses: axel-h/ci-actions/.github/workflows/push.yml@patch-axel-7

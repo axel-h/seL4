@@ -12,6 +12,7 @@ on:
   push:
     branches: [master]
   pull_request:
+  workflow_dispatch:
 
 # To reduce the load we cancel any older runs of this workflow for the current
 # PR. Such runs exist, if there were new pushes to the PR's branch without
