@@ -164,12 +164,12 @@ static inline void plic_init_hart(void)
 
 static inline void plic_init_controller(void)
 {
-
+    word_t offset = plic_claim_offset(PLIC_HART_ID, PLIC_SVC_CONTEXT);
     for (int i = 1; i <= PLIC_NUM_INTERRUPTS; i++) {
         /* Clear all pending bits */
         if (plic_pending_interrupt(i)) {
-            plic_read_u32(plic_claim_offset(PLIC_HART_ID, PLIC_SVC_CONTEXT));
-            plic_write_u32(i, plic_claim_offset(PLIC_HART_ID, PLIC_SVC_CONTEXT));
+            plic_read_u32(offset);
+            plic_write_u32(i, offset);
         }
     }
 
