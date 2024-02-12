@@ -139,15 +139,10 @@ static inline void plic_complete_claim(irq_t irq)
 
 static inline void plic_mask_irq(bool_t disable, irq_t irq)
 {
-    word_t addr = 0;
-    uint32_t val = 0;
-    uint32_t bit = 0;
-
     word_t hart_id = plic_get_current_hart_id();
-    addr = PLIC_PPTR_BASE + plic_enable_offset(hart_id, PLIC_SVC_CONTEXT) + (irq / 32) * 4;
-    bit = irq % 32;
-
-    val = readl(addr);
+    word_t addr = PLIC_PPTR_BASE + plic_enable_offset(hart_id, PLIC_SVC_CONTEXT) + (irq / 32) * 4;
+    uint32_t bit = irq % 32;
+    uint32_t val = readl(addr);
     if (disable) {
         val &= ~BIT(bit);
     } else {
