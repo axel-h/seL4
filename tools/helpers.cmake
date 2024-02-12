@@ -299,13 +299,11 @@ macro(config_set optionname configname value)
     set(${optionname} "${value}" CACHE INTERNAL "" FORCE)
     if("${value}" STREQUAL "OFF")
         cfg_str_add_disabled(configure_string ${configname})
+    elseif("${value}" STREQUAL "ON")
+        cfg_str_add_enabled(configure_string ${configname} ${optionname})
     else()
-        if("${value}" STREQUAL "ON")
-            cfg_str_add_enabled(configure_string ${configname} ${optionname})
-        else()
-            # we have to quote ${value} here because it could be empty
-            cfg_str_add_string(configure_string ${configname} "${value}")
-        endif()
+        # we have to quote ${value} here because it could be empty
+        cfg_str_add_string(configure_string ${configname} "${value}")
     endif()
 endmacro(config_set)
 
