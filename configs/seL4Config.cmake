@@ -239,6 +239,12 @@ if(KernelArchARM)
 
     config_set(KernelArmMach ARM_MACH "${KernelArmMach}")
 
+elseif(KernelArchRiscV)
+    # nothing here
+elseif(KernelArchX86)
+    # nothing here
+else()
+    message(FATAL_ERROR "unsupported KernelArch: '${KernelArch}'")
 endif()
 
 if("${TRIPLE}" STREQUAL "")
