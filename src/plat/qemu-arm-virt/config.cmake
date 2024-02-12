@@ -76,8 +76,6 @@ if(KernelPlatformQEMUArmVirt)
         message(FATAL_ERROR "Unsupported ARM_CPU: '${ARM_CPU}'")
     endif()
 
-    config_set(KernelARMPlatform ARM_PLAT qemu-arm-virt)
-
     # If neither QEMU_DTS nor QEMU_DTB is set explicitly, the device tree is
     # extracted from QEMU. This keeps it nicely up to date with the the actual
     # QEMU versions that is used, and it's quite convenient for development.

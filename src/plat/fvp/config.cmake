@@ -13,7 +13,6 @@ if(KernelPlatformFVP)
     set(KernelArmCortexA57 ON)
     set(KernelArchArmV8a ON)
     set(KernelArmGicV3 ON)
-    config_set(KernelARMPlatform ARM_PLAT "fvp")
     list(APPEND KernelDTSList "tools/dts/fvp.dts")
     list(APPEND KernelDTSList "src/plat/fvp/overlay-fvp.dts")
     declare_default_headers(

@@ -192,6 +192,10 @@ endforeach()
 
 if(KernelArchARM)
 
+    if(NOT KernelARMPlatform)
+        config_set(KernelARMPlatform ARM_PLAT "${KernelPlatform}")
+    endif()
+
     # Now enshrine all the common variables in the config
     config_set(KernelArmCortexA7 ARM_CORTEX_A7 "${KernelArmCortexA7}")
     config_set(KernelArmCortexA8 ARM_CORTEX_A8 "${KernelArmCortexA8}")
@@ -240,6 +244,11 @@ if(KernelArchARM)
     config_set(KernelArmMach ARM_MACH "${KernelArmMach}")
 
 elseif(KernelArchRiscV)
+
+    if(NOT KernelRiscVPlatform)
+        config_set(KernelRiscVPlatform RISCV_PLAT "${KernelPlatform}")
+    endif()
+
     # nothing here
 elseif(KernelArchX86)
     # nothing here

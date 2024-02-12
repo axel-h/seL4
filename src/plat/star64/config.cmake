@@ -10,7 +10,6 @@ declare_platform(star64 KernelPlatformStar64 PLAT_STAR64 KernelArchRiscV)
 
 if(KernelPlatformStar64)
     declare_seL4_arch(riscv64)
-    config_set(KernelRiscVPlatform RISCV_PLAT "star64")
     # The JH7110 SoC contains the SiFive U74-MC core complex. This has four U74
     # cores and one S7 core (which has a hart ID of 0). The first U74 core has
     # a hart ID of 1.
