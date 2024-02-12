@@ -191,7 +191,7 @@ static inline void plic_init_controller(void)
 
 /*
  * Provide a dummy definition of set trigger as the Hifive platform currently
- * has all global interrupt positive-level triggered.
+ * has all global interrupts positive-level triggered.
  */
 static inline void plic_irq_set_trigger(irq_t irq, bool_t edge_triggered)
 {
