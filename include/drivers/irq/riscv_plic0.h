@@ -5,7 +5,7 @@
  * SPDX-License-Identifier: GPL-2.0-only
  *
  * SiFive U54/U74 PLIC handling (HiFive Unleashed/Unmatched, Polarfire,
- * QEMU RISC-V virt, Star64)
+ * QEMU RISC-V virt, Star64, Hobgoblin)
  */
 
 #pragma once
@@ -16,7 +16,8 @@
     !defined(CONFIG_PLAT_POLARFIRE) && \
     !defined(CONFIG_PLAT_QEMU_RISCV_VIRT) && \
     !defined(CONFIG_PLAT_ROCKETCHIP_ZCU102) && \
-    !defined(CONFIG_PLAT_STAR64)
+    !defined(CONFIG_PLAT_STAR64) && \
+    !defined(CONFIG_PLAT_HOBGOBLIN)
 #error "Check if this platform suppots a PLIC."
 #endif
 
