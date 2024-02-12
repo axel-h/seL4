@@ -21,6 +21,4 @@ if(KernelPlatformHifive)
         MAX_IRQ 53
         INTERRUPT_CONTROLLER drivers/irq/riscv_plic0.h
     )
-else()
-    unset(KernelPlatformFirstHartID CACHE)
 endif()

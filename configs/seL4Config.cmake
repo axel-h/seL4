@@ -159,6 +159,8 @@ unset(KernelArmMach CACHE)
 unset(KernelArmMachFeatureModifiers CACHE)
 unset(KernelArmCPU CACHE)
 unset(KernelArmArmV CACHE)
+# RISC-V specific settings
+unset(KernelPlatformFirstHartID CACHE)
 
 # Blacklist platforms without MCS support
 set(KernelPlatformSupportsMCS ON)

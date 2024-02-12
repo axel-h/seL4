@@ -20,6 +20,4 @@ if(KernelPlatformPolarfire)
         MAX_IRQ 186
         INTERRUPT_CONTROLLER drivers/irq/riscv_plic0.h
     )
-else()
-    unset(KernelPlatformFirstHartID CACHE)
 endif()

@@ -28,6 +28,4 @@ if(KernelPlatformStar64)
         MAX_IRQ 136
         INTERRUPT_CONTROLLER drivers/irq/riscv_plic0.h
     )
-else()
-    unset(KernelPlatformFirstHartID CACHE)
 endif()

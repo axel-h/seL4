@@ -26,6 +26,4 @@ if(KernelPlatformAriane)
         MAX_IRQ 0
         INTERRUPT_CONTROLLER drivers/irq/riscv_plic_dummy.h
     )
-else()
-    unset(KernelPlatformFirstHartID CACHE)
 endif()
