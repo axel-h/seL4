@@ -1,0 +1,98 @@
+/*
+ * Copyright 2024, Codasip GmbH
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
+ */
+
+/dts-v1/;
+
+/ {
+
+    #address-cells = <2>;
+    #size-cells = <2>;
+
+    compatible = "codasip,hobgoblin", "codasip,a7xx";
+    model = "codasip,hobgoblin";
+
+    chosen {
+        stdout-path = "/soc/serial@60100000";
+    };
+
+    ddr: memory@80000000 {
+        device_type = "memory";
+        reg = <0x0 0x80000000 0x0 0x40000000>;
+    };
+
+    cpus {
+        #address-cells = <1>;
+        #size-cells = <0>;
+
+        clock-frequency = <50000000>; /* CPU runs at 50 MHz */
+        timebase-frequency = <100000000>; /* CLINT timer runs at 100 MHz */
+
+        cpu@0 {
+            compatible = "riscv";
+            device_type = "cpu";
+            reg = <0>;
+            riscv,isa = "rv64imafdc_svpbmt_zicbom_zicboz_zicbop";
+            riscv,cbom-block-size = <64>;
+            riscv,cboz-block-size = <64>;
+            mmu-type = "riscv,sv39";
+
+            cpu0_intc: interrupt-controller {
+                #interrupt-cells = <1>;
+                #address-cells = <0>;
+                compatible = "riscv,cpu-intc";
+                interrupt-controller;
+            };
+        };
+    };
+
+    clock {
+        compatible = "fixed-clock";
+        #clock-cells = <0>;
+        clock-frequency = <20000>;
+        clock-accuracy = <100>;
+    };
+
+    soc {
+        #address-cells = <1>;
+        #size-cells = <1>;
+        compatible = "simple-bus";
+        ranges = <0x0 0x0 0x0 0x70000000>;
+
+        plic: interrupt-controller@40000000 {
+            compatible = "codasip,plic", "riscv,plic0";
+            reg = <0x40000000 0x4000000>;
+            #address-cells = <0>;
+            interrupt-controller;
+            #interrupt-cells = <1>;
+            riscv,ndev = <31>;
+            interrupts-extended = <&cpu0_intc 11 &cpu0_intc 9>;
+        };
+
+        clint@60014000 {
+            compatible = "codasip,clint", "sifive,clint0", "riscv,cpu-intc";
+            reg = <0x60014000 0xC000>;
+            interrupts-extended = < &cpu0_intc 3 &cpu0_intc 7>;
+        };
+
+        serial@60100000 {
+            compatible = "codasip,uart16550", "ns16550a";
+            reg = <0x60100000 0x1020>;
+            clock-frequency = <100000000>;
+            current-speed = <115200>;
+            reg-shift = <2>;
+            reg-offset = <0x1000>;
+            interrupts-extended = <&plic 1>;
+        };
+
+        timer@60600000 {
+            compatible = "codasip,timer";
+            reg = <0x60600000 0x8000>;
+            clock-frequency = <100000000>; /* 100 MHz */
+            interrupts-extended = <&plic 9>;
+        };
+
+    };
+};

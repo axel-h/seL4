@@ -81,6 +81,7 @@ description indicates whether it is SOURCE-COMPATIBLE, BINARY-COMPATIBLE, or BRE
 * Added support for qemu-riscv-virt
 * Added support for the Pine64 Star64
 * Added support for the TQMa8XQP 1GiB module
+* Added support for the Codasip A730/Hobgoblin
 * Remove imx31/kzm platform support. This platform is being removed as it is sufficiently old and unused.
 * Remove ARM1136JF_S and ARMv6 support. This architecture version is being removed as it is sufficiently old and
   unused. See [RFC-8](https://sel4.github.io/rfcs/implemented/0080-remove-armv6-support.html).
