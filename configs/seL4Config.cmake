@@ -166,23 +166,27 @@ set(KernelPlatformSupportsMCS ON)
 file(GLOB result ${KERNEL_ROOT_DIR}/src/plat/*/config.cmake)
 list(SORT result)
 
+# Include all platform configurations. Each supported platform must be
+# registered via declare_platform(), which will append it to the list stored
+# in the variable 'kernel_platforms'
 foreach(file ${result})
     include("${file}")
 endforeach()
-
-# Verify that, as a minimum any variables that are used
-# to find other build files are actually defined at this
-# point. This means at least: KernelArch KernelWordSize
-
-if("${KernelArch}" STREQUAL "")
-    message(FATAL_ERROR "Variable 'KernelArch' is not set.")
+if(NOT KernelPlatform)
+    message(FATAL_ERROR "No kernel platform selected, please set 'KernelPlatform'.")
 endif()
-
-if("${KernelWordSize}" STREQUAL "")
-    message(FATAL_ERROR "Variable 'KernelWordSize' is not set.")
-endif()
-
+# Check that a supported platform has been selected.
 config_choice(KernelPlatform PLAT "Select the platform" ${kernel_platforms})
+# The varibale 'KernelPlatform' will be cleared if unsupported.
+if(NOT KernelPlatform)
+    message(FATAL_ERROR "Selected kernel platform not supported.")
+endif()
+# Verify that a proper minimal configuration has been set up.
+foreach(var IN ITEMS KernelArch KernelSel4Arch KernelWordSize)
+    if(NOT ${var})
+        message(FATAL_ERROR "Variable '${var}' is not set.")
+    endif()
+endforeach()
 
 # Now enshrine all the common variables in the config
 config_set(KernelArmCortexA7 ARM_CORTEX_A7 "${KernelArmCortexA7}")
