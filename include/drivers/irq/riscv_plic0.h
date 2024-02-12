@@ -31,9 +31,6 @@
  * https://static.dev.sifive.com/U54-MC-RVCoreIP.pdf
  */
 
-#define PLIC_PPTR_BASE          PLIC_PPTR
-
-
 #define PLIC_HART_ID (CONFIG_FIRST_HART_ID)
 
 #define PLIC_PRIO               0x0
@@ -72,14 +69,14 @@
 
 
 
-static inline uint32_t readl(word_t addr)
+static inline uint32_t plic_read_u32(word_t offset)
 {
-    return *((volatile uint32_t *)(addr));
+    return *((volatile uint32_t *)(PLIC_PPTR + offset));
 }
 
-static inline void writel(uint32_t val, word_t addr)
+static inline void plic_write_u32(uint32_t val, word_t offset)
 {
-    *((volatile uint32_t *)(addr)) = val;
+    *((volatile uint32_t *)(PLIC_PPTR + offset)) = val;
 }
 
 static inline word_t plic_enable_offset(word_t hart_id, word_t context_id)
@@ -103,9 +100,9 @@ static inline word_t plic_claim_offset(word_t hart_id, word_t context_id)
 
 static inline bool_t plic_pending_interrupt(word_t interrupt)
 {
-    word_t addr = PLIC_PPTR_BASE + PLIC_PENDING + (interrupt / 32) * 4;
+    word_t offset = PLIC_PENDING + (interrupt / 32) * 4;
     word_t bit = interrupt % 32;
-    if (readl(addr) & BIT(bit)) {
+    if (plic_read_u32(offset) & BIT(bit)) {
         return true;
     } else {
         return false;
@@ -127,28 +124,28 @@ static inline irq_t plic_get_claim(void)
 {
     /* Read the claim register for our HART interrupt context */
     word_t hart_id = plic_get_current_hart_id();
-    return readl(PLIC_PPTR_BASE + plic_claim_offset(hart_id, PLIC_SVC_CONTEXT));
+    return plic_read_u32(plic_claim_offset(hart_id, PLIC_SVC_CONTEXT));
 }
 
 static inline void plic_complete_claim(irq_t irq)
 {
     /* Complete the IRQ claim by writing back to the claim register. */
     word_t hart_id = plic_get_current_hart_id();
-    writel(irq, PLIC_PPTR_BASE + plic_claim_offset(hart_id, PLIC_SVC_CONTEXT));
+    plic_write_u32(irq, plic_claim_offset(hart_id, PLIC_SVC_CONTEXT));
 }
 
 static inline void plic_mask_irq(bool_t disable, irq_t irq)
 {
     word_t hart_id = plic_get_current_hart_id();
-    word_t addr = PLIC_PPTR_BASE + plic_enable_offset(hart_id, PLIC_SVC_CONTEXT) + (irq / 32) * 4;
+    word_t offset = plic_enable_offset(hart_id, PLIC_SVC_CONTEXT) + (irq / 32) * 4;
     uint32_t bit = irq % 32;
-    uint32_t val = readl(addr);
+    uint32_t val = plic_read_u32(offset);
     if (disable) {
         val &= ~BIT(bit);
     } else {
         val |= BIT(bit);
     }
-    writel(val, addr);
+    plic_write_u32(val, offset);
 }
 
 static inline void plic_init_hart(void)
@@ -162,7 +159,7 @@ static inline void plic_init_hart(void)
     }
 
     /* Set threshold to zero */
-    writel(0, PLIC_PPTR_BASE + plic_thres_offset(hart_id, PLIC_SVC_CONTEXT));
+    plic_write_u32(0, plic_thres_offset(hart_id, PLIC_SVC_CONTEXT));
 }
 
 static inline void plic_init_controller(void)
@@ -171,14 +168,14 @@ static inline void plic_init_controller(void)
     for (int i = 1; i <= PLIC_NUM_INTERRUPTS; i++) {
         /* Clear all pending bits */
         if (plic_pending_interrupt(i)) {
-            readl(PLIC_PPTR_BASE + plic_claim_offset(PLIC_HART_ID, PLIC_SVC_CONTEXT));
-            writel(i, PLIC_PPTR_BASE + plic_claim_offset(PLIC_HART_ID, PLIC_SVC_CONTEXT));
+            plic_read_u32(plic_claim_offset(PLIC_HART_ID, PLIC_SVC_CONTEXT));
+            plic_write_u32(i, plic_claim_offset(PLIC_HART_ID, PLIC_SVC_CONTEXT));
         }
     }
 
     /* Set the priorities of all interrupts to 1 */
     for (int i = 1; i <= PLIC_MAX_IRQ + 1; i++) {
-        writel(2, PLIC_PPTR_BASE + PLIC_PRIO + PLIC_PRIO_PER_ID * i);
+        plic_write_u32(2, PLIC_PRIO + PLIC_PRIO_PER_ID * i);
     }
 
 }
