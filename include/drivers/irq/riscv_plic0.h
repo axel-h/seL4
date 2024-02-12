@@ -167,7 +167,7 @@ static inline void plic_init_hart(void)
     }
 
     /* Set threshold to zero */
-    writel(0, (PLIC_PPTR_BASE + plic_thres_offset(hart_id, PLIC_SVC_CONTEXT)));
+    writel(0, PLIC_PPTR_BASE + plic_thres_offset(hart_id, PLIC_SVC_CONTEXT));
 }
 
 static inline void plic_init_controller(void)
