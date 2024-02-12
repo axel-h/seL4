@@ -1,0 +1,35 @@
+/*
+ * Copyright 2024, Codasip GmbH
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
+ */
+
+/ {
+    chosen {
+        seL4,elfloader-devices =
+            "uart0";
+        seL4,kernel-devices =
+            &uart0,
+            &{/soc/plic@40000000},
+            &{/soc/clint@60014000};
+    };
+
+
+    /* Patch original device tree */
+
+    soc {
+       /*
+        * The Hobgoblin FPGA uses a Xilinx AXI UART 16550 v2.0, which is at
+        * 0x60100000 and uses 8 KiB in the address space. However, the lower
+        * 4 KiB do not contain any registers, the registers start at offset
+        * 4 KiB. To keep things simple, we leave out the lower 4 KiB and just
+        * declare the upper 4 KiB here. The acessible register are fully
+        * compatible with the exitng NS16550A UART driver.
+        */
+        uart0: serial@60100000 {
+            reg = <0x60101000 0x1000>;
+            reg-offset = <0>;
+        };
+    };
+
+};
