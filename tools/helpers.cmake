@@ -205,24 +205,27 @@ function(GenProofsBFTarget target_name target_file pbf_path pbf_target prunes de
     )
 endfunction(GenProofsBFTarget)
 
-macro(cfg_str_add_enabled cfg_str name var)
-    cfg_str_add_entry(${cfg_str} ${name} "true" "${var}=${${var}}")
+macro(cfg_str_add_enabled name var)
+    cfg_str_add_entry(${name} "true" "${var}=${${var}}")
 endmacro()
 
-macro(cfg_str_add_disabled cfg_str name)
-    cfg_str_add_entry(${cfg_str} ${name} "false" "")
+macro(cfg_str_add_disabled name)
+    cfg_str_add_entry(${name} "false" "")
 endmacro()
 
-macro(cfg_str_add_string cfg_str name value)
-    cfg_str_add_entry(${cfg_str} ${name} "\"${value}\"" "")
+macro(cfg_str_add_string name value)
+    cfg_str_add_entry(${name} "\"${value}\"" "")
 endmacro()
 
-macro(cfg_str_add_entry cfg_str name value comment)
-    set(cfg_str_entry "${name}: ${value}")
+macro(cfg_str_add_entry name value comment)
+    # add another entry to the YAML map
+    string(APPEND configure_string "${name}: ${value}")
     if(NOT "${comment}" STREQUAL "")
-        string(APPEND cfg_str_entry " # ${comment}")
+        string(APPEND configure_string " # ${comment}")
     endif()
-    string(APPEND ${cfg_str} "${cfg_str_entry}\n")
+    string(APPEND configure_string "\n")
+    # update variable in parent soope
+    set(configure_string "${configure_string}" PARENT_SCOPE)
 endmacro()
 
 # config_option(cmake_option_name c_config_name doc DEFAULT default [DEPENDS deps] [DEFAULT_DISABLE default_disabled])
@@ -283,29 +286,27 @@ function(config_option optionname configname doc)
         set(${optionname} "${CONFIG_DEFAULT_DISABLED}" CACHE INTERNAL "${doc}" FORCE)
         set(${optionname}_DISABLED TRUE CACHE INTERNAL "" FORCE)
     endif()
-    set(local_config_string "${configure_string}")
     if(${optionname})
-        cfg_str_add_enabled(local_config_string ${configname} ${optionname})
+        cfg_str_add_enabled(${configname} ${optionname})
     else()
-        cfg_str_add_disabled(local_config_string ${configname})
+        cfg_str_add_disabled(${configname})
     endif()
-    set(configure_string "${local_config_string}" PARENT_SCOPE)
 endfunction(config_option)
 
 # Set a configuration option to a particular value. This value will not appear in
 # the cmake-gui, but will produce an internal cmake cache variable and generated
 # configuration headers.
-macro(config_set optionname configname value)
+function(config_set optionname configname value)
     set(${optionname} "${value}" CACHE INTERNAL "" FORCE)
     if("${value}" STREQUAL "OFF")
-        cfg_str_add_disabled(configure_string ${configname})
+        cfg_str_add_disabled(${configname})
     elseif("${value}" STREQUAL "ON")
-        cfg_str_add_enabled(configure_string ${configname} ${optionname})
+        cfg_str_add_enabled(${configname} ${optionname})
     else()
         # we have to quote ${value} here because it could be empty
-        cfg_str_add_string(configure_string ${configname} "${value}")
+        cfg_str_add_string(${configname} "${value}")
     endif()
-endmacro(config_set)
+endfunction(config_set)
 
 # config_cmake_string(cmake_option_name c_config_name doc DEFAULT default [DEPENDS dep]
 #   [DEFAULT_DISABLED default_disabled] [UNDEF_DISABLED] [QUOTE])
@@ -335,7 +336,6 @@ function(config_string optionname configname doc)
         set(CONFIG_DEFAULT_DISABLED "${CONFIG_DEFAULT}")
     endif()
     set(valid ON)
-    set(local_config_string "${configure_string}")
     if(NOT "${CONFIG_DEPENDS}" STREQUAL "")
         # Check the passed in dependencies. This loop and logic is inspired by the
         # actual cmake_dependent_option code
@@ -390,9 +390,8 @@ function(config_string optionname configname doc)
         else()
             set(quote "@quote@")
         endif()
-        cfg_str_add_string(local_config_string ${configname} "${quote}@${cfg_tag_option}@${quote}")
+        cfg_str_add_string(${configname} "${quote}@${cfg_tag_option}@${quote}")
     endif()
-    set(configure_string "${local_config_string}" PARENT_SCOPE)
 endfunction(config_string)
 
 # Defines a multi choice / select configuration option
@@ -417,7 +416,6 @@ endfunction(config_string)
 function(config_choice optionname configname doc)
     # Cannot use ARGN because each argument itself is a list
     math(EXPR limit "${ARGC} - 1")
-    set(local_config_string "${configure_string}")
     # force_default represents whether we need to force a new value or not. We would need
     # to force a new value for example if we detect that the current selected choice is
     # no longer (due to conditions) a valid choice
@@ -482,11 +480,11 @@ function(config_choice optionname configname doc)
             # Check if this option is the one that is currently set
             if("${${optionname}}" STREQUAL "${option_value}")
                 set(${option_cache} ON CACHE INTERNAL "" FORCE)
-                cfg_str_add_enabled(local_config_string ${option_config} ${option_cache})
+                cfg_str_add_enabled(${option_config} ${option_cache})
                 set(found_current ON)
             else()
                 set(${option_cache} OFF CACHE INTERNAL "" FORCE)
-                cfg_str_add_disabled(local_config_string ${option_config})
+                cfg_str_add_disabled(${option_config})
             endif()
         else()
             # Remove this config as it's not valid
@@ -501,8 +499,7 @@ function(config_choice optionname configname doc)
         # None of the choices were valid. Remove this option so its not visible
         unset(${optionname} CACHE)
     else()
-        cfg_str_add_string(local_config_string ${configname} "@${optionname}@")
-        set(configure_string "${local_config_string}" PARENT_SCOPE)
+        cfg_str_add_string(${configname} "@${optionname}@")
         set(${optionname} "${default}" CACHE STRING "${doc}" ${force_default})
         # This is a directory scope setting used to allow or prevent config options
         # from appearing in the cmake config GUI
@@ -515,13 +512,12 @@ function(config_choice optionname configname doc)
             # choice earlier, since we didn't know we were going to revert to
             # the default. So add the option setting here
             set(${first_cache} ON CACHE INTERNAL "" FORCE)
-            cfg_str_add_enabled(local_config_string ${first_config} ${first_cache})
+            cfg_str_add_enabled(${first_config} ${first_cache})
         endif()
     endif()
     # Save all possible options to an internal value.  This is to allow enumerating the options elsewhere.
     # We create a new variable because cmake doesn't support arbitrary properties on cache variables.
     set(${optionname}_all_strings ${all_strings} CACHE INTERNAL "" FORCE)
-    set(configure_string "${local_config_string}" PARENT_SCOPE)
 endfunction(config_choice)
 
 # Defines a target for a 'configuration' library, which generates a header based
