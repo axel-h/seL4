@@ -15,6 +15,21 @@ on:
     types: [synchronize, labeled]
 
 jobs:
+  info:
+    runs-on: ubuntu-latest
+    steps:
+    - env:
+        github_JSON: ${{ toJSON(github) }}
+      run: |
+        echo github.workspace = ${{ github.workspace }}
+        echo GITHUB_WORKSPACE = ${GITHUB_WORKSPACE}
+        echo github.event_name = ${{ github.event_name }}
+        echo github.event.action = ${{ github.event.action }}
+        echo labeled: ${{ contains(fromJSON('["hw-build", "hw-test"]'), github.event.label.name) }}
+        echo hw-build: ${{ contains(github.event.pull_request.labels.*.name, 'hw-build') }}
+        echo hw-test: ${{ contains(github.event.pull_request.labels.*.name, 'hw-test') }}
+        echo hw-bench: ${{ contains(github.event.pull_request.labels.*.name, 'hw-bench') }}
+
   sel4-projects:
     uses: axel-h/ci-actions/.github/workflows/sel4projects.yml@patch-axel-7
     with:
