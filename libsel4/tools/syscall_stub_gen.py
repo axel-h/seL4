@@ -82,12 +82,7 @@ INCLUDES = [
     'sel4/config.h', 'sel4/types.h', 'sel4/sel4_arch/constants.h'
 ]
 
-TYPES = {
-    8:  "seL4_Uint8",
-    16: "seL4_Uint16",
-    32: "seL4_Uint32",
-    64: "seL4_Uint64"
-}
+TYPES = { f"seL4_Uint{n}" for n in [8, 16, 32, 64] }
 
 
 class Type(object):
@@ -141,17 +136,19 @@ class Type(object):
         Return code for a C expression that gets word 'word_num'
         of this type.
         """
-        assert word_num == 0
-        return f"{var_name}"
+        if word_num == 0:
+            return f"{var_name}"
+        else:
+            raise AssertionError(f"invalid: word_num={word_num}")
 
     def double_word_expression(self, var_name, word_num, word_size):
-
-        assert word_num == 0 or word_num == 1
-
+        expr = f"({TYPES[self.size_bits]}) {var_name}"
         if word_num == 0:
-            return f"({TYPES[self.size_bits]}) {var_name}"
+            return expr
         elif word_num == 1:
-            return f"({TYPES[self.size_bits]}) ({var_name} >> {word_size})"
+            return f"({expr} >> {word_size})"
+        else:
+            raise AssertionError(f"invalid: word_num={word_num}")
 
 
 class PointerType(Type):
@@ -167,8 +164,10 @@ class PointerType(Type):
         return f"{self.name} *{name}"
 
     def c_expression(self, var_name, word_num=0):
-        assert word_num == 0
-        return f"*{var_name}"
+        if word_num == 0:
+            return f"*{var_name}"
+        else:
+            raise AssertionError(f"invalid: word_num={word_num}")
 
     def pointer(self):
         raise NotImplementedError()
