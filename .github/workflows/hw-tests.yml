@@ -17,4 +17,16 @@ on:
 jobs:
   sel4-projects:
     uses: axel-h/ci-actions/.github/workflows/sel4projects.yml@patch-axel-7
+    with:
+      projects: sim, sel4test, sel4bench
+      # concurrency is tricky, as we are called multple times when multiple
+      # lables are set at once. We don't want to kill the workflow for
+      # different lables kill each other, just multiple runs for the same
+      # lable should kille the older ones.
+      concurrency_group: pr-${{ github.event.number }}
+      labels: ${{ join(github.event.pull_request.labels.*.name, ', ') }}
+      # pass context on
+      workflow_call_repo: "axel-h/ci-actions"
+      workflow_call_branch: "patch-axel-7"
+      workflow_call_workflow: "sel4test-sim.yml"
     secrets: inherit
