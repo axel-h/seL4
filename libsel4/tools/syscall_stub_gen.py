@@ -82,8 +82,6 @@ INCLUDES = [
     'sel4/config.h', 'sel4/types.h', 'sel4/sel4_arch/constants.h'
 ]
 
-TYPES = { f"seL4_Uint{n}" for n in [8, 16, 32, 64] }
-
 
 class Type(object):
     """
@@ -142,7 +140,7 @@ class Type(object):
             raise AssertionError(f"invalid: word_num={word_num}")
 
     def double_word_expression(self, var_name, word_num, word_size):
-        expr = f"({TYPES[self.size_bits]}) {var_name}"
+        expr = f"(seL4_Uint{self.size_bits}) {var_name}"
         if word_num == 0:
             return expr
         elif word_num == 1:
@@ -757,8 +755,8 @@ def generate_stub(arch, wordsize, interface_name, method_name, method_id, input_
             else:
                 if param.type.double_word:
                     result.append("\tresult.%s = ((%s)%s + ((%s)%s << 32));" %
-                                  (param.name, TYPES[64], words[0] % source_words,
-                                   TYPES[64], words[1] % source_words))
+                                  (param.name, 'seL4_Uint64', words[0] % source_words,
+                                   'seL4_Uint64', words[1] % source_words))
                 else:
                     for word in words:
                         result.append("\tresult.%s = %s;" % (param.name, word % source_words))
