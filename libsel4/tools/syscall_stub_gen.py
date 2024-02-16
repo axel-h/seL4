@@ -69,11 +69,6 @@ MESSAGE_REGISTERS_FOR_ARCH = {
     "riscv64": 4,
 }
 
-WORD_CONST_SUFFIX_BITS = {
-    32: "ul",
-    64: "ull",
-}
-
 # Maximum number of words that will be in a message.
 MAX_MESSAGE_LENGTH = 64
 
@@ -475,7 +470,7 @@ def generate_marshal_expressions(params, num_mrs, structs, wordsize):
         if num_bits < wordsize:
             expr = param.type.c_expression(param.name)
             mask = (1 << num_bits) - 1
-            expr = f"({expr} & {mask:#x}{WORD_CONST_SUFFIX_BITS[wordsize]})"
+            expr = f"({expr} & LIBSEL4_WORD_CONST({mask:#x}))"
 
             if target_offset:
                 expr = f"({expr} << {target_offset})"
