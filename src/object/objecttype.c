@@ -533,7 +533,7 @@ cap_t createObject(object_t t, void *regionBase, word_t userSize, bool_t deviceM
         tcb->tcbDomain = ksCurDomain;
 #ifndef CONFIG_KERNEL_MCS
         /* Initialize the new TCB to the current core */
-        SMP_COND_STATEMENT(tcb->tcbAffinity = getCurrentCPUIndex());
+        SMP_COND_STATEMENT(init_tcb_on_current_core(tcb));
 #endif
 #ifdef CONFIG_DEBUG_BUILD
         strlcpy(TCB_PTR_DEBUG_PTR(tcb)->tcbName, "child of: '", TCB_NAME_LENGTH);

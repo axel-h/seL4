@@ -17,6 +17,16 @@
 void migrateTCB(tcb_t *tcb, word_t new_core);
 static inline CONST cpu_id_t getCurrentCPUIndex(void);
 
+static int init_tcb_on_current_core(tcb_t *tcb) {
+    assert(tcb);
+    tcb->tcbAffinity = getCurrentCPUIndex()
+}
+
+static int is_tcb_on_current_core(tcb_t *tcb) {
+    assert(tcb);
+    return (tcb->tcbAffinity == getCurrentCPUIndex());
+}
+
 #endif /* [not] CONFIG_ENABLE_SMP_SUPPORT */
 
 #define CURRENT_CPU_INDEX() \

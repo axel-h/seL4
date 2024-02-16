@@ -1450,7 +1450,7 @@ void VMCheckBoundNotification(tcb_t *tcb)
      * be running a VM and another core may have placed a message on the
      * endpoint
      */
-    assert(tcb->tcbAffinity == getCurrentCPUIndex());
+    assert(is_tcb_on_current_core(tcb->tcbAffinity));
     notification_t *ntfnPtr = tcb->tcbBoundNotification;
     if (thread_state_ptr_get_tsType(&tcb->tcbState) == ThreadState_RunningVM
         && ntfnPtr && notification_ptr_get_state(ntfnPtr) == NtfnState_Active) {

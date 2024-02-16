@@ -90,7 +90,7 @@ void sendSignal(notification_t *ntfnPtr, word_t badge)
 #ifdef CONFIG_VTX
             } else if (thread_state_ptr_get_tsType(&tcb->tcbState) == ThreadState_RunningVM) {
 #ifdef ENABLE_SMP_SUPPORT
-                if (tcb->tcbAffinity != getCurrentCPUIndex()) {
+                if (!is_tcb_on_current_core(tcb)) {
                     ntfn_set_active(ntfnPtr, badge);
                     doRemoteVMCheckBoundNotification(tcb->tcbAffinity, tcb);
                 } else
