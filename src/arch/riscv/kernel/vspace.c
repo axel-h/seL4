@@ -1159,15 +1159,15 @@ void Arch_userStackTrace(tcb_t *tptr)
         return;
     }
 
-    word_t sp = getRegister(tptr, SP);
-    if (!IS_ALIGNED(sp, seL4_WordSizeBits)) {
-        printf("SP %p not aligned", (void *) sp);
+    word_t reg_sp = getRegister(tptr, SP);
+    if (!IS_ALIGNED(reg_sp, seL4_WordSizeBits)) {
+        printf("SP %p not aligned", (void *) reg_sp);
         return;
     }
 
     pte_t *vspace_root = PTE_PTR(pptr_of_cap(threadRoot));
     for (int i = 0; i < CONFIG_USER_STACK_TRACE_LENGTH; i++) {
-        word_t address = sp + (i * sizeof(word_t));
+        word_t address = reg_sp + (i * sizeof(word_t));
         lookupPTSlot_ret_t ret = lookupPTSlot(vspace_root, address);
         if (pte_ptr_get_valid(ret.ptSlot) && !isPTEPageTable(ret.ptSlot)) {
             pptr_t pptr = (pptr_t)(getPPtrFromHWPTE(ret.ptSlot));
