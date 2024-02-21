@@ -175,9 +175,10 @@ static void x86_64_obj_pml4_print_slots(pml4e_t *pml4)
 void obj_tcb_print_vtable(tcb_t *tcb)
 {
     /* levels: PML4 -> PDPT -> PD -> PT */
-    if (isValidVTableRoot(TCB_PTR_CTE_PTR(tcb, tcbVTable)->cap) && !seen(TCB_PTR_CTE_PTR(tcb, tcbVTable)->cap)) {
-        pml4e_t *pml4 = PML4E_PTR(cap_pml4_cap_get_capPML4BasePtr(TCB_PTR_CTE_PTR(tcb, tcbVTable)->cap));
-        add_to_seen(TCB_PTR_CTE_PTR(tcb, tcbVTable)->cap);
+    cap_t cap = TCB_PTR_CTE_PTR(tcb, tcbVTable)->cap
+    if (isValidVTableRoot(cap) && !seen(cap)) {
+        pml4e_t *pml4 = PML4E_PTR(cap_pml4_cap_get_capPML4BasePtr(cap));
+        add_to_seen(cap);
         printf("%p_pd = pml4\n", pml4);
         x86_64_obj_pml4_print_slots(pml4);
     }
@@ -470,9 +471,10 @@ static void x86_64_cap_pml4_print_slots(pml4e_t *pml4)
 void obj_vtable_print_slots(tcb_t *tcb)
 {
     /* levels: PML4 -> PDPT -> PD -> PT */
-    if (isValidVTableRoot(TCB_PTR_CTE_PTR(tcb, tcbVTable)->cap) && !seen(TCB_PTR_CTE_PTR(tcb, tcbVTable)->cap)) {
-        pml4e_t *pml4 = PML4E_PTR(cap_pml4_cap_get_capPML4BasePtr(TCB_PTR_CTE_PTR(tcb, tcbVTable)->cap));
-        add_to_seen(TCB_PTR_CTE_PTR(tcb, tcbVTable)->cap);
+    cap_t cap = TCB_PTR_CTE_PTR(tcb, tcbVTable)->cap
+    if (isValidVTableRoot(cap) && !seen(cap)) {
+        pml4e_t *pml4 = PML4E_PTR(cap_pml4_cap_get_capPML4BasePtr(cap));
+        add_to_seen(cap);
         x86_64_cap_pml4_print_slots(pml4);
     }
 }
