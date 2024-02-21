@@ -227,19 +227,21 @@ void cap_ntfn_print_attrs(cap_t ntfn)
 
 void obj_tcb_print_slots(tcb_t *tcb)
 {
+    cap_t cap;
+
     printf("%p_tcb {\n", tcb);
 
     /* CSpace root */
-    if (cap_get_capType(TCB_PTR_CTE_PTR(tcb, tcbCTable)->cap) != cap_null_cap) {
-        printf("cspace: %p_cnode ",
-               (void *)cap_cnode_cap_get_capCNodePtr(TCB_PTR_CTE_PTR(tcb, tcbCTable)->cap));
-        cap_cnode_print_attrs(TCB_PTR_CTE_PTR(tcb, tcbCTable)->cap);
+    cap = TCB_PTR_CTE_PTR(tcb, tcbCTable)->cap;
+    if (cap_get_capType(cap) != cap_null_cap) {
+        printf("cspace: %p_cnode ", (void *)cap_cnode_cap_get_capCNodePtr(cap));
+        cap_cnode_print_attrs(cap);
     }
 
     /* VSpace root */
-    if (cap_get_capType(TCB_PTR_CTE_PTR(tcb, tcbVTable)->cap) != cap_null_cap) {
-        printf("vspace: %p_pd\n",
-               cap_vtable_cap_get_vspace_root_fp(TCB_PTR_CTE_PTR(tcb, tcbVTable)->cap));
+    cap = TCB_PTR_CTE_PTR(tcb, tcbVTable)->cap;
+    if (cap_get_capType(cap) != cap_null_cap) {
+        printf("vspace: %p_pd\n", cap_vtable_cap_get_vspace_root_fp(cap);
 
     }
 
@@ -252,10 +254,10 @@ void obj_tcb_print_slots(tcb_t *tcb)
 #ifdef CONFIG_KERNEL_MCS
 
     /* Fault endpoint slot */
-    if (cap_get_capType(TCB_PTR_CTE_PTR(tcb, tcbFaultHandler)->cap) != cap_null_cap) {
-        printf("fault_ep_slot: %p_ep ",
-               (void *)cap_endpoint_cap_get_capEPPtr(TCB_PTR_CTE_PTR(tcb, tcbFaultHandler)->cap));
-        cap_ep_print_attrs(TCB_PTR_CTE_PTR(tcb, tcbFaultHandler)->cap);
+    cap = TCB_PTR_CTE_PTR(tcb, tcbFaultHandler)->cap;
+    if (cap_get_capType(cap) != cap_null_cap) {
+        printf("fault_ep_slot: %p_ep ", (void *)cap_endpoint_cap_get_capEPPtr(cap));
+        cap_ep_print_attrs(cap);
     }
 
     /* sc */
@@ -264,22 +266,23 @@ void obj_tcb_print_slots(tcb_t *tcb)
     }
 
     /* Timeout endpoint slot */
-    if (cap_get_capType(TCB_PTR_CTE_PTR(tcb, tcbTimeoutHandler)->cap) != cap_null_cap) {
-        printf("temp_fault_ep_slot: %p_ep ",
-               (void *)cap_endpoint_cap_get_capEPPtr(TCB_PTR_CTE_PTR(tcb, tcbTimeoutHandler)->cap));
-        cap_ep_print_attrs(TCB_PTR_CTE_PTR(tcb, tcbTimeoutHandler)->cap);
+    cap = TCB_PTR_CTE_PTR(tcb, tcbTimeoutHandler)->cap;
+    if (cap_get_capType(cap) != cap_null_cap) {
+        printf("temp_fault_ep_slot: %p_ep ", (void *)cap_endpoint_cap_get_capEPPtr(cap));
+        cap_ep_print_attrs(cap);
     }
 
 # else
     /* Reply cap slot */
-    if (cap_get_capType(TCB_PTR_CTE_PTR(tcb, tcbReply)->cap) != cap_null_cap) {
-        printf("reply_slot: %p_reply\n",
-               (void *)cap_reply_cap_get_capTCBPtr(TCB_PTR_CTE_PTR(tcb, tcbReply)->cap));
+    cap = TCB_PTR_CTE_PTR(tcb, tcbTimeoutHandler)->cap;
+    if (cap_get_capType(cap) != cap_null_cap) {
+        printf("reply_slot: %p_reply\n", (void *)cap_reply_cap_get_capTCBPtr(cap));
     }
 
     /* TCB of most recent IPC sender */
-    if (cap_get_capType(TCB_PTR_CTE_PTR(tcb, tcbCaller)->cap) != cap_null_cap) {
-        tcb_t *caller = TCB_PTR(cap_thread_cap_get_capTCBPtr(TCB_PTR_CTE_PTR(tcb, tcbCaller)->cap));
+    cap = TCB_PTR_CTE_PTR(tcb, tcbCaller)->cap;
+    if (cap_get_capType(cap) != cap_null_cap) {
+        tcb_t *caller = TCB_PTR(cap_thread_cap_get_capTCBPtr(cap));
         printf("caller_slot: %p_tcb\n", caller);
     }
 #endif /* CONFIG_KERNEL_MCS */
@@ -385,8 +388,9 @@ void print_objects(void)
         obj_tcb_print_attrs(curr);
 
         /* print the contains of the tcb's ctable as objects */
-        if (cap_get_capType(TCB_PTR_CTE_PTR(curr, tcbCTable)->cap) == cap_cnode_cap) {
-            obj_tcb_print_cnodes(TCB_PTR_CTE_PTR(curr, tcbCTable)->cap, curr);
+        cap_t cap = TCB_PTR_CTE_PTR(curr, tcbCTable)->cap
+        if (cap_get_capType(cap) == cap_cnode_cap) {
+            obj_tcb_print_cnodes(cap, curr);
         }
     }
 }

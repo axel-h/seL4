@@ -222,9 +222,10 @@ static void arm64_cap_pud_print_slots(void *pgdSlot_or_vspace, vptr_t vptr)
 
 void obj_vtable_print_slots(tcb_t *tcb)
 {
-    if (isVTableRoot(TCB_PTR_CTE_PTR(tcb, tcbVTable)->cap) && !seen(TCB_PTR_CTE_PTR(tcb, tcbVTable)->cap)) {
-        add_to_seen(TCB_PTR_CTE_PTR(tcb, tcbVTable)->cap);
-        vspace_root_t *vspace = VSPACE_PTR(cap_vspace_cap_get_capVSBasePtr(TCB_PTR_CTE_PTR(tcb, tcbVTable)->cap));
+    cap_t cap = TCB_PTR_CTE_PTR(tcb, tcbVTable)->cap
+    if (isVTableRoot(cap) && !seen(cap)) {
+        add_to_seen(cap);
+        vspace_root_t *vspace = VSPACE_PTR(cap_vspace_cap_get_capVSBasePtr(cap));
 
         /*
         * ARM hyp uses 3 level translation rather than the usual 4 level.
@@ -459,9 +460,10 @@ void arm64_obj_pud_print_slots(void *pgdSlot_or_vspace)
 
 void obj_tcb_print_vtable(tcb_t *tcb)
 {
-    if (isVTableRoot(TCB_PTR_CTE_PTR(tcb, tcbVTable)->cap) && !seen(TCB_PTR_CTE_PTR(tcb, tcbVTable)->cap)) {
-        add_to_seen(TCB_PTR_CTE_PTR(tcb, tcbVTable)->cap);
-        vspace_root_t *vspace = VSPACE_PTR(cap_vspace_cap_get_capVSBasePtr(TCB_PTR_CTE_PTR(tcb, tcbVTable)->cap));
+    cap_t cap = TCB_PTR_CTE_PTR(tcb, tcbVTable)->cap
+    if (isVTableRoot(cap) && !seen(cap)) {
+        add_to_seen(cap);
+        vspace_root_t *vspace = VSPACE_PTR(cap_vspace_cap_get_capVSBasePtr(cap));
 
         /*
          * ARM hyp uses 3 level translation rather than the usual 4 level.

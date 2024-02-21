@@ -33,7 +33,8 @@ static void obj_asidpool_print_attrs(cap_t asid_cap)
 void print_ipc_buffer_slot(tcb_t *tcb)
 {
     word_t vptr = tcb->tcbIPCBuffer;
-    asid_t asid = cap_page_table_cap_get_capPTMappedASID(TCB_PTR_CTE_PTR(tcb, tcbVTable)->cap);
+    cap_t cap = TCB_PTR_CTE_PTR(tcb, tcbVTable)->cap;
+    asid_t asid = cap_page_table_cap_get_capPTMappedASID(cap);
     findVSpaceForASID_ret_t find_ret = findVSpaceForASID(asid);
 
     printf("ipc_buffer_slot: ");
@@ -82,9 +83,10 @@ static void riscv_cap_pt_print_slots(pte_t *upperPtSlot, word_t ptIndex, int lev
 
 void obj_vtable_print_slots(tcb_t *tcb)
 {
-    if (isValidVTableRoot(TCB_PTR_CTE_PTR(tcb, tcbVTable)->cap) && !seen(TCB_PTR_CTE_PTR(tcb, tcbVTable)->cap)) {
-        pte_t *lvl1pt = PTE_PTR(pptr_of_cap(TCB_PTR_CTE_PTR(tcb, tcbVTable)->cap));
-        add_to_seen(TCB_PTR_CTE_PTR(tcb, tcbVTable)->cap);
+    cap_t cap = TCB_PTR_CTE_PTR(tcb, tcbVTable)->cap;
+    if (isValidVTableRoot(cap) && !seen(cap)) {
+        pte_t *lvl1pt = PTE_PTR(pptr_of_cap(cap));
+        add_to_seen(cap);
         riscv_cap_pt_print_slots(lvl1pt, 0, CONFIG_PT_LEVELS);
     }
 }
@@ -215,9 +217,10 @@ static void riscv_obj_pt_print_slots(pte_t *lvl1pt, pte_t *pt, int level)
 
 void obj_tcb_print_vtable(tcb_t *tcb)
 {
-    if (isValidVTableRoot(TCB_PTR_CTE_PTR(tcb, tcbVTable)->cap) && !seen(TCB_PTR_CTE_PTR(tcb, tcbVTable)->cap)) {
-        add_to_seen(TCB_PTR_CTE_PTR(tcb, tcbVTable)->cap);
-        pte_t *lvl1pt = PTE_PTR(pptr_of_cap(TCB_PTR_CTE_PTR(tcb, tcbVTable)->cap));
+    cap_t cap = TCB_PTR_CTE_PTR(tcb, tcbVTable)->cap;
+    if (isValidVTableRoot(cap) && !seen(cap)) {
+        add_to_seen(cap);
+        pte_t *lvl1pt = PTE_PTR(pptr_of_cap(cap));
         printf("%p_pd = pt\n", lvl1pt);
         riscv_obj_pt_print_slots(lvl1pt, lvl1pt, CONFIG_PT_LEVELS - 1);
     }
