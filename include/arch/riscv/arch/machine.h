@@ -282,7 +282,7 @@ static inline void arch_pause(void)
     fence_rw_rw();
 }
 
-#endif
+#endif /* ENABLE_SMP_SUPPORT */
 
 /* Update the value of the actual register to hold the expected value */
 static inline exception_t Arch_setTLSRegister(word_t tls_base)

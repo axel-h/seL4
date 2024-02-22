@@ -7,6 +7,7 @@
 #pragma once
 
 #include <config.h>
+#include <util.h>
 
 #ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
 
@@ -577,33 +578,35 @@ static void vcpu_hw_write_reg(word_t reg_index, word_t reg)
 /** DONT_TRANSLATE */
 static inline void vcpu_init_vtcr(void)
 {
-
     /* check that the processor supports the configuration */
     uint32_t val;
     MRS(REG_ID_AA64MMFR0_EL1, val);
-    uint32_t pa_range = ID_AA64MMFR0_EL1_PARANGE(val);
-    if (config_set(CONFIG_ARM_PA_SIZE_BITS_40) && pa_range < PS_1T) {
-        fail("Processor does not support a 40 bit PA");
-    }
-    if (config_set(CONFIG_ARM_PA_SIZE_BITS_44) && pa_range < PS_16T) {
-        fail("Processor does not support a 44 bit PA");
-    }
+
     uint32_t granule = ID_AA64MMFR0_TGRAN4(val);
     if (granule) {
         fail("Processor does not support 4KB");
     }
 
-    /* Set up the stage-2 translation control register for cores supporting 44-bit PA */
-    uint32_t vtcr_el2;
-#ifdef CONFIG_ARM_PA_SIZE_BITS_40
-    vtcr_el2 = VTCR_EL2_T0SZ(24);                            // 40-bit input IPA
-    vtcr_el2 |= VTCR_EL2_PS(PS_1T);                          // 40-bit PA size
-    vtcr_el2 |= VTCR_EL2_SL0(SL0_4K_L1);                     // 4KiB, start at level 1
+#if (CONFIG_PHYS_ADDR_SPACE_BITS == 40)
+    uint32_t cfg_pa_range = PS_1T;
+#elif (CONFIG_PHYS_ADDR_SPACE_BITS == 44)
+    uint32_t cfg_pa_range = PS_16T;
 #else
-    vtcr_el2 = VTCR_EL2_T0SZ(20);                            // 44-bit input IPA
-    vtcr_el2 |= VTCR_EL2_PS(PS_16T);                         // 44-bit PA size
-    vtcr_el2 |= VTCR_EL2_SL0(SL0_4K_L0);                     // 4KiB, start at level 0
+#error "Unknown physical address width"
 #endif
+    uint32_t pa_range = ID_AA64MMFR0_EL1_PARANGE(val);
+    if (pa_range < cfg_pa_range) {
+        fail("Processor does not support " STRINGIFY(CONFIG_PHYS_ADDR_SPACE_BITS) " bit PA");
+    }
+
+    /* Set up the stage-2 translation control register */
+#ifdef AARCH64_VSPACE_S2_START_L1
+    uint32_t vtcr_el2 = VTCR_EL2_SL0(SL0_4K_L1); // 4KiB, start at level 1
+#else
+    uint32_t vtcr_el2 = VTCR_EL2_SL0(SL0_4K_L0); // 4KiB, start at level 0
+#endif
+    vtcr_el2 |= VTCR_EL2_T0SZ(64 - CONFIG_PHYS_ADDR_SPACE_BITS);
+    vtcr_el2 |= VTCR_EL2_PS(cfg_pa_range);
     vtcr_el2 |= VTCR_EL2_IRGN0(NORMAL_WB_WA_CACHEABLE);      // inner write-back, read/write allocate
     vtcr_el2 |= VTCR_EL2_ORGN0(NORMAL_WB_WA_CACHEABLE);      // outer write-back, read/write allocate
     vtcr_el2 |= VTCR_EL2_SH0(SH0_INNER);                     // inner shareable

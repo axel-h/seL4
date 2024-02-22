@@ -16,7 +16,7 @@
 
 static inline CONST time_t getKernelWcetUs(void)
 {
-    return  10u;
+    return 10u;
 }
 
 static inline PURE ticks_t usToTicks(time_t us)
@@ -40,6 +40,7 @@ static inline PURE ticks_t getTimerPrecision(void)
 
 static inline void ackDeadlineIRQ(void)
 {
+    /* nothing to do */
 }
 
 static inline ticks_t getCurrentTime(void)
@@ -80,4 +81,3 @@ static inline void resetTimer(void)
 
 
 BOOT_CODE uint32_t tsc_init(void);
-

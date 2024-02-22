@@ -29,10 +29,10 @@ void arm_init_ccnt(void)
 #ifdef PMCNTENSET
     /* turn on the cycle counter */
     SYSTEM_WRITE_WORD(PMCNTENSET, BIT(CCNT_INDEX));
-#endif
+#endif /* PMCNTENSET */
 
 #ifdef CONFIG_ARM_ENABLE_PMU_OVERFLOW_INTERRUPT
     armv_enableOverflowIRQ();
 #endif /* CONFIG_ARM_ENABLE_PMU_OVERFLOW_INTERRUPT */
 }
-#endif
+#endif /* CONFIG_ENABLE_BENCHMARKS */

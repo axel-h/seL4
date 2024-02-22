@@ -417,32 +417,19 @@ static BOOT_CODE void map_it_frame_cap(cap_t pd_cap, cap_t frame_cap, bool_t exe
 
 /* Create a frame cap for the initial thread. */
 
-static BOOT_CODE cap_t create_it_frame_cap(pptr_t pptr, vptr_t vptr, asid_t asid, bool_t use_large)
+static BOOT_CODE cap_t create_it_frame_cap(pptr_t pptr, vptr_t vptr, asid_t asid)
 {
-    if (use_large)
-        return
-            cap_frame_cap_new(
-                ARMSection,                    /* capFSize           */
-                ASID_LOW(asid),                /* capFMappedASIDLow  */
-                wordFromVMRights(VMReadWrite), /* capFVMRights       */
-                vptr,                          /* capFMappedAddress  */
-                false,                         /* capFIsDevice       */
-                ASID_HIGH(asid),               /* capFMappedASIDHigh */
-                pptr                           /* capFBasePtr        */
-            );
-    else
-        return
-            cap_small_frame_cap_new(
-                ASID_LOW(asid),                /* capFMappedASIDLow  */
-                wordFromVMRights(VMReadWrite), /* capFVMRights       */
-                vptr,                          /* capFMappedAddress  */
-                false,                         /* capFIsDevice       */
+    return cap_small_frame_cap_new(
+               ASID_LOW(asid),                /* capFMappedASIDLow  */
+               wordFromVMRights(VMReadWrite), /* capFVMRights       */
+               vptr,                          /* capFMappedAddress  */
+               false,                         /* capFIsDevice       */
 #ifdef CONFIG_TK1_SMMU
-                0,                             /* IOSpace            */
+               0,                             /* IOSpace            */
 #endif
-                ASID_HIGH(asid),               /* capFMappedASIDHigh */
-                pptr                           /* capFBasePtr        */
-            );
+               ASID_HIGH(asid),               /* capFMappedASIDHigh */
+               pptr                           /* capFBasePtr        */
+           );
 }
 
 static BOOT_CODE void map_it_pt_cap(cap_t pd_cap, cap_t pt_cap)
@@ -527,15 +514,15 @@ BOOT_CODE cap_t create_it_address_space(cap_t root_cnode_cap, v_region_t it_v_re
     return pd_cap;
 }
 
-BOOT_CODE cap_t create_unmapped_it_frame_cap(pptr_t pptr, bool_t use_large)
+BOOT_CODE cap_t create_unmapped_it_frame_cap(pptr_t pptr)
 {
-    return create_it_frame_cap(pptr, 0, asidInvalid, use_large);
+    return create_it_frame_cap(pptr, 0, asidInvalid);
 }
 
-BOOT_CODE cap_t create_mapped_it_frame_cap(cap_t pd_cap, pptr_t pptr, vptr_t vptr, asid_t asid, bool_t use_large,
+BOOT_CODE cap_t create_mapped_it_frame_cap(cap_t pd_cap, pptr_t pptr, vptr_t vptr, asid_t asid,
                                            bool_t executable)
 {
-    cap_t cap = create_it_frame_cap(pptr, vptr, asid, use_large);
+    cap_t cap = create_it_frame_cap(pptr, vptr, asid);
     map_it_frame_cap(pd_cap, cap, executable);
     return cap;
 }

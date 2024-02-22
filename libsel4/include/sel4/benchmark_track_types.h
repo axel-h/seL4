@@ -11,8 +11,10 @@
 
 #if (defined CONFIG_BENCHMARK_TRACK_KERNEL_ENTRIES || defined CONFIG_DEBUG_BUILD)
 
-/* the following code can be used at any point in the kernel
- * to determine detail about the kernel entry point */
+/* The following IDs can be used at any point in the kernel to determine details
+ * about the kernel entry point. However, there are 3 bits available to store
+ * the value, thus max. 8 different values are possible.
+ */
 typedef enum {
     Entry_Interrupt,
     Entry_UnknownSyscall,
@@ -21,10 +23,9 @@ typedef enum {
     Entry_VMFault,
     Entry_Syscall,
     Entry_UnimplementedDevice,
-#ifdef CONFIG_ARCH_ARM
+#if defined(CONFIG_ARCH_ARM)
     Entry_VCPUFault,
-#endif
-#ifdef CONFIG_ARCH_X86
+#elif defined(CONFIG_ARCH_X86)
     Entry_VMExit,
 #endif
 } entry_type_t;

@@ -31,26 +31,17 @@ BOOT_BSS static volatile word_t node_boot_lock;
 
 BOOT_BSS static region_t res_reg[NUM_RESERVED_REGIONS];
 
-BOOT_CODE cap_t create_mapped_it_frame_cap(cap_t pd_cap, pptr_t pptr, vptr_t vptr, asid_t asid, bool_t
-                                           use_large, bool_t executable)
+BOOT_CODE cap_t create_mapped_it_frame_cap(cap_t pd_cap, pptr_t pptr, vptr_t vptr,
+                                           asid_t asid, bool_t executable)
 {
-    cap_t cap;
-    vm_page_size_t frame_size;
-
-    if (use_large) {
-        frame_size = RISCV_Mega_Page;
-    } else {
-        frame_size = RISCV_4K_Page;
-    }
-
-    cap = cap_frame_cap_new(
-              asid,                            /* capFMappedASID       */
-              pptr,                            /* capFBasePtr          */
-              frame_size,                      /* capFSize             */
-              wordFromVMRights(VMReadWrite),   /* capFVMRights         */
-              0,                               /* capFIsDevice         */
-              vptr                             /* capFMappedAddress    */
-          );
+    cap_t cap = cap_frame_cap_new(
+                    asid,                            /* capFMappedASID       */
+                    pptr,                            /* capFBasePtr          */
+                    RISCV_4K_Page,                   /* capFSize             */
+                    wordFromVMRights(VMReadWrite),   /* capFVMRights         */
+                    0,                               /* capFIsDevice         */
+                    vptr                             /* capFMappedAddress    */
+                );
 
     map_it_frame_cap(pd_cap, cap);
     return cap;
@@ -153,6 +144,7 @@ BOOT_CODE static void init_plat(void)
 
 
 #ifdef ENABLE_SMP_SUPPORT
+
 BOOT_CODE static bool_t try_init_kernel_secondary_core(word_t hart_id, word_t core_id)
 {
     while (!node_boot_lock);
@@ -188,6 +180,7 @@ BOOT_CODE static void release_secondary_cores(void)
         __atomic_thread_fence(__ATOMIC_ACQ_REL);
     }
 }
+
 #endif /* ENABLE_SMP_SUPPORT */
 
 /* Main kernel initialisation function. */
@@ -432,9 +425,6 @@ static BOOT_CODE bool_t try_init_kernel(
         printf("ERROR: could not create untypteds for kernel image boot memory\n");
         return false;
     }
-
-    /* no shared-frame caps (RISC-V has no multikernel support) */
-    ndks_boot.bi_frame->sharedFrames = S_REG_EMPTY;
 
     /* finalise the bootinfo frame */
     bi_finalise();

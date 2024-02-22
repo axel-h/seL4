@@ -8,9 +8,9 @@
 
 #include <config.h>
 #include <types.h>
+#include <util.h>
 #include <object/structures.h>
 #include <object/tcb.h>
-#include <mode/types.h>
 
 #ifdef ENABLE_SMP_SUPPORT
 #define NODE_STATE_BEGIN(_name)                 typedef struct _name {
@@ -21,16 +21,13 @@
 #define SMP_STATE_DEFINE(_type, _state)         _type _state
 #define UP_STATE_DEFINE(_type, _state)
 
-#define SMP_COND_STATEMENT(_st)                 _st
-#define SMP_TERNARY(_smp, _up)                  _smp
-
 #define MODE_NODE_STATE_ON_CORE(_state, _core)  ksSMP[(_core)].cpu.mode._state
 #define ARCH_NODE_STATE_ON_CORE(_state, _core)  ksSMP[(_core)].cpu._state
 #define NODE_STATE_ON_CORE(_state, _core)       ksSMP[(_core)].system._state
 
 #define CURRENT_CPU_INDEX() getCurrentCPUIndex()
 
-#else
+#else /* not ENABLE_SMP_SUPPORT */
 
 #define NODE_STATE_BEGIN(_name)
 #define NODE_STATE_END(_name)
@@ -41,16 +38,13 @@
 #define SMP_STATE_DEFINE(_name, _state)
 #define UP_STATE_DEFINE(_type, _state)          _type _state
 
-#define SMP_COND_STATEMENT(_st)
-#define SMP_TERNARY(_smp, _up)                  _up
-
 #define MODE_NODE_STATE_ON_CORE(_state, _core) _state
 #define ARCH_NODE_STATE_ON_CORE(_state, _core) _state
 #define NODE_STATE_ON_CORE(_state, _core)      _state
 
 #define CURRENT_CPU_INDEX() SEL4_WORD_CONST(0)
 
-#endif /* ENABLE_SMP_SUPPORT */
+#endif /* [not] ENABLE_SMP_SUPPORT */
 
 #define NUM_READY_QUEUES (CONFIG_NUM_DOMAINS * CONFIG_NUM_PRIORITIES)
 #define L2_BITMAP_SIZE ((CONFIG_NUM_PRIORITIES + wordBits - 1) / wordBits)

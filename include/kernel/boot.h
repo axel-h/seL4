@@ -34,11 +34,6 @@ extern ndks_boot_t ndks_boot;
 
 /* function prototypes */
 
-static inline bool_t is_reg_empty(region_t reg)
-{
-    return reg.start == reg.end;
-}
-
 p_region_t get_p_reg_kernel_img_boot(void);
 p_region_t get_p_reg_kernel_img(void);
 bool_t init_freemem(word_t n_available, const p_region_t *available,
@@ -49,6 +44,9 @@ void write_slot(slot_ptr_t slot_ptr, cap_t cap);
 cap_t create_root_cnode(void);
 bool_t provide_cap(cap_t root_cnode_cap, cap_t cap);
 cap_t create_it_asid_pool(cap_t root_cnode_cap);
+cap_t create_unmapped_it_frame_cap(pptr_t pptr);
+cap_t create_mapped_it_frame_cap(cap_t pd_cap, pptr_t pptr, vptr_t vptr,
+                                 asid_t asid, bool_t executable);
 void write_it_pd_pts(cap_t root_cnode_cap, cap_t it_pd_cap);
 void create_idle_thread(void);
 bool_t create_untypeds(cap_t root_cnode_cap);

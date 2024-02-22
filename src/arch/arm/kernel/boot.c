@@ -225,12 +225,11 @@ BOOT_CODE static bool_t init_cpu(void)
     }
 
 #ifdef CONFIG_HAVE_FPU
-    if (haveHWFPU) {
-        if (!fpsimd_init()) {
-            return false;
-        }
-    } else {
+    if (!haveHWFPU) {
         printf("Platform claims to have FP hardware, but does not!\n");
+        return false;
+    }
+    if (!fpsimd_init()) {
         return false;
     }
 #endif /* CONFIG_HAVE_FPU */
@@ -311,7 +310,7 @@ BOOT_CODE static void release_secondary_cpus(void)
 #ifdef CONFIG_ARCH_AARCH32
     cleanInvalidateL1Caches();
     plat_cleanInvalidateL2Cache();
-#endif
+#endif /* CONFIG_ARCH_AARCH64 */
 
     /* Wait until all the secondary cores are done initialising */
     while (ksNumCPUs != CONFIG_MAX_NUM_NODES) {
@@ -473,14 +472,12 @@ static BOOT_CODE bool_t try_init_kernel(
     }
 
     if (config_set(CONFIG_TK1_SMMU)) {
-        ndks_boot.bi_frame->ioSpaceCaps = create_iospace_caps(root_cnode_cap);
-        if (ndks_boot.bi_frame->ioSpaceCaps.start == 0 &&
-            ndks_boot.bi_frame->ioSpaceCaps.end == 0) {
+        seL4_SlotRegion reg = create_iospace_caps(root_cnode_cap);
+        if ((reg.start == 0) && (reg.end == 0)) {
             printf("ERROR: SMMU I/O space creation failed\n");
             return false;
         }
-    } else {
-        ndks_boot.bi_frame->ioSpaceCaps = S_REG_EMPTY;
+        ndks_boot.bi_frame->ioSpaceCaps = reg;
     }
 
     /* Construct an initial address space with enough virtual addresses
@@ -589,9 +586,6 @@ static BOOT_CODE bool_t try_init_kernel(
         return false;
     }
 
-    /* no shared-frame caps (ARM has no multikernel support) */
-    ndks_boot.bi_frame->sharedFrames = S_REG_EMPTY;
-
     /* finalise the bootinfo frame */
     bi_finalise();
 
@@ -649,14 +643,14 @@ BOOT_CODE VISIBLE void init_kernel(
         result = try_init_kernel_secondary_core();
     }
 
-#else
+#else /* not ENABLE_SMP_SUPPORT */
     result = try_init_kernel(ui_p_reg_start,
                              ui_p_reg_end,
                              pv_offset,
                              v_entry,
                              dtb_addr_p, dtb_size);
 
-#endif /* ENABLE_SMP_SUPPORT */
+#endif /* [not] ENABLE_SMP_SUPPORT */
 
     if (!result) {
         fail("ERROR: kernel init failed");

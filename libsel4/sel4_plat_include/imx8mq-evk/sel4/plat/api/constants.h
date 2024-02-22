@@ -12,6 +12,8 @@
 #if CONFIG_WORD_SIZE == 32
 /* First address in the virtual address space that is not accessible to user level */
 #define seL4_UserTop 0xe0000000
+#elif CONFIG_WORD_SIZE == 64
+/*  defined at the arch level */
 #else
-/* otherwise this is defined at the arch level */
+#error "unsupported CONFIG_WORD_SIZE"
 #endif

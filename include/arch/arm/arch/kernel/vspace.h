@@ -15,9 +15,6 @@
 #define IT_ASID 1 /* initial thread's ASID */
 
 cap_t create_it_address_space(cap_t root_cnode_cap, v_region_t it_v_reg);
-cap_t create_unmapped_it_frame_cap(pptr_t pptr, bool_t use_large);
-cap_t create_mapped_it_frame_cap(cap_t pd_cap, pptr_t pptr, vptr_t vptr, asid_t asid, bool_t use_large,
-                                 bool_t executable);
 
 void map_kernel_window(void);
 void map_kernel_frame(paddr_t paddr, pptr_t vaddr, vm_rights_t vm_rights, vm_attributes_t vm_attributes);

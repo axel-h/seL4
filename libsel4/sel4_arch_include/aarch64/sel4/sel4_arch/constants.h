@@ -195,7 +195,7 @@ typedef enum {
 
 #define seL4_VSpaceEntryBits 3
 
-#if defined(CONFIG_ARM_HYPERVISOR_SUPPORT) && defined (CONFIG_ARM_PA_SIZE_BITS_40)
+#ifdef AARCH64_VSPACE_S2_START_L1
 /* for a 3 level translation, we skip the PGD */
 
 #define seL4_VSpaceBits 13
@@ -233,25 +233,15 @@ SEL4_SIZE_SANITY(seL4_VSpaceEntryBits, seL4_VSpaceIndexBits, seL4_VSpaceBits);
 /* IPC buffer is 1024 bytes, giving size bits of 10 */
 #define seL4_IPCBufferSizeBits 10
 
-#ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
-
-/* The userspace occupies the range 0x0 to 0xfffffffffff.
+/* The userspace occupies the range 0x0 to 2^n -1
  * The stage-1 translation is disabled, and the stage-2
- * translation input addree size is constrained by the
+ * translation input address size is constrained by the
  * ID_AA64MMFR0_EL1.PARange which is 44 bits on TX1.
- * Anything address above the range above triggers an
+ * Any address above the range above triggers an
  * address size fault.
  */
-/* First address in the virtual address space that is not accessible to user level */
-#if defined(CONFIG_ARM_PA_SIZE_BITS_44)
-#define seL4_UserTop 0x00000fffffffffff
-#elif defined(CONFIG_ARM_PA_SIZE_BITS_40)
-#define seL4_UserTop 0x000000ffffffffff
+#ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
+#define seL4_UserTop (LIBSEL4_BIT(CONFIG_PHYS_ADDR_SPACE_BITS) - 1)
 #else
-#error "Unknown physical address width"
-#endif
-
-#else
-/* First address in the virtual address space that is not accessible to user level */
-#define seL4_UserTop 0x00007fffffffffff
+#define seL4_UserTop (LIBSEL4_BIT(47) - 1)
 #endif

@@ -302,7 +302,7 @@ BOOT_CODE bool_t map_kernel_window(
 
     /* null mappings up to KDEV_BASE */
 
-    while (idx < (KDEV_BASE &MASK(LARGE_PAGE_BITS)) >> PAGE_BITS) {
+    while (idx < (KDEV_BASE & MASK(LARGE_PAGE_BITS)) >> PAGE_BITS) {
         pte = pte_new(
                   0,      /* page_base_address    */
                   0,      /* avl                  */
@@ -463,39 +463,30 @@ BOOT_CODE cap_t create_it_address_space(cap_t root_cnode_cap, v_region_t it_v_re
     return vspace_cap;
 }
 
-static BOOT_CODE cap_t create_it_frame_cap(pptr_t pptr, vptr_t vptr, asid_t asid, bool_t use_large,
+static BOOT_CODE cap_t create_it_frame_cap(pptr_t pptr, vptr_t vptr, asid_t asid,
                                            vm_page_map_type_t map_type)
 {
-    vm_page_size_t frame_size;
-
-    if (use_large) {
-        frame_size = X86_LargePage;
-    } else {
-        frame_size = X86_SmallPage;
-    }
-
-    return
-        cap_frame_cap_new(
-            frame_size,                    /* capFSize           */
-            ASID_LOW(asid),                /* capFMappedASIDLow  */
-            vptr,                          /* capFMappedAddress  */
-            map_type,                      /* capFMapType        */
-            false,                         /* capFIsDevice       */
-            ASID_HIGH(asid),               /* capFMappedASIDHigh */
-            wordFromVMRights(VMReadWrite), /* capFVMRights       */
-            pptr                           /* capFBasePtr        */
-        );
+    return cap_frame_cap_new(
+               X86_SmallPage,                 /* capFSize           */
+               ASID_LOW(asid),                /* capFMappedASIDLow  */
+               vptr,                          /* capFMappedAddress  */
+               map_type,                      /* capFMapType        */
+               false,                         /* capFIsDevice       */
+               ASID_HIGH(asid),               /* capFMappedASIDHigh */
+               wordFromVMRights(VMReadWrite), /* capFVMRights       */
+               pptr                           /* capFBasePtr        */
+           );
 }
 
-BOOT_CODE cap_t create_unmapped_it_frame_cap(pptr_t pptr, bool_t use_large)
+BOOT_CODE cap_t create_unmapped_it_frame_cap(pptr_t pptr)
 {
-    return create_it_frame_cap(pptr, 0, asidInvalid, use_large, X86_MappingNone);
+    return create_it_frame_cap(pptr, 0, asidInvalid, X86_MappingNone);
 }
 
-BOOT_CODE cap_t create_mapped_it_frame_cap(cap_t vspace_cap, pptr_t pptr, vptr_t vptr, asid_t asid, bool_t use_large,
+BOOT_CODE cap_t create_mapped_it_frame_cap(cap_t vspace_cap, pptr_t pptr, vptr_t vptr, asid_t asid,
                                            bool_t executable UNUSED)
 {
-    cap_t cap = create_it_frame_cap(pptr, vptr, asid, use_large, X86_MappingVSpace);
+    cap_t cap = create_it_frame_cap(pptr, vptr, asid, X86_MappingVSpace);
     map_it_frame_cap(vspace_cap, cap);
     return cap;
 }

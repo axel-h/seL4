@@ -189,7 +189,7 @@ static inline void riscv_sys_nbsend_recv(seL4_Word sys, seL4_Word dest, seL4_Wor
     *in_out_mr2 = msg2;
     *in_out_mr3 = msg3;
 }
-#endif
+#endif /* CONFIG_KERNEL_MCS */
 
 LIBSEL4_INLINE_FUNC void seL4_Send(seL4_CPtr dest, seL4_MessageInfo_t msgInfo)
 {
@@ -246,7 +246,7 @@ LIBSEL4_INLINE_FUNC void seL4_ReplyWithMRs(seL4_MessageInfo_t msgInfo,
                    );
 
 }
-#endif
+#endif /* CONFIG_KERNEL_MCS */
 
 LIBSEL4_INLINE_FUNC void seL4_Signal(seL4_CPtr dest)
 {
@@ -372,7 +372,7 @@ LIBSEL4_INLINE_FUNC void seL4_Wait(seL4_CPtr src, seL4_Word *sender)
 {
     seL4_Recv(src, sender);
 }
-#endif
+#endif /* CONFIG_KERNEL_MCS */
 
 LIBSEL4_INLINE_FUNC seL4_MessageInfo_t seL4_Poll(seL4_CPtr src, seL4_Word *sender)
 {
@@ -683,7 +683,7 @@ LIBSEL4_INLINE_FUNC seL4_MessageInfo_t seL4_NBSendWaitWithMRs(seL4_CPtr dest, se
 
     return info;
 }
-#endif
+#endif /* CONFIG_KERNEL_MCS */
 
 LIBSEL4_INLINE_FUNC void seL4_Yield(void)
 {
@@ -770,7 +770,7 @@ LIBSEL4_INLINE_FUNC seL4_MessageInfo_t seL4_NBWait(seL4_CPtr src, seL4_Word *sen
     }
     return info;
 }
-#endif
+#endif /* CONFIG_KERNEL_MCS */
 
 #ifdef CONFIG_PRINTING
 LIBSEL4_INLINE_FUNC void seL4_DebugPutChar(char c)
@@ -806,7 +806,7 @@ LIBSEL4_INLINE_FUNC void seL4_DebugDumpScheduler(void)
     riscv_sys_send_recv(seL4_SysDebugDumpScheduler, 0, &unused0, 0, &unused1, &unused2, &unused3,
                         &unused4, &unused5, 0);
 }
-#endif
+#endif /* CONFIG_PRINTING */
 
 #ifdef CONFIG_DEBUG_BUILD
 LIBSEL4_INLINE_FUNC void seL4_DebugHalt(void)
@@ -849,7 +849,7 @@ LIBSEL4_INLINE_FUNC void seL4_DebugNameThread(seL4_CPtr tcb, const char *name)
     riscv_sys_send_recv(seL4_SysDebugNameThread, tcb, &unused0, 0, &unused1, &unused2, &unused3,
                         &unused4, &unused5, 0);
 }
-#endif
+#endif /* CONFIG_DEBUG_BUILD */
 
 #ifdef CONFIG_DANGEROUS_CODE_INJECTION
 LIBSEL4_INLINE_FUNC void seL4_DebugRun(void (* userfn)(void *), void *userarg)
@@ -859,7 +859,7 @@ LIBSEL4_INLINE_FUNC void seL4_DebugRun(void (* userfn)(void *), void *userarg)
     register seL4_Word scno asm("a7") = seL4_SysDebugRun;
     asm volatile("ecall" : "+r"(arg1) : "r"(arg2), "r"(scno));
 }
-#endif
+#endif /* CONFIG_DANGEROUS_CODE_INJECTION */
 
 #ifdef CONFIG_ENABLE_BENCHMARKS
 /* set the log index back to 0 */
@@ -976,7 +976,7 @@ LIBSEL4_INLINE_FUNC void seL4_BenchmarkResetAllThreadsUtilisation(void)
     riscv_sys_send_recv(seL4_SysBenchmarkResetAllThreadsUtilisation, 0, &unused0, 0, &unused1, &unused2, &unused3, &unused4,
                         &unused5, 0);
 }
-#endif
+#endif /* CONFIG_DEBUG_BUILD */
 #endif /* CONFIG_BENCHMARK_TRACK_UTILISATION */
 #endif /* CONFIG_ENABLE_BENCHMARKS */
 

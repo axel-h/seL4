@@ -19,7 +19,7 @@
 static inline CONST time_t getKernelWcetUs(void)
 {
     /* Copied from x86_64. Hopefully it's an overestimate here. */
-    return  10u;
+    return 10u;
 }
 
 static inline PURE ticks_t usToTicks(time_t us)
@@ -69,6 +69,7 @@ static inline void setDeadline(ticks_t deadline)
 /* ack previous deadline irq */
 static inline void ackDeadlineIRQ(void)
 {
+    /* nothing to do */
 }
 
 #endif /* CONFIG_KERNEL_MCS */

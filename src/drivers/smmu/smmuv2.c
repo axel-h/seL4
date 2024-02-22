@@ -386,15 +386,16 @@ static void smmu_config_stage2(struct smmu_table_config *cfg,
     reg |= CBn_TCR_ORGN0_SET(CBn_TCR_GN_WB_WA_CACHE);
     reg |= CBn_TCR_IRGN0_SET(CBn_TCR_GN_WB_WA_CACHE);
     reg |= CBn_TCR_TG0_SET(CBn_TCR_TG_4K);
+    reg |= CBn_TCR_T0SZ_SET(64 - CONFIG_PHYS_ADDR_SPACE_BITS);
     /*setting according to the vcpu_init_vtcr in vcpu.h*/
-#ifdef CONFIG_ARM_PA_SIZE_BITS_40
-    reg |= CBn_TCR_T0SZ_SET(24);
+#if (CONFIG_PHYS_ADDR_SPACE_BITS == 40)
     reg |= CBn_TCR_PASize_SET(CBn_TCR2_PASize_40);
     reg |= CBn_TCR_SL0_SET(CBn_TCR_SL0_4KB_L1);
-#else
-    reg |= CBn_TCR_T0SZ_SET(20);
+#elif (CONFIG_PHYS_ADDR_SPACE_BITS == 44)
     reg |= CBn_TCR_PASize_SET(CBn_TCR2_PASize_44);
     reg |= CBn_TCR_SL0_SET(CBn_TCR_SL0_4KB_L0);
+#else
+#error "Unknown physical address width"
 #endif
     /*reserved as 1*/
     reg |= BIT(31);

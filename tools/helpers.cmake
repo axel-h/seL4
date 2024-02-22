@@ -52,17 +52,13 @@ endfunction()
 #  * Input is assumed to be in CMAKE_CURRENT_SOURCE_DIR if it resolves to a file that exists
 #    otherwise it is assumed to be in CMAKE_CURRENT_BINARY_DIR
 function(cppfile output output_target input)
-    cmake_parse_arguments(PARSE_ARGV 3 "CPP" "" "EXACT_NAME" "EXTRA_DEPS;EXTRA_FLAGS")
-    if(NOT "${CPP_UNPARSED_ARGUMENTS}" STREQUAL "")
+    cmake_parse_arguments(PARSE_ARGV 3 "CPP" "" "" "EXTRA_DEPS;EXTRA_FLAGS")
+    if(CPP_UNPARSED_ARGUMENTS)
         message(FATAL_ERROR "Unknown arguments to cppfile: ${CPP_UNPARSED_ARGUMENTS}")
     endif()
     get_absolute_source_or_binary(input "${input}")
     set(file_copy_name "${output_target}_temp.c")
-    # If EXACT_NAME then we copy the input file to the name given by the caller. Otherwise
-    # generate a rule for copying the input file to a default name.
-    if(CPP_EXACT_NAME)
-        set(file_copy_name ${CPP_EXACT_NAME})
-    endif()
+
     add_custom_command(
         OUTPUT ${file_copy_name}
         COMMAND
@@ -70,21 +66,22 @@ function(cppfile output output_target input)
         COMMENT "Creating C input file for preprocessor"
         DEPENDS ${CPP_EXTRA_DEPS} ${input}
     )
+    # We must create a target here that add_dependencies() can use, we can't
+    # use ${file_copy_name} here directly.
     add_custom_target(${output_target}_copy_in DEPENDS ${file_copy_name})
-    # Now generate an object library to persuade cmake to just do compilation and not try
-    # and link our 'object' files
-    add_library(${output_target}_temp_lib OBJECT ${file_copy_name})
-    add_dependencies(${output_target}_temp_lib ${output_target}_copy_in)
-    # Give the preprecess flag
-    target_compile_options(${output_target}_temp_lib PRIVATE -E)
-    # Give any other flags from the user
-    target_compile_options(${output_target}_temp_lib PRIVATE ${CPP_EXTRA_FLAGS})
+    # Now generate an object library to persuade cmake to just do compilation
+    # and not try to link our 'object' files.
+    set(target_temp_lib "${output_target}_temp_lib")
+    add_library(${target_temp_lib} OBJECT ${file_copy_name})
+    add_dependencies(${target_temp_lib} ${output_target}_copy_in)
+    # Give the preprecess flag and any other flags from the user
+    target_compile_options(${target_temp_lib} PRIVATE -E ${CPP_EXTRA_FLAGS})
     # Now copy from the random name cmake gave our object file into the one desired by the user
     add_custom_command(
         OUTPUT ${output}
         COMMAND
-            ${CMAKE_COMMAND} -E copy $<TARGET_OBJECTS:${output_target}_temp_lib> ${output}
-        DEPENDS ${output_target}_temp_lib $<TARGET_OBJECTS:${output_target}_temp_lib>
+            ${CMAKE_COMMAND} -E copy $<TARGET_OBJECTS:${target_temp_lib}> ${output}
+        DEPENDS ${target_temp_lib} $<TARGET_OBJECTS:${target_temp_lib}>
     )
     add_custom_target(${output_target} DEPENDS ${output})
 endfunction(cppfile)
@@ -161,10 +158,8 @@ endfunction(GenThyBFTarget)
 
 # Generate hol definitions from a bitfield specification
 function(GenDefsBFTarget target_name target_file pbf_path pbf_target prunes deps)
-    set(args "")
-    list(APPEND args --hol_defs)
     GenThyBFTarget(
-        "${args}"
+        "--hol_defs"
         "${target_name}"
         "${target_file}"
         "${pbf_path}"

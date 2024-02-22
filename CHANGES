@@ -83,6 +83,8 @@ Upcoming release: BREAKING
   optimization.
 * Added SMC Capability (smc_cap) and SMC forwarding for aarch64 platforms. See
   [RFC-9](https://sel4.atlassian.net/browse/RFC-9).
+* Added CONFIG_PHYS_ADDR_SPACE_BITS (KernelPhysAddressSpaceBits), from this CONFIG_PHYS_ADDR_TOP (KernelPhysAddrTop)
+  gets derived in the generic CMake files. Removeed PADDR_USER_DEVICE_TOP (KernelPaddrUserTop).
 
 ## Upgrade Notes
 

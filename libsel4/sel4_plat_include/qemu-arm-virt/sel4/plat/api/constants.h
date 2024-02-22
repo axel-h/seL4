@@ -21,9 +21,11 @@
 #error "unsupported core"
 #endif
 
-/* First address in the virtual address space that is not accessible to user level */
-
 #if CONFIG_WORD_SIZE == 32
-
+/* First address in the virtual address space that is not accessible to user level */
 #define seL4_UserTop CONFIG_USER_TOP
+#elif CONFIG_WORD_SIZE == 64
+/*  defined at the arch level */
+#else
+#error "unsupported CONFIG_WORD_SIZE"
 #endif

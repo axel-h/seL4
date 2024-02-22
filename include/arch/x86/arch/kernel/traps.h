@@ -19,7 +19,7 @@ static inline void arch_c_entry_hook(void)
 
 static inline void arch_c_exit_hook(void)
 {
-    /* Restore the values ofthe FS and GS base. */
+    /* Restore the values of the FS and GS base. */
     tcb_t *tcb = NODE_STATE(ksCurThread);
     x86_load_fsgs_base(tcb,  CURRENT_CPU_INDEX());
 }
