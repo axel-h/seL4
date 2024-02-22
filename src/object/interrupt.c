@@ -153,10 +153,17 @@ void invokeIRQHandler_AckIRQ(irq_t irq)
 #endif
 }
 
-void invokeIRQHandler_SetIRQHandler(irq_t irq, cap_t cap, cte_t *slot)
+static cte_t *getIrqStateSlot(irq_t irq)
 {
     word_t idx = IRQT_TO_IDX(irq);
-    cte_t *irqSlot = &intStateIRQNode[idx];
+    // ToDo: check if index is valid?
+    return &intStateIRQNode[idx];
+}
+
+void invokeIRQHandler_SetIRQHandler(irq_t irq, cap_t cap, cte_t *slot)
+{
+    cte_t *irqSlot = getIrqStateSlot(irq);
+    assert(irqSlot);
 
     /** GHOSTUPD: "(True, gs_set_assn cteDeleteOne_'proc (-1))" */
     cteDeleteOne(irqSlot);
@@ -165,8 +172,8 @@ void invokeIRQHandler_SetIRQHandler(irq_t irq, cap_t cap, cte_t *slot)
 
 void invokeIRQHandler_ClearIRQHandler(irq_t irq)
 {
-    word_t idx = IRQT_TO_IDX(irq);
-    cte_t *irqSlot = &intStateIRQNode[idx];
+    cte_t *irqSlot = getIrqStateSlot(irq);
+    assert(irqSlot);
 
     /** GHOSTUPD: "(True, gs_set_assn cteDeleteOne_'proc (-1))" */
     cteDeleteOne(irqSlot);
@@ -174,8 +181,8 @@ void invokeIRQHandler_ClearIRQHandler(irq_t irq)
 
 void deletingIRQHandler(irq_t irq)
 {
-    word_t idx = IRQT_TO_IDX(irq);
-    cte_t *slot = &intStateIRQNode[idx];
+    cte_t *slot = getIrqStateSlot(irq);
+    assert(slot);
 
     /** GHOSTUPD: "(True, gs_set_assn cteDeleteOne_'proc (ucast cap_notification_cap))" */
     cteDeleteOne(slot);
