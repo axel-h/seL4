@@ -17,7 +17,8 @@ if(KernelPlatformOdroidc4)
     list(APPEND KernelDTSList "tools/dts/odroidc4.dts" "src/plat/odroidc4/overlay-odroidc4.dts")
     declare_default_headers(
         TIMER_FREQUENCY 24000000
-        MAX_IRQ 250
+        # MAX_IRQ is based on the section 7.10.2 of the S905X3 SoC manual
+        MAX_IRQ 255
         NUM_PPI 32
         TIMER drivers/timer/arm_generic.h
         INTERRUPT_CONTROLLER arch/machine/gic_v2.h
