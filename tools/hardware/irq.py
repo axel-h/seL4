@@ -5,6 +5,7 @@
 # SPDX-License-Identifier: GPL-2.0-only
 #
 
+from __future__ import annotations
 import logging
 from hardware.device import Utils, WrappedNode
 from hardware.fdt import FdtParser

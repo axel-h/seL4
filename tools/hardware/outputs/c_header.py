@@ -5,6 +5,8 @@
 #
 
 ''' generate a c header file from the device tree '''
+
+from __future__ import annotations
 import argparse
 import builtins
 import jinja2

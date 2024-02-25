@@ -4,9 +4,10 @@
 # SPDX-License-Identifier: GPL-2.0-only
 #
 
-from collections import OrderedDict
+from __future__ import annotations
 from typing import Generator, cast
 from collections.abc import Callable
+from collections import OrderedDict
 import logging
 import pyfdt.pyfdt
 from hardware.memory import Region

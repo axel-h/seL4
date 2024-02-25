@@ -4,6 +4,7 @@
 # SPDX-License-Identifier: GPL-2.0-only
 #
 
+from __future__ import annotations
 from typing import IO
 from collections.abc import Callable
 import pyfdt.pyfdt

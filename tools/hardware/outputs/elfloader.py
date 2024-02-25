@@ -6,6 +6,7 @@
 
 ''' generate a header file for the elfloader from a device tree '''
 
+from __future__ import annotations
 import argparse
 import builtins
 import logging

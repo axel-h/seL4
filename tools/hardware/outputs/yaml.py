@@ -6,6 +6,7 @@
 
 ''' generate a yaml file with memory region info from the device tree '''
 
+from __future__ import annotations
 import argparse
 import yaml
 import hardware
