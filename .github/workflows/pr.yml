@@ -6,32 +6,12 @@
 
 name: PR
 
-on: [pull_request]
+on: [pull_request, workflow_dispatch]
 
 jobs:
-  gitlint:
-    name: Gitlint
-    runs-on: ubuntu-latest
-    steps:
-    - uses: axel-h/ci-actions/.github/workflows/pr.yml@patch-axel-7
-
-  whitespace:
-    name: 'Trailing Whitespace'
-    runs-on: ubuntu-latest
-    steps:
-    - uses: axel-h/ci-actions/git-diff-check@patch-axel-7
-
-  shell:
-    name: 'Portable Shell'
-    runs-on: ubuntu-latest
-    steps:
-    - uses: axel-h/ci-actions/bashisms@patch-axel-7
-
-  style:
-    name: Style
-    runs-on: ubuntu-latest
-    steps:
-    - uses: axel-h/ci-actions/style@patch-axel-7
+  pr-checks:
+    name: Checks
+    uses: axel-h/ci-actions/.github/workflows/pr.yml@patch-axel-7
 
   preprocess:
     name: Preprocess

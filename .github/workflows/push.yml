@@ -10,16 +10,9 @@ on:
     branches:
       - master
   pull_request:
+  workflow_dispatch:
 
 jobs:
-  check:
-    name: License Check
-    runs-on: ubuntu-latest
-    steps:
-    - uses: axel-h/ci-actions/license-check@patch-axel-7
-
-  links:
-    name: Links
-    runs-on: ubuntu-latest
-    steps:
-      - uses: axel-h/ci-actions/link-check@patch-axel-7
+  checks:
+    name: Checks
+    uses: axel-h/ci-actions/.github/workflows/push.yml@patch-axel-7
