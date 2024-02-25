@@ -1,3 +1,4 @@
+# Copyright 2021, Proofcraft Pty Ltd
 # Copyright 2020, Data61, CSIRO (ABN 41 687 119 230)
 #
 # SPDX-License-Identifier: BSD-2-Clause
@@ -12,7 +13,46 @@ on:
   pull_request:
   workflow_dispatch:
 
+# To reduce the load we cancel any older runs of this workflow for the current
+# PR. For deployment to the master branch, the workflow will run on each push,
+# and the `run_id` parameter will prevent cancellation.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.number) || format('run-{0}', github.run_id) }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   checks:
     name: Checks
     uses: seL4/ci-actions/.github/workflows/push.yml@master
+
+  cparser:
+    name: C Parser
+    runs-on: ubuntu-latest
+    steps:
+    - uses: seL4/ci-actions/cparser-run@master
+
+  standalone_kernel:
+    name: kernel
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # RISCV32 and IA32 are left out, as they have no verified config
+        arch: [ARM, ARM_HYP, AARCH64, RISCV64, X64]
+        compiler: [gcc, llvm]
+    steps:
+    - uses: actions/checkout@v4
+    - uses: seL4/ci-actions/standalone-kernel@master
+      with:
+        ARCH: ${{ matrix.arch }}
+        COMPILER: ${{ matrix.compiler }}
+
+  manual:
+    name: Build PDF
+    runs-on: ubuntu-latest
+    steps:
+    - uses: seL4/ci-actions/seL4-manual@master
+    - uses: actions/upload-artifact@v4
+      with:
+        name: PDF
+        path: manual/manual.pdf
