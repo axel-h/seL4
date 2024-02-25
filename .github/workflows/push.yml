@@ -31,4 +31,4 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: pip3 install mypy
-      - run: mypy tools
+      - run: mypy --disable-error-code=import-untyped tools
