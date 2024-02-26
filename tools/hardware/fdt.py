@@ -4,10 +4,9 @@
 # SPDX-License-Identifier: GPL-2.0-only
 #
 
-from typing import Dict, IO, List, Union
+from typing import IO, Union
 from collections.abc import Callable
 import pyfdt.pyfdt
-
 from hardware.device import WrappedNode
 from hardware.irq import create_irq_controller, IrqController
 
@@ -18,9 +17,9 @@ class FdtParser:
     def __init__(self, dtb_file: IO[bytes]):
         self.fdt = pyfdt.pyfdt.FdtBlobParse(dtb_file).to_fdt()
         self.wrapped_root: WrappedNode
-        self.by_phandle: Dict[int, WrappedNode] = {}
-        self.by_path: Dict[str, WrappedNode] = {}
-        self.irq_controllers: Dict[int, IrqController] = {}
+        self.by_phandle: dict[int, WrappedNode] = {}
+        self.by_path: dict[str, WrappedNode] = {}
+        self.irq_controllers: dict[int, IrqController] = {}
         # initialise the "nice" representation of the tree
         self._walk()
 
@@ -74,15 +73,15 @@ class FdtParser:
         prop = aliases.get_prop(alias)
         return prop.strings[0]
 
-    def get_kernel_devices(self) -> List[WrappedNode]:
+    def get_kernel_devices(self) -> list[WrappedNode]:
         return self.get_devices_list('seL4,kernel-devices')
 
-    def get_elfloader_devices(self) -> List[WrappedNode]:
+    def get_elfloader_devices(self) -> list[WrappedNode]:
         return self.get_devices_list('seL4,elfloader-devices')
 
-    def get_devices_list(self, prop) -> List[WrappedNode]:
+    def get_devices_list(self, prop) -> list[WrappedNode]:
         ''' Returns a list of devices that are used by the kernel '''
-        ret: List[WrappedNode] = []
+        ret: list[WrappedNode] = []
         chosen = self.get_path('/chosen')
         if (chosen is not None) and chosen.has_prop(prop):
             paths = chosen.get_prop(prop).strings

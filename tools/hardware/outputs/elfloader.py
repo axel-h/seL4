@@ -12,7 +12,7 @@ import logging
 import pyfdt.pyfdt
 
 from jinja2 import Environment, BaseLoader
-from typing import Dict, List, Union
+from typing import Union
 
 from hardware import config, device, fdt
 from hardware.utils import cpu, memory, rule
@@ -99,7 +99,7 @@ extern struct elfloader_cpu elfloader_cpus[];
 '''
 
 
-def get_elfloader_cpus(tree: fdt.FdtParser, devices: List[device.WrappedNode]) -> List[dict]:
+def get_elfloader_cpus(tree: fdt.FdtParser, devices: list[device.WrappedNode]) -> list[dict]:
     cpus = cpu.get_cpus(tree)
     PSCI_COMPAT = ['arm,psci-0.2', 'arm,psci-1.0']
     psci_node = [n for n in devices if n.has_prop('compatible')
@@ -145,7 +145,7 @@ def run(tree: fdt.FdtParser, hardware: rule.HardwareYaml, config: config.Config,
     cpu_info = get_elfloader_cpus(tree, devices)
 
     max_reg = 1
-    device_info: List[Dict] = []  # ToDo: TypeDect: str, str, List[Region]
+    device_info: list[dict] = []  # ToDo: TypeDect: str, str, List[Region]
     for dev in devices:
         regions = dev.get_regions()
         max_reg = max(len(regions), max_reg)

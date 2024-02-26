@@ -5,11 +5,10 @@
 #
 
 from collections import OrderedDict
-from typing import Dict, Generator, List, Tuple, cast
+from typing import Generator, cast
 from collections.abc import Callable
 import logging
 import pyfdt.pyfdt
-
 from hardware.memory import Region
 from hardware.fdt import FdtParser
 
@@ -22,8 +21,8 @@ class WrappedNode:
         self.parent = parent
         self.depth = 0
         self.path = path
-        self.children: Dict[str, WrappedNode] = OrderedDict()
-        self.props: Dict[str, pyfdt.pyfdt.FdtProperty] = {}
+        self.children: dict[str, WrappedNode] = OrderedDict()
+        self.props: dict[str, pyfdt.pyfdt.FdtProperty] = {}
         for prop in node:
             if not isinstance(prop, pyfdt.pyfdt.FdtProperty):
                 continue
@@ -96,7 +95,7 @@ class WrappedNode:
         # see devicetree spec v0.2, 2.3.5 "#address-cells and #size-cells"
         return 1
 
-    def get_regions(self) -> List[Region]:
+    def get_regions(self) -> list[Region]:
         if 'reg' not in self.props:
             return []
 
@@ -112,7 +111,7 @@ class WrappedNode:
         size = self.parent.get_addr_cells()
         return Utils.make_number(size, array)
 
-    def get_interrupts(self, tree: FdtParser) -> List[int]:
+    def get_interrupts(self, tree: FdtParser) -> list[int]:
         irqs = []
         if 'interrupts-extended' in self.props:
             data = list(self.props['interrupts-extended'].words)
@@ -127,7 +126,7 @@ class WrappedNode:
                 irqs.append(interrupt_parent.parse_irq(self, data))
         return irqs
 
-    def get_interrupt_affinities(self) -> List[int]:
+    def get_interrupt_affinities(self) -> list[int]:
         if not self.has_prop('interrupt-affinity'):
             return []
         return list(self.get_prop('interrupt-affinity').words)
@@ -207,7 +206,7 @@ class Utils:
         return addr
 
     @staticmethod
-    def make_number(cells: int, array: List[int]) -> int:
+    def make_number(cells: int, array: list[int]) -> int:
         ret = 0
         for i in range(cells):
             ret = (ret << 32)
@@ -215,7 +214,7 @@ class Utils:
         return ret
 
     @staticmethod
-    def intarray_iter(array: List[int], sizes: Tuple[int, ...]) -> Generator[List[int], None, None]:
+    def intarray_iter(array: list[int], sizes: tuple[int, ...]) -> Generator[list[int], None, None]:
         i = 0
         res = []
         while len(array) > 0:

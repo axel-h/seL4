@@ -4,18 +4,17 @@
 # SPDX-License-Identifier: GPL-2.0-only
 #
 
-from typing import List
-
 from hardware.device import WrappedNode
 from hardware.fdt import FdtParser
+
 
 # documentation for CPU bindings:
 # https://www.kernel.org/doc/Documentation/devicetree/bindings/arm/cpus.yaml
 
 
-def get_cpus(tree: FdtParser) -> List[WrappedNode]:
+def get_cpus(tree: FdtParser) -> list[WrappedNode]:
     ' Return a list of all the CPUs described in this device tree. '
-    found_cpus: List[WrappedNode] = []
+    found_cpus: list[WrappedNode] = []
     cpus_nodes = tree.get_path('/cpus')
     if cpus_nodes is not None:
         for node in cpus_nodes:

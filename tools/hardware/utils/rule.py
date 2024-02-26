@@ -6,7 +6,7 @@
 
 from collections import defaultdict
 from functools import lru_cache
-from typing import Dict, List, Union
+from typing import Union
 
 import logging
 
@@ -58,7 +58,7 @@ class KernelRegionGroup:
         ''' True if this group has a macro '''
         return self.macro is not None
 
-    def take_labels(self, other_group: 'KernelRegionGroup'):
+    def take_labels(self, other_group: KernelRegionGroup):
         ''' Take another group's labels and add them to our own '''
         if self != other_group:
             raise ValueError('need to have equal size and base to take labels')
@@ -80,9 +80,9 @@ class KernelRegionGroup:
         self.kernel_offset = offset
         return offset + self.size
 
-    def get_labelled_addresses(self) -> Dict[int, str]:
+    def get_labelled_addresses(self) -> dict[int, str]:
         ''' Get a dict of address -> label for the kernel '''
-        ret: Dict[int, str] = {}
+        ret: dict[int, str] = {}
         for (k, v) in self.labels.items():
             ret[v + self.kernel_offset] = k
         return ret
@@ -155,7 +155,7 @@ class DeviceRule:
 
     def __init__(self, rule: dict, config: Config):
         self.rule = rule
-        self.regions: Dict[int, Dict] = {}
+        self.regions: dict[int, dict] = {}
         self.interrupts = rule.get('interrupts', {})
         self.config = config
 
@@ -163,7 +163,7 @@ class DeviceRule:
             self.regions[reg['index']] = reg
 
     @lru_cache()
-    def get_regions(self, node: WrappedNode) -> List[KernelRegionGroup]:
+    def get_regions(self, node: WrappedNode) -> list[KernelRegionGroup]:
         ''' Returns a list of KernelRegionGroups that this rule specifies should be mapped into the kernel for this device. '''
         ret = []
         regions = node.get_regions()
@@ -189,9 +189,9 @@ class DeviceRule:
         return ret
 
     @lru_cache()
-    def get_interrupts(self, tree: FdtParser, node: WrappedNode) -> List[KernelInterrupt]:
+    def get_interrupts(self, tree: FdtParser, node: WrappedNode) -> list[KernelInterrupt]:
         ''' Returns a list of KernelInterrupts that this rule says are used by the kernel for this device. '''
-        ret: List[KernelInterrupt] = []
+        ret: list[KernelInterrupt] = []
         interrupts = node.get_interrupts(tree)
 
         for name, rule in self.interrupts.items():

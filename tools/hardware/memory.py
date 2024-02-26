@@ -4,7 +4,7 @@
 # SPDX-License-Identifier: GPL-2.0-only
 #
 
-from typing import List, Union
+from typing import Union
 import functools
 import hardware
 
@@ -71,7 +71,7 @@ class Region:
         return (self.base <= other.base and (self.base + self.size) > other.base) \
             or (other.base <= self.base and (other.base + other.size) > self.base)
 
-    def reserve(self, excluded: Region) -> List[Region]:
+    def reserve(self, excluded: Region) -> list[Region]:
         ''' returns an array of regions that represent this region
         minus the excluded range '''
         if not self.overlaps(excluded):
@@ -114,7 +114,7 @@ class Region:
         new_size = hardware.utils.align_up(self.size, align_bits)
         return Region(new_base, new_size, self.owner)
 
-    def make_chunks(self, chunksz: int) -> List[Region]:
+    def make_chunks(self, chunksz: int) -> list[Region]:
         base = self.base
         size = self.size
         ret = []

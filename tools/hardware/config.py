@@ -3,7 +3,7 @@
 #
 # SPDX-License-Identifier: GPL-2.0-only
 #
-from typing import List, Set, Tuple
+
 from hardware.memory import Region
 
 
@@ -35,15 +35,15 @@ class Config:
         ''' Get page size in bits for mapping devices for this arch '''
         return self.get_page_bits()
 
-    def align_memory(self, regions: Set[Region]) -> Tuple[List[Region], Set[Region], int]:
+    def align_memory(self, regions: set[Region]) -> tuple[list[Region], set[Region], int]:
         ''' Given a set of regions, sort them and align the first so that the
         ELF loader will be able to load the kernel into it. Will return the
         aligned memory region list, a set of any regions of memory that were
         aligned out and the physBase value that the kernel will use. memory
         region list, a set of any regions of memory that were aligned out and
         the physBase value that the kernel will use. '''
-        ret: List[Region] = sorted(regions)
-        extra_reserved: Set[Region] = set()
+        ret: list[Region] = sorted(regions)
+        extra_reserved: set[Region] = set()
         if len(regions) == 0:
             raise IndexError("no regions defined, can't set physBase")
         physBase = ret[0].base
@@ -62,7 +62,7 @@ class ARMConfig(Config):
         ''' On AArch32 the kernel requires at least super section alignment for physBase. '''
         return self.SUPERSECTION_BITS
 
-    def align_memory(self, regions: Set[Region]) -> Tuple[List[Region], Set[Region], int]:
+    def align_memory(self, regions: set[Region]) -> tuple[list[Region], set[Region], int]:
         ''' Arm wants physBase to be the physical load address of the kernel. '''
         ret, extra_reserved, _ = super().align_memory(regions)
         new = ret[0].align_base(self.get_kernel_phys_align())
@@ -89,7 +89,7 @@ class RISCVConfig(Config):
         magepages that exist there. '''
         return self.MEGA_PAGE_SIZE_RV64
 
-    def align_memory(self, regions: Set[Region]) -> Tuple[List[Region], Set[Region], int]:
+    def align_memory(self, regions: set[Region]) -> tuple[list[Region], set[Region], int]:
         ''' Currently the RISC-V port expects physBase to be the address that the
         bootloader is loaded at. To be generalised in the future. '''
         ret, extra_reserved, physBase = super().align_memory(regions)

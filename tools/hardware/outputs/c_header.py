@@ -8,7 +8,6 @@
 import argparse
 import builtins
 import jinja2
-from typing import Dict, List, Tuple
 import hardware
 from hardware.config import Config
 from hardware.fdt import FdtParser
@@ -132,7 +131,7 @@ static const p_region_t BOOT_RODATA avail_p_regs[] = {
 '''
 
 
-def get_kernel_devices(tree: FdtParser, hw_yaml: HardwareYaml) -> Tuple[List[KernelRegionGroup], Dict[int, str]]:
+def get_kernel_devices(tree: FdtParser, hw_yaml: HardwareYaml) -> tuple[list[KernelRegionGroup], dict[int, str]]:
     '''
     Given a device tree and a set of rules, returns a tuple (groups, offsets).
 
@@ -145,7 +144,7 @@ def get_kernel_devices(tree: FdtParser, hw_yaml: HardwareYaml) -> Tuple[List[Ker
     kernel_devices = tree.get_kernel_devices()
 
     kernel_offset = 0
-    groups: List[KernelRegionGroup] = []
+    groups: list[KernelRegionGroup] = []
     for dev in kernel_devices:
         dev_rule = hw_yaml.get_rule(dev)
         new_regions = dev_rule.get_regions(dev)
@@ -156,18 +155,18 @@ def get_kernel_devices(tree: FdtParser, hw_yaml: HardwareYaml) -> Tuple[List[Ker
             else:
                 groups.append(reg)
 
-    offsets: Dict[int, str] = {}
+    offsets: dict[int, str] = {}
     for group in groups:
         kernel_offset = group.set_kernel_offset(kernel_offset)
         offsets.update(group.get_labelled_addresses())
     return (groups, offsets)
 
 
-def get_interrupts(tree: FdtParser, hw_yaml: HardwareYaml) -> List[KernelInterrupt]:
+def get_interrupts(tree: FdtParser, hw_yaml: HardwareYaml) -> list[KernelInterrupt]:
     ''' Get dict of interrupts, {label: KernelInterrupt} from the DT and hardware rules. '''
     kernel_devices = tree.get_kernel_devices()
 
-    labeldIrqs: Dict[str, KernelInterrupt] = {}
+    labeldIrqs: dict[str, KernelInterrupt] = {}
     for dev in kernel_devices:
         dev_rule = hw_yaml.get_rule(dev)
         if len(dev_rule.interrupts.items()) == 0:
@@ -183,8 +182,8 @@ def get_interrupts(tree: FdtParser, hw_yaml: HardwareYaml) -> List[KernelInterru
     return ret
 
 
-def create_c_header_file(config, kernel_irqs: List, kernel_macros: Dict,
-                         kernel_regions: List, physBase: int, physical_memory,
+def create_c_header_file(config, kernel_irqs: list, kernel_macros: dict,
+                         kernel_regions: list, physBase: int, physical_memory,
                          outputStream):
 
     jinja_env = jinja2.Environment(loader=jinja2.BaseLoader(), trim_blocks=True,

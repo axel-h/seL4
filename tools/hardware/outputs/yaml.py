@@ -8,7 +8,6 @@
 
 import argparse
 import yaml
-from typing import Dict, List
 import hardware
 from hardware.config import Config
 from hardware.fdt import FdtParser
@@ -16,7 +15,7 @@ from hardware.memory import Region
 from hardware.utils.rule import HardwareYaml, KernelRegionGroup
 
 
-def make_yaml_list_of_regions(regions: List[Region]) -> List[Dict[str, int]]:
+def make_yaml_list_of_regions(regions: list[Region]) -> list[dict[str, int]]:
     return [
         {
             'start': r.base,
@@ -26,7 +25,7 @@ def make_yaml_list_of_regions(regions: List[Region]) -> List[Dict[str, int]]:
     ]
 
 
-def create_yaml_file(dev_mem: List[Region], phys_mem: List[Region], outputStream):
+def create_yaml_file(dev_mem: list[Region], phys_mem: list[Region], outputStream):
 
     yaml.add_representer(
         int,
@@ -41,7 +40,7 @@ def create_yaml_file(dev_mem: List[Region], phys_mem: List[Region], outputStream
         yaml.dump(yaml_obj, outputStream)
 
 
-def get_kernel_devices(tree: FdtParser, hw_yaml: HardwareYaml) -> List[KernelRegionGroup]:
+def get_kernel_devices(tree: FdtParser, hw_yaml: HardwareYaml) -> list[KernelRegionGroup]:
     kernel_devices = tree.get_kernel_devices()
 
     groups = []
