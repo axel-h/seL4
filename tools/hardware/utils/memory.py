@@ -58,13 +58,13 @@ def merge_memory_regions(regions: Set[Region]) -> Set[Region]:
 def parse_reserved_regions(node: Union[WrappedNode, None]) -> Set[Region]:
     ''' Parse a reserved-memory node, looking for regions that are
         unusable by OS (e.g. reserved for firmware/bootloader) '''
-    if node is None:
-        return set()
-
     ret = set()
-    for child in node:
-        if child.has_prop('reg') and child.has_prop('no-map'):
-            ret.update(child.get_regions())
+
+    if node is not None:
+        for child in node:
+            if child.has_prop('reg') and child.has_prop('no-map'):
+                ret.update(child.get_regions())
+
     return ret
 
 

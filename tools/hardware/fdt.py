@@ -82,20 +82,17 @@ class FdtParser:
 
     def get_devices_list(self, prop) -> List[WrappedNode]:
         ''' Returns a list of devices that are used by the kernel '''
-        chosen = self.get_path('/chosen')
-        if (chosen is None) or (not chosen.has_prop(prop)):
-            return []
-
         ret = []
-        paths = chosen.get_prop(prop).strings
-
-        for path in paths:
-            if not path.startswith('/'):
-                path = self.lookup_alias(path)
-            node = self.get_path(path)
-            if node is None:
-                raise KeyError(f"could not resolve path in chosen node: '{path}'")
-            ret.append(node)
+        chosen = self.get_path('/chosen')
+        if (chosen is not None) and chosen.has_prop(prop):
+            paths = chosen.get_prop(prop).strings
+            for path in paths:
+                if not path.startswith('/'):
+                    path = self.lookup_alias(path)
+                node = self.get_path(path)
+                if node is None:
+                    raise KeyError(f"could not resolve path in chosen node: '{path}'")
+                ret.append(node)
 
         return ret
 

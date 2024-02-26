@@ -147,13 +147,13 @@ def run(tree: fdt.FdtParser, hardware: rule.HardwareYaml, config: config.Config,
     max_reg = 1
     device_info = []
     for dev in devices:
+        regions = dev.get_regions()
+        max_reg = max(len(regions), max_reg)
         obj = {
             'compat': hardware.get_matched_compatible(dev),
             'path': dev.path,
-            'regions': dev.get_regions()
+            'regions': regions
         }
-        max_reg = max(len(obj['regions']), max_reg)
-
         device_info.append(obj)
 
     device_info.sort(key=lambda a: a['compat'])

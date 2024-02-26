@@ -167,21 +167,18 @@ def get_interrupts(tree: FdtParser, hw_yaml: HardwareYaml) -> List[KernelInterru
     ''' Get dict of interrupts, {label: KernelInterrupt} from the DT and hardware rules. '''
     kernel_devices = tree.get_kernel_devices()
 
-    irqs = []
+    labeldIrqs = {}
     for dev in kernel_devices:
         dev_rule = hw_yaml.get_rule(dev)
-        if len(dev_rule.interrupts.items()) > 0:
-            irqs += dev_rule.get_interrupts(tree, dev)
+        if len(dev_rule.interrupts.items()) == 0:
+            continue
+        for irq in dev_rule.get_interrupts(tree, dev):
+            label = irq.label
+            if (label in labeldIrqs) and (irq.prio <= labeldIrqs[label].prio):
+                continue
+            labeldIrqs[label] = irq
 
-    ret = {}
-    for irq in irqs:
-        if irq.label in ret:
-            if irq.prio > ret[irq.label].prio:
-                ret[irq.label] = irq
-        else:
-            ret[irq.label] = irq
-
-    ret = list(ret.values())
+    ret = list(labeldIrqs.values())
     ret.sort(key=lambda a: a.label)
     return ret
 
