@@ -4,7 +4,7 @@
 # SPDX-License-Identifier: GPL-2.0-only
 #
 
-from typing import TypedDict, Union
+from typing import TypedDict
 
 import hardware
 from hardware.config import Config
@@ -30,8 +30,8 @@ def get_memory_regions(tree: FdtParser) -> set[Region]:
 # to define this here to use type checking.
 class RegionExt(TypedDict):
     region: Region
-    right_adj: Union[RegionExt, None]
-    left_adj: Union[RegionExt, None]
+    right_adj: RegionExt | None
+    left_adj: RegionExt | None
 
 
 def merge_memory_regions(regions: set[Region]) -> set[Region]:
@@ -64,7 +64,7 @@ def merge_memory_regions(regions: set[Region]) -> set[Region]:
     return contiguous_regions
 
 
-def parse_reserved_regions(node: Union[WrappedNode, None]) -> set[Region]:
+def parse_reserved_regions(node: WrappedNode | None) -> set[Region]:
     ''' Parse a reserved-memory node, looking for regions that are
         unusable by OS (e.g. reserved for firmware/bootloader) '''
     ret: set[Region] = set()

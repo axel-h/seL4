@@ -12,7 +12,6 @@ import logging
 import pyfdt.pyfdt
 
 from jinja2 import Environment, BaseLoader
-from typing import Union
 
 from hardware import config, device, fdt
 from hardware.utils import cpu, memory, rule
@@ -120,7 +119,7 @@ def get_elfloader_cpus(tree: fdt.FdtParser, devices: list[device.WrappedNode]) -
         if cpu_node.has_prop('reg'):
             cpuid = cpu_node.parse_address(list(cpu_node.get_prop('reg').words))
 
-        extra_data: Union[str, int] = 0
+        extra_data: str | int = 0
         if enable_method == 'psci' and psci_node:
             extra_data = 'PSCI_METHOD_' + psci_node.get_prop('method').strings[0].upper()
         elif enable_method == 'spin-table':

@@ -4,7 +4,7 @@
 # SPDX-License-Identifier: GPL-2.0-only
 #
 
-from typing import IO, Union
+from typing import IO
 from collections.abc import Callable
 import pyfdt.pyfdt
 from hardware.device import WrappedNode
@@ -54,7 +54,7 @@ class FdtParser:
         ''' Look up a node by phandle '''
         return self.by_phandle[phandle]
 
-    def get_path(self, path: str) -> Union[WrappedNode, None]:
+    def get_path(self, path: str) -> WrappedNode | None:
         ''' Look up a node by path '''
         return self.by_path.get(path, None)
 
