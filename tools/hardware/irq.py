@@ -8,6 +8,7 @@
 from typing import List
 import logging
 from hardware.device import Utils, WrappedNode
+from hardware.fdt import FdtParser
 
 
 class IrqController:
@@ -23,7 +24,7 @@ class IrqController:
             data.pop(0)
         return -1
 
-    def __init__(self, node: WrappedNode, tree: 'FdtParser'):
+    def __init__(self, node: WrappedNode, tree: FdtParser):
         self.node = node
         self.tree = tree
 
@@ -190,7 +191,7 @@ CONTROLLERS = {
 }
 
 
-def create_irq_controller(node: WrappedNode, tree: 'FdtParser') -> IrqController:
+def create_irq_controller(node: WrappedNode, tree: FdtParser) -> IrqController:
     if node.has_prop('interrupt-map'):
         # interrupt nexus
         return InterruptNexus(node, tree)
