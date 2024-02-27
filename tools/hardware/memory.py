@@ -8,13 +8,17 @@ from typing import List, Union
 import functools
 import hardware
 
+# Circular type dependency support has been postponed to Python 4, thus we can't
+# simply use "from hardware.device import WrappedNode", but have to use the
+# fully qualified name in the type annotation.
+
 
 @functools.total_ordering
 class Region:
     ''' Represents a region of memory. '''
 
     def __init__(self, base: int, size: int,
-                 owner: Union['WrappedNode', None] = None):
+                 owner: Union[hardware.device.WrappedNode, None] = None):
         self.base = base
         self.size = size
         self.owner = owner
@@ -53,7 +57,7 @@ class Region:
         return hash((self.base, self.size))
 
     @staticmethod
-    def from_range(start: int, end: int, owner: Union['WrappedNode', None] = None) -> Region:
+    def from_range(start: int, end: int, owner: Union[hardware.device.WrappedNode, None] = None) -> Region:
         ''' create a region from a start/end rather than start/size '''
         if start > end:
             raise ValueError(
