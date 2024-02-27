@@ -82,7 +82,7 @@ class FdtParser:
 
     def get_devices_list(self, prop) -> List[WrappedNode]:
         ''' Returns a list of devices that are used by the kernel '''
-        ret = []
+        ret: List[WrappedNode] = []
         chosen = self.get_path('/chosen')
         if (chosen is not None) and chosen.has_prop(prop):
             paths = chosen.get_prop(prop).strings

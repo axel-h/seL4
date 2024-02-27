@@ -15,7 +15,7 @@ from hardware.fdt import FdtParser
 
 def get_cpus(tree: FdtParser) -> List[WrappedNode]:
     ' Return a list of all the CPUs described in this device tree. '
-    found_cpus = []
+    found_cpus: List[WrappedNode] = []
     cpus_nodes = tree.get_path('/cpus')
     if cpus_nodes is not None:
         for node in cpus_nodes:

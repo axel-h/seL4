@@ -110,7 +110,7 @@ def get_elfloader_cpus(tree: fdt.FdtParser, devices: List[device.WrappedNode]) -
     else:
         psci_node = None
 
-    cpu_info = []
+    cpu_info = []  # ToDo: TypeDect: str, callable? ...
     for i, cpu_node in enumerate(sorted(cpus, key=lambda a: a.path)):
         enable_method = None
         if cpu_node.has_prop('enable-method'):
@@ -145,7 +145,7 @@ def run(tree: fdt.FdtParser, hardware: rule.HardwareYaml, config: config.Config,
     cpu_info = get_elfloader_cpus(tree, devices)
 
     max_reg = 1
-    device_info = []
+    device_info: List[Dict] = []  # ToDo: TypeDect: str, str, List[Region]
     for dev in devices:
         regions = dev.get_regions()
         max_reg = max(len(regions), max_reg)

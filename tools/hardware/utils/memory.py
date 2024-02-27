@@ -25,9 +25,18 @@ def get_memory_regions(tree: FdtParser) -> Set[Region]:
     return regions
 
 
+# Python 3.8 brought TypedDict. This one is used in merge_memory_regions() only,
+# but mypy does not allow recursive types at function scope (yet?), so we have
+# to define this here to use type checking.
+class RegionExt(TypedDict):
+    region: Region
+    right_adj: Union[RegionExt, None]
+    left_adj: Union[RegionExt, None]
+
+
 def merge_memory_regions(regions: Set[Region]) -> Set[Region]:
     ''' Check all region and merge adjacent ones '''
-    all_regions = [dict(region=region, right_adj=None, left_adj=None)
+    all_regions = [RegionExt(region=region, right_adj=None, left_adj=None)
                    for region in regions]
 
     # Find all right contiguous regions
@@ -58,7 +67,7 @@ def merge_memory_regions(regions: Set[Region]) -> Set[Region]:
 def parse_reserved_regions(node: Union[WrappedNode, None]) -> Set[Region]:
     ''' Parse a reserved-memory node, looking for regions that are
         unusable by OS (e.g. reserved for firmware/bootloader) '''
-    ret = set()
+    ret: Set[Region] = set()
 
     if node is not None:
         for child in node:
