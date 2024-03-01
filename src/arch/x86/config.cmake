@@ -72,8 +72,8 @@ config_option(
 config_string(
     KernelCacheLnSz CACHE_LN_SZ "Define cache line size for the current architecture"
     DEFAULT 64
-    DEPENDS "KernelArchX86" UNDEF_DISABLED
-    UNQUOTE
+    DEPENDS "KernelArchX86"
+    UNDEF_DISABLED UNQUOTE
 )
 
 config_option(
@@ -229,8 +229,8 @@ config_string(
     "The bits per pixel of the linear graphics mode ot request. Value of zero indicates \
     no preference."
     DEFAULT 32
-    DEPENDS "KernelMultibootGFXModeLinear" UNDEF_DISABLED
-    UNQUOTE
+    DEPENDS "KernelMultibootGFXModeLinear"
+    UNDEF_DISABLED UNQUOTE
 )
 
 config_string(
@@ -239,8 +239,8 @@ config_string(
     number of pixels. For a text mode this is the number of characters, value of zero \
     indicates no preference."
     DEFAULT 0
-    DEPENDS "KernelMultibootGFXModeText OR KernelMultibootGFXModeLinear" UNDEF_DISABLED
-    UNQUOTE
+    DEPENDS "KernelMultibootGFXModeText OR KernelMultibootGFXModeLinear"
+    UNDEF_DISABLED UNQUOTE
 )
 config_string(
     KernelMultibootGFXHeight MULTIBOOT_GRAPHICS_MODE_HEIGHT
@@ -248,8 +248,8 @@ config_string(
     number of pixels. For a text mode this is the number of characters, value of zero \
     indicates no preference."
     DEFAULT 0
-    DEPENDS "KernelMultibootGFXModeText OR KernelMultibootGFXModeLinear" UNDEF_DISABLED
-    UNQUOTE
+    DEPENDS "KernelMultibootGFXModeText OR KernelMultibootGFXModeLinear"
+    UNDEF_DISABLED UNQUOTE
 )
 
 config_option(
