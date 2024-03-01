@@ -1,0 +1,6 @@
+#
+# Copyright 2024, Axel Heider
+#
+# SPDX-License-Identifier: BSD-2-Clause
+#
+mypy==0.910
