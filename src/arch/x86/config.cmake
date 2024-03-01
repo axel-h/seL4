@@ -181,7 +181,8 @@ config_string(
         2 - AVX \
         FPU and SSE is guaranteed to exist if XSAVE exists."
     DEFAULT 3
-    DEPENDS "KernelFPUXSave" DEFAULT_DISABLED 0
+    DEPENDS "KernelFPUXSave"
+    DEFAULT_DISABLED 0
     UNQUOTE
 )
 
@@ -197,7 +198,8 @@ config_string(
     XSAVE_FEATURE_SET that have been requested. Default is 576 for the FPU and SSE
     state, unless XSAVE is not in use then it should be 512 for the legacy FXSAVE region."
     DEFAULT ${default_xsave_size}
-    DEPENDS "KernelArchX86" DEFAULT_DISABLED 0
+    DEPENDS "KernelArchX86"
+    DEFAULT_DISABLED 0
     UNQUOTE
 )
 
