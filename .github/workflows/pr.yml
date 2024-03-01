@@ -12,24 +12,3 @@ jobs:
   pr-checks:
     name: Checks
     uses: axel-h/ci-actions/.github/workflows/pr.yml@patch-axel-7
-
-  preprocess:
-    name: Preprocess
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        arch: [ARM, ARM_HYP, AARCH64, RISCV64, X64]
-        feature: ["", MCS]
-        exclude:
-          - arch: ARM_HYP
-            feature: MCS
-          - arch: AARCH64
-            feature: MCS
-          - arch: X64
-            feature: MCS
-    steps:
-    - uses: axel-h/ci-actions/preprocess@patch-axel-7
-      with:
-        L4V_ARCH: ${{ matrix.arch }}
-        L4V_FEATURES: ${{ matrix.feature }}
