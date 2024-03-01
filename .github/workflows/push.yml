@@ -46,13 +46,3 @@ jobs:
       with:
         ARCH: ${{ matrix.arch }}
         COMPILER: ${{ matrix.compiler }}
-
-  manual:
-    name: Build PDF
-    runs-on: ubuntu-latest
-    steps:
-    - uses: axel-h/ci-actions/seL4-manual@patch-axel-7
-    - uses: actions/upload-artifact@v4
-      with:
-        name: PDF
-        path: manual/manual.pdf
