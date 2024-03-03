@@ -26,9 +26,11 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # RISCV32 and IA32 are left out, as they have no verified config
-        arch: [ARM, ARM_HYP, AARCH64, RISCV64, X64]
+        arch: [ARM, ARM_HYP, AARCH64, RISCV32, RISCV64, IA32, X64]
         compiler: [gcc, llvm]
+        exclude:
+          - arch: RISCV32 # no verified config
+          - arch: IA32 # no verified config
     steps:
     - uses: actions/checkout@v4
     - uses: seL4/ci-actions/standalone-kernel@master
