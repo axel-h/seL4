@@ -135,24 +135,36 @@ void generic_ipi_send_mask(irq_t ipi, word_t mask, bool_t isBlocking)
 #ifdef CONFIG_DEBUG_BUILD
 exception_t handle_SysDebugSendIPI(void)
 {
-#ifdef CONFIG_ARCH_ARM
-    word_t target = getRegister(NODE_STATE(ksCurThread), capRegister);
+
+#if defined(CONFIG_ARCH_ARM) || defined(CONFIG_ARCH_RISCV)
+
     word_t irq = getRegister(NODE_STATE(ksCurThread), msgInfoRegister);
+    word_t target = getRegister(NODE_STATE(ksCurThread), capRegister);
     if (target > CONFIG_MAX_NUM_NODES) {
         userError("SysDebugSendIPI: Invalid target, halting");
         halt();
     }
+
+#if defined(CONFIG_ARCH_ARM)
     if (irq > 15) {
         userError("SysDebugSendIPI: Invalid IRQ, not a SGI, halting");
         halt();
     }
-    ipi_send_target(CORE_IRQ_TO_IRQT(0, irq), BIT(target));
+    irq = CORE_IRQ_TO_IRQT(0, irq);
+#endif
+
+    ipi_send_target(irq, BIT(target));
     return EXCEPTION_NONE;
-#else /* not CONFIG_ARCH_ARM */
+
+#else /*  CONFIG_ARCH_??? */
+
     userError("SysDebugSendIPI: not supported on this architecture");
     halt();
-#endif  /* [not] CONFIG_ARCH_ARM */
+
+#endif /* CONFIG_ARCH_xxx */
+
 }
+
 #endif /* CONFIG_DEBUG_BUILD */
 
 #endif /* ENABLE_SMP_SUPPORT */
