@@ -9,6 +9,7 @@
 #include <config.h>
 
 #ifdef ENABLE_SMP_SUPPORT
+
 typedef enum {
     IpiRemoteCall_Stall,
     IpiRemoteCall_switchFpuOwner,
@@ -17,5 +18,5 @@ typedef enum {
 
 irq_t ipi_get_irq(void);
 void  ipi_clear_irq(irq_t irq);
-#endif
 
+#endif /* ENABLE_SMP_SUPPORT */

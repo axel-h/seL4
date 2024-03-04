@@ -184,5 +184,46 @@ static inline word_t CONST sanitiseRegister(register_t reg, word_t v, bool_t arc
     [seL4_TimeoutReply_TP] = TP, \
 }
 
-#endif /* __ASSEMBLER__ */
+#define RISCV_CSR_CYCLE     0xc00
+#define RISCV_CSR_TIME      0xc01
+#define RISCV_CSR_INSTRET   0xc02
+#ifdef CONFIG_ARCH_RISCV32
+#define RISCV_CSR_CYCLEH    0xc80
+#define RISCV_CSR_TIMEH     0xc81
+#define RISCV_CSR_INSTRETH  0xc82
+#endif /* CONFIG_ARCH_RISCV32 */
 
+
+#define RISCV_CSR_READ(_id_, _var_) \
+    asm volatile("csrr %0, " #_id_ : "=r" (_var_) : : "memory")
+
+#define declare_helper_get_riscv_csr(_name_, _id_) \
+    static inline word_t get_riscv_csr_##_name_(void) \
+    { \
+        register word_t val; \
+        RISCV_CSR_READ(_id_, val); \
+        return val; \
+    }
+
+/* create get_riscv_csr_cycle() */
+declare_helper_get_riscv_csr(cycle, RISCV_CSR_CYCLE)
+#ifdef CONFIG_ARCH_RISCV32
+/* create get_riscv_csr_cycleh() */
+declare_helper_get_riscv_csr(cycleh, RISCV_CSR_CYCLEH)
+#endif
+
+/* create get_riscv_csr_time() */
+declare_helper_get_riscv_csr(time, RISCV_CSR_TIME)
+#ifdef CONFIG_ARCH_RISCV32
+/* create get_riscv_csr_timeh() */
+declare_helper_get_riscv_csr(timeh, RISCV_CSR_TIMEH)
+#endif
+
+/* create get_riscv_csr_instret() */
+declare_helper_get_riscv_csr(instret, RISCV_CSR_INSTRET)
+#ifdef CONFIG_ARCH_RISCV32
+/* create get_riscv_csr_instreth() */
+declare_helper_get_riscv_csr(instreth, RISCV_CSR_INSTRETH)
+#endif
+
+#endif /* __ASSEMBLER__ */
