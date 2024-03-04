@@ -46,7 +46,7 @@ SECTIONS
     {
         . = ALIGN(4K);
 
-       /* Traps and fastpath */
+        /* Traps and fastpath */
         *(.text.traps)
         *(.text.fastpath)
 

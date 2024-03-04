@@ -1,0 +1,17 @@
+/*
+ * Copyright 2022, Axel Heider <axelheider@gmx.de>
+ *
+ * SPDX-License-Identifier: GPL-2.0-only
+ */
+
+/ {
+    chosen {
+        seL4,elfloader-devices =
+            /* console if provided by SBI */
+            /* nothing else */
+            ;
+
+        seL4,kernel-devices =
+            /* console if provided by SBI */
+            &{/soc/interrupt-controller@c000000};
+};

@@ -30,7 +30,6 @@ enum vm_rights {
 };
 typedef word_t vm_rights_t;
 
-#define PTE_SIZE_BITS       seL4_PageTableEntryBits
 #define PT_INDEX_BITS       seL4_PageTableIndexBits
 
 #define PT_INDEX_OFFSET     (seL4_PageBits)
