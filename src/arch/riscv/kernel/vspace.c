@@ -189,7 +189,7 @@ BOOT_CODE void map_it_pt_cap(cap_t vspace_cap, cap_t pt_cap)
                       0,  /* read */
                       1 /* valid */
                   );
-    sfence();
+    sfence_vma_global();
 }
 
 BOOT_CODE void map_it_frame_cap(cap_t vspace_cap, cap_t frame_cap)
@@ -216,7 +216,7 @@ BOOT_CODE void map_it_frame_cap(cap_t vspace_cap, cap_t frame_cap)
                       1,  /* read */
                       1   /* valid */
                   );
-    sfence();
+    sfence_vma_global();
 }
 
 BOOT_CODE cap_t create_unmapped_it_frame_cap(pptr_t pptr, bool_t use_large)
@@ -540,7 +540,7 @@ void unmapPageTable(asid_t asid, vptr_t vptr, pte_t *target_pt)
                   0,  /* read */
                   0  /* valid */
               );
-    sfence();
+    sfence_vma_global();
 }
 
 static pte_t pte_pte_invalid_new(void)
@@ -570,7 +570,7 @@ void unmapPage(vm_page_size_t page_size, asid_t asid, vptr_t vptr, pptr_t pptr)
     }
 
     lu_ret.ptSlot[0] = pte_pte_invalid_new();
-    sfence();
+    sfence_vma_global();
 }
 
 void setVMRoot(tcb_t *tcb)
@@ -1078,7 +1078,7 @@ exception_t performPageTableInvocationMap(cap_t cap, cte_t *ctSlot,
 {
     ctSlot->cap = cap;
     *ptSlot = pte;
-    sfence();
+    sfence_vma_global();
 
     return EXCEPTION_NONE;
 }
@@ -1121,7 +1121,7 @@ static exception_t performPageGetAddress(void *vbase_ptr, bool_t call)
 static exception_t updatePTE(pte_t pte, pte_t *base)
 {
     *base = pte;
-    sfence();
+    sfence_vma_global();
     return EXCEPTION_NONE;
 }
 
@@ -1228,7 +1228,7 @@ exception_t benchmark_arch_map_logBuffer(word_t frame_cptr)
     kernel_image_level2_dev_pt[RISCV_GET_PT_INDEX(KS_LOG_PPTR, 1)] = pte_next(ksUserLogBuffer, true);
 #endif
 
-    sfence();
+    sfence_vma_global();
 
     return EXCEPTION_NONE;
 }
