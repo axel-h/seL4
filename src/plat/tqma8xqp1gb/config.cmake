@@ -21,7 +21,6 @@ if(KernelPlatformTqma8xqp1gb)
     declare_default_headers(
         TIMER_FREQUENCY 8000000
         MAX_IRQ 511
-        TIMER drivers/timer/arm_generic.h
         TIMER_OVERHEAD_TICKS 1
         INTERRUPT_CONTROLLER arch/machine/gic_v3.h
         NUM_PPI 32

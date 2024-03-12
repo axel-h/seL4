@@ -26,7 +26,6 @@ if(KernelPlatformAPQ8064)
         TIMER_FREQUENCY 7000000
         MAX_IRQ 283
         NUM_PPI 32
-        TIMER drivers/timer/arm_generic.h
         INTERRUPT_CONTROLLER arch/machine/gic_v2.h
     )
 endif()
