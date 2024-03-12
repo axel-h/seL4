@@ -35,7 +35,6 @@ if(KernelPlatformImx8mq-evk OR KernelPlatformImx8mm-evk OR KernelPlatformImx8mp-
     declare_default_headers(
         TIMER_FREQUENCY 8000000
         MAX_IRQ ${IMX8M_MAX_IRQ}
-        TIMER drivers/timer/arm_generic.h
         INTERRUPT_CONTROLLER arch/machine/gic_v3.h
         NUM_PPI 32
         CLK_MAGIC 1llu

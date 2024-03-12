@@ -19,7 +19,6 @@ if(KernelPlatformHifive)
     declare_default_headers(
         TIMER_FREQUENCY 1000000
         MAX_IRQ 53
-        INTERRUPT_CONTROLLER drivers/irq/riscv_plic0.h
     )
 else()
     unset(KernelPlatformFirstHartID CACHE)

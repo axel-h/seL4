@@ -50,7 +50,6 @@ if(KernelPlatformRpi4)
         TIMER_FREQUENCY 54000000
         MAX_IRQ 216
         NUM_PPI 32
-        TIMER drivers/timer/arm_generic.h
         INTERRUPT_CONTROLLER arch/machine/gic_v2.h
         KERNEL_WCET 10u
         CLK_MAGIC 5337599559llu

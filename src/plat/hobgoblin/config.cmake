@@ -19,7 +19,7 @@ if(KernelPlatformHobgoblin)
     declare_default_headers(
         TIMER_FREQUENCY 100000000 #  FPGA runs CLINT timer at 100 MHz
         MAX_IRQ 31 # DTS: soc/plic/riscv,ndev
-        INTERRUPT_CONTROLLER "drivers/irq/riscv_plic0.h"
+        # INTERRUPT_CONTROLLER "drivers/irq/riscv_plic0.h"
     )
 else()
     # ToDo: why are we doing this everywhere? Seems this should only be cleared

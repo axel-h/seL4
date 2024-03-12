@@ -191,7 +191,6 @@ if(KernelPlatformQEMURiscVVirt)
     declare_default_headers(
         TIMER_FREQUENCY 10000000
         MAX_IRQ 128
-        INTERRUPT_CONTROLLER drivers/irq/riscv_plic0.h
     )
 
 endif()

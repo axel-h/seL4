@@ -59,7 +59,6 @@ if(KernelPlatformZynqmp)
         TIMER_FREQUENCY 100000000
         MAX_IRQ 187
         NUM_PPI 32
-        TIMER drivers/timer/arm_generic.h
         INTERRUPT_CONTROLLER arch/machine/gic_v2.h
         CLK_MAGIC 1374389535llu
         CLK_SHIFT 37u
