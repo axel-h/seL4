@@ -9,6 +9,13 @@
 #include <config.h>
 
 #define TIMER_CLOCK_HZ ULL_CONST(@CONFIGURE_TIMER_FREQUENCY@)
+/*
+ * This is current not used on RISC-V
+ *    #define TIMER_PRECISION @CONFIGURE_TIMER_PRECISION@
+ *    #define TIMER_OVERHEAD_TICKS @CONFIGURE_TIMER_OVERHEAD_TICKS@
+ */
+#include <@CONFIGURE_TIMER@>
+
 
 #include <machine/interrupt.h>
 

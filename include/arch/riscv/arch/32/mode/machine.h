@@ -41,46 +41,6 @@ declare_helper_riscv_read_csr64cntr(cycle, RISCV_CSR_CYCLEH, RISCV_CSR_CYCLE)
 /* create get_riscv_csr64cntr_instret() */
 declare_helper_riscv_read_csr64cntr(instret, RISCV_CSR_INSTRETH, RISCV_CSR_INSTRET)
 
-
-#ifdef CONFIG_RISCV_USE_CLINT_MTIME
-/*
- * Currently all RISC-V 32-bit platforms supported have the mtime register
- * mapped at the same offset of the base address of the CLINT.
- */
-#define CLINT_MTIME_OFFSET_LO 0xbff8
-#define CLINT_MTIME_OFFSET_HI 0xbffc
-
-static inline uint32_t riscv_read_clint_u32(word_t offset)
-{
-    return *(volatile uint32_t *)(CLINT_PPTR + offset);
-}
-
-static inline uint64_t riscv_read_clint_mtime(void)
-{
-    /*
-     * Ensure that the time is correct if there is a rollover in the
-     * high bits between reading the low and high bits.
-     */
-    uint32_t nH_prev = riscv_read_clint_u32(CLINT_MTIME_OFFSET_HI);
-    uint32_t nL = riscv_read_clint_u32(CLINT_MTIME_OFFSET_LO);
-    uint32_t nH = riscv_read_clint_u32(CLINT_MTIME_OFFSET_HI);
-    if (nH_prev != nH) {
-        nL = riscv_read_clint_u32(CLINT_MTIME_OFFSET_LO);
-    }
-    return (((uint64_t)nH) << 32) | nL;
-}
-
-#endif /* CONFIG_RISCV_USE_CLINT_MTIME */
-
-static inline uint64_t riscv_read_time(void)
-{
-#ifdef CONFIG_RISCV_USE_CLINT_MTIME
-    return riscv_read_clint_mtime();
-#else
-    return riscv_read_csr64cntr_time();
-#endif
-}
-
 static inline uint64_t riscv_read_cycle(void)
 {
     return riscv_read_csr64cntr_cycle();
