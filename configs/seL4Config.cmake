@@ -158,8 +158,10 @@ function(declare_default_headers)
     elseif(KernelArchRiscV)
         set(REQUIRED_PARAM "TIMER_FREQUENCY;MAX_IRQ")
         set(DEFAULT_PARAM_INTERRUPT_CONTROLLER "drivers/irq/riscv_plic0.h")
+        set(DEFAULT_PARAM_TIMER "drivers/timer/risc-v_sbi-timer.h")
     else()
         message(FATAL_ERROR "unsupported kernel architecture")
+
     endif()
 
     foreach(tag IN LISTS REQUIRED_PARAM)
