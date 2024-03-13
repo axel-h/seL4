@@ -49,10 +49,16 @@ static inline bool_t try_arch_atomic_exchange_rlx(void *ptr, void *new_val, void
     return true;
 }
 
+
+/* We can't include arch/machine.h because there is a circular include
+ * dependency. Until that can be resolved, we need to define the function
+ * prototype here.
+ */
+static inline word_t read_sscratch(void);
+
 static inline CONST cpu_id_t getCurrentCPUIndex(void)
 {
-    word_t sp;
-    asm volatile("csrr %0, sscratch" : "=r"(sp));
+    word_t sp = read_sscratch();
     sp -= (word_t)kernel_stack_alloc;
     sp -= 8;
     return (sp >> CONFIG_KERNEL_STACK_BITS);
