@@ -22,24 +22,30 @@ extern core_map_t coreMap;
 
 static inline cpu_id_t cpuIndexToID(word_t index)
 {
-    assert(index < ARRAY_SIZE(coreMap.map));
+    if (index >= ARRAY_SIZE(coreMap.map)) {
+        printf("ERROR: coreMap index invalid: %"SEL4_PRIu_word"\n", index);
+        halt();
+    }
     return coreMap.map[index];
 }
 
 static inline word_t hartIDToCoreID(word_t hart_id)
 {
-    word_t i = 0;
-    for (i = 0; i < ARRAY_SIZE(coreMap.map); i++) {
+    for (word_t i = 0; i < ARRAY_SIZE(coreMap.map); i++) {
         if (coreMap.map[i] == hart_id) {
-            break;
+            return i;
         }
     }
-    return i;
+    printf("ERROR: no entry in coreMap for hart_id %"SEL4_PRIx_word"\n", hart_id);
+    halt();
 }
 
 static inline void add_hart_to_core_map(word_t hart_id, word_t core_id)
 {
-    assert(core_id < ARRAY_SIZE(coreMap.map));
+    if (core_id >= ARRAY_SIZE(coreMap.map)) {
+        printf("ERROR: coreMap too small to add core_id %"SEL4_PRIu_word"\n", core_id);
+        halt();
+    }
     coreMap.map[core_id] = hart_id;
 }
 
