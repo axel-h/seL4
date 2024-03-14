@@ -14,7 +14,9 @@
 #include <model/statedata.h>
 #include <object/structures.h>
 #include <arch/types.h>
-
+#ifdef CONFIG_ENABLE_SMP_SUPPORT
+#include <machine/interrupt.h>
+#endif
 
 NODE_STATE_BEGIN(archNodeState)
 /* TODO: add RISCV-dependent fields here */
@@ -24,6 +26,7 @@ NODE_STATE_END(archNodeState);
 
 typedef struct {
     word_t hart_id;
+    SMP_STATE_DEFINE(volatile irq_t,  ipi);
 } core_context_t;
 
 typedef struct {
