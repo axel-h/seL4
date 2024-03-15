@@ -459,12 +459,9 @@ BOOT_CODE VISIBLE void init_kernel(
     sword_t pv_offset,
     vptr_t  v_entry,
     paddr_t dtb_addr_p,
-    uint32_t dtb_size
-#ifdef ENABLE_SMP_SUPPORT
-    ,
+    uint32_t dtb_size,
     word_t hart_id,
     word_t core_id
-#endif
 )
 {
     bool_t result;

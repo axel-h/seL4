@@ -16,9 +16,15 @@
 .extern __global_pointer$
 .extern restore_user_context
 
-/*
- * When SMP is enabled, the elfloader passes the hart ID in a6
- * and logical core ID in a7.
+/* The loader passes these parameters:
+ *    a0/x10: user image physical start address
+ *    a1/x11: user image physical end address
+ *    a2/x12: physical/virtual offset
+ *    a3/x13: user image virtual entry address
+ *    a4/x14: DTB physical address (0 if there is none)
+ *    a5/x15: DTB size (0 if there is none)
+ *    a6/x16: hart ID
+ *    a7/x17: core ID (0 is the primary core)
  */
 _start:
   fence.i
@@ -39,15 +45,16 @@ _start:
   csrw sscratch, sp
 #endif
 
-  /* Call bootstrapping implemented in C with parameters:
+  /* Call bootstrapping implemented in C with the same parameters that got
+   * passed from the loader:
    *    a0/x10: user image physical start address
    *    a1/x11: user image physical end address
    *    a2/x12: physical/virtual offset
    *    a3/x13: user image virtual entry address
    *    a4/x14: DTB physical address (0 if there is none)
    *    a5/x15: DTB size (0 if there is none)
-   *    a6/x16: hart ID (SMP only, unused on non-SMP)
-   *    a7/x17: core ID (SMP only, unused on non-SMP)
+   *    a6/x16: hart ID
+   *    a7/x17: core ID
    */
   jal init_kernel
 
