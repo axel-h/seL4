@@ -22,6 +22,16 @@ NODE_STATE_BEGIN(archNodeState)
 NODE_STATE_DECLARE(word_t, ipiReschedulePending);
 NODE_STATE_END(archNodeState);
 
+typedef struct {
+    word_t hart_id;
+} core_context_t;
+
+typedef struct {
+    core_context_t cores[CONFIG_MAX_NUM_NODES];
+} core_map_t;
+
+extern core_map_t coreMap;
+
 extern asid_pool_t *riscvKSASIDTable[BIT(asidHighBits)];
 
 /* Kernel Page Tables */
@@ -36,3 +46,4 @@ extern pte_t kernel_image_level2_dev_pt[BIT(PT_INDEX_BITS)];
 extern pte_t kernel_image_level2_log_buffer_pt[BIT(PT_INDEX_BITS)];
 #endif
 
+word_t get_current_hart_id(void);

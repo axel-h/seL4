@@ -9,30 +9,26 @@
 #include <config.h>
 #include <model/smp.h>
 #include <kernel/stack.h>
+#include <arch/model/statedata.h>
 
 #ifdef ENABLE_SMP_SUPPORT
 
-typedef struct core_map {
-    word_t map[CONFIG_MAX_NUM_NODES];
-} core_map_t;
-
 extern char kernel_stack_alloc[CONFIG_MAX_NUM_NODES][BIT(CONFIG_KERNEL_STACK_BITS)];
 compile_assert(kernel_stack_4k_aligned, KERNEL_STACK_ALIGNMENT == 4096)
-extern core_map_t coreMap;
 
 static inline cpu_id_t cpuIndexToID(word_t index)
 {
-    if (index >= ARRAY_SIZE(coreMap.map)) {
+    if (index >= ARRAY_SIZE(coreMap.cores)) {
         printf("ERROR: coreMap index invalid: %"SEL4_PRIu_word"\n", index);
         halt();
     }
-    return coreMap.map[index];
+    return coreMap.cores[index].hart_id;
 }
 
 static inline word_t hartIDToCoreID(word_t hart_id)
 {
-    for (word_t i = 0; i < ARRAY_SIZE(coreMap.map); i++) {
-        if (coreMap.map[i] == hart_id) {
+    for (word_t i = 0; i < ARRAY_SIZE(coreMap.cores); i++) {
+        if (coreMap.cores[i].hart_id == hart_id) {
             return i;
         }
     }
@@ -42,11 +38,11 @@ static inline word_t hartIDToCoreID(word_t hart_id)
 
 static inline void add_hart_to_core_map(word_t hart_id, word_t core_id)
 {
-    if (core_id >= ARRAY_SIZE(coreMap.map)) {
+    if (core_id >= ARRAY_SIZE(coreMap.cores)) {
         printf("ERROR: coreMap too small to add core_id %"SEL4_PRIu_word"\n", core_id);
         halt();
     }
-    coreMap.map[core_id] = hart_id;
+    coreMap.cores[core_id].hart_id = hart_id;
 }
 
 static inline bool_t try_arch_atomic_exchange_rlx(void *ptr, void *new_val, void **prev)

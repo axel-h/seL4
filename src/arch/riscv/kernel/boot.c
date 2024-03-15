@@ -153,6 +153,12 @@ BOOT_CODE static void init_plat(void)
 #ifdef ENABLE_SMP_SUPPORT
 BOOT_CODE static bool_t try_init_kernel_secondary_core(word_t hart_id, word_t core_id)
 {
+    if (core_id >= ARRAY_SIZE(coreMap.cores)) {
+        printf("ERROR: coreMap.map[] too small\n");
+        return false;
+    }
+    coreMap.cores[core_id].hart_id = hart_id;
+
     while (!node_boot_lock);
 
     fence_r_rw();
@@ -196,8 +202,8 @@ static BOOT_CODE bool_t try_init_kernel(
     sword_t pv_offset,
     vptr_t  v_entry,
     paddr_t dtb_phys_addr,
-    word_t  dtb_size
-)
+    word_t  dtb_size,
+    word_t hart_id)
 {
     cap_t root_cnode_cap;
     cap_t it_pd_cap;
@@ -223,6 +229,8 @@ static BOOT_CODE bool_t try_init_kernel(
     ipcbuf_vptr = ui_v_reg.end;
     bi_frame_vptr = ipcbuf_vptr + BIT(PAGE_BITS);
     extra_bi_frame_vptr = bi_frame_vptr + BIT(seL4_BootInfoFrameBits);
+
+    coreMap.cores[0].hart_id = hart_id;
 
     map_kernel_window();
 
@@ -464,34 +472,25 @@ BOOT_CODE VISIBLE void init_kernel(
     word_t core_id
 )
 {
-    bool_t result;
-
     printf("hart_id %"SEL4_PRIu_word", core_id %"SEL4_PRIu_word", CONFIG_FIRST_HART_ID %d\n",
            hart_id, core_id, CONFIG_FIRST_HART_ID);
 
-#ifdef ENABLE_SMP_SUPPORT
-    add_hart_to_core_map(hart_id, core_id);
-    if (core_id == 0) {
-        result = try_init_kernel(ui_p_reg_start,
-                                 ui_p_reg_end,
-                                 pv_offset,
-                                 v_entry,
-                                 dtb_addr_p,
-                                 dtb_size);
+    if (0 == core_id) {
+        if (!try_init_kernel(ui_p_reg_start, ui_p_reg_end, pv_offset, v_entry,
+                             dtb_addr_p, dtb_size, hart_id)) {
+            fail("ERROR: kernel init on primary hart failed");
+            UNREACHABLE();
+        }
     } else {
-        result = try_init_kernel_secondary_core(hart_id, core_id);
-    }
-#else
-    result = try_init_kernel(ui_p_reg_start,
-                             ui_p_reg_end,
-                             pv_offset,
-                             v_entry,
-                             dtb_addr_p,
-                             dtb_size);
-#endif
-    if (!result) {
-        fail("ERROR: kernel init failed");
+#ifdef CONFIG_ENABLE_SMP_SUPPORT
+        if (!try_init_kernel_secondary_core(hart_id, core_id)) {
+            fail("ERROR: kernel init on secondary hart failed");
+            UNREACHABLE();
+        }
+#else /* not CONFIG_ENABLE_SMP_SUPPORT */
+        fail("ERROR: secondary cores are not supported on non-SMP configuratons");
         UNREACHABLE();
+#endif /* [not] CONFIG_ENABLE_SMP_SUPPORT */
     }
 
 #ifdef CONFIG_KERNEL_MCS

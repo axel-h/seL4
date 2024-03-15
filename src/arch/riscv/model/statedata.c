@@ -27,4 +27,18 @@ pte_t kernel_image_level2_dev_pt[BIT(PT_INDEX_BITS)] ALIGN_BSS(BIT(seL4_PageTabl
 pte_t kernel_image_level2_log_buffer_pt[BIT(PT_INDEX_BITS)] ALIGN_BSS(BIT(seL4_PageTableBits));
 #endif
 
-SMP_STATE_DEFINE(core_map_t, coreMap);
+/* Unlike on ARM, there is no register in RISC-V that allows reading the current
+ * hart ID. It is passed during boot and thus we have to remember it even in
+ * non-SMP configurations.
+ */
+core_map_t coreMap;
+
+
+word_t get_current_hart_id(void)
+{
+#ifdef CONFIG_ENABLE_SMP_SUPPORT
+    return cpuIndexToID(getCurrentCPUIndex());
+#else
+    return coreMap.cores[0].hart_id;
+#endif
+}
