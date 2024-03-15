@@ -336,11 +336,24 @@ config_string(
     UNQUOTE
 )
 
-# Set CONFIG_ENABLE_SMP_SUPPORT as an alias of CONFIG_MAX_NUM_NODES > 1
+# SMP support is required if more than one node is used.
 if(KernelMaxNumNodes GREATER 1)
-    config_set(KernelEnableSMPSupport ENABLE_SMP_SUPPORT ON)
+    set(KernelRequiresSMPSUpport ON)
 else()
-    config_set(KernelEnableSMPSupport ENABLE_SMP_SUPPORT OFF)
+    set(KernelRequiresSMPSUpport OFF)
+endif()
+
+config_option(
+    KernelEnableSMPSupport ENABLE_SMP_SUPPORT
+    "Enable SMP support."
+    DEFAULT ${KernelRequiresSMPSUpport}
+)
+
+# Catch potential misconfiguration
+if(KernelRequiresSMPSUpport AND (NOT KernelEnableSMPSupport))
+    message(
+        FATAL_ERROR "SMP support is required, but KernelEnableSMPSupport is disabled."
+    )
 endif()
 
 config_string(

@@ -8,6 +8,10 @@
 
 #include <sel4/config.h>
 
+#if (MAX_NUM_NODES > 1) && !defined(CONFIG_ENABLE_SMP_SUPPORT)
+#error "SMP support is required for MAX_NUM_NODES > 1"
+#endif
+
 /* Set ENABLE_SMP_SUPPORT for kernel source files */
 #ifdef CONFIG_ENABLE_SMP_SUPPORT
 #define ENABLE_SMP_SUPPORT
