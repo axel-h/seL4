@@ -73,9 +73,11 @@ static inline CONST cpu_id_t getCurrentCPUIndex(void)
      */
     word_t sp;
     asm volatile("csrr %0, sscratch" : "=r"(sp));
+    assert(sp > (word_t)kernel_stack_alloc);
     sp -= (word_t)kernel_stack_alloc;
-    sp -= 8;
-    return (sp >> CONFIG_KERNEL_STACK_BITS);
+    word_t idx = (sp - 1) >> CONFIG_KERNEL_STACK_BITS;
+    assert(idx < CONFIG_MAX_NUM_NODES);
+    return idx;
 }
 
 #endif /* ENABLE_SMP_SUPPORT */
