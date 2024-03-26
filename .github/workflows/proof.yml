@@ -6,7 +6,7 @@ name: Proofs
 
 on:
   pull_request_target:
-    types: [labeled, synchronize]
+    types: [opened, reopened, synchronize, labeled]
 
 jobs:
   cproof:
