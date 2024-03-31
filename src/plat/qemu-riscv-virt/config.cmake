@@ -108,7 +108,7 @@ if(KernelPlatformQEMURiscVVirt)
             # it can be added to the DTS as reference. Every parameter must be
             # a separate string, as CMake will make it a dedicated argument
             # passed to QEMU then (e.g. "-machine virt" wont be recognized,
-            # but "-machine", "vir" is).
+            # but "-machine", "virt" is).
             set(
                 QEMU_CMD
                 "${QEMU_BINARY}"
