@@ -485,6 +485,7 @@ def generate_stub_file(arch, input_files, output_file, use_only_ipc_buffer, mcs,
     result.append(" */")
     for (interface_name, method_name, method_id, inputs, outputs, condition, comment) in methods:
         if condition != "":
+            print(f"condition in: {condition}")
             if condition == "(!defined(CONFIG_KERNEL_MCS) && defined(CONFIG_ENABLE_SMP_SUPPORT))":
                 condition = 'all(not(feature = "CONFIG_KERNEL_MCS"), feature = "CONFIG_ENABLE_SMP_SUPPORT")'
             elif condition:
@@ -496,7 +497,10 @@ def generate_stub_file(arch, input_files, output_file, use_only_ipc_buffer, mcs,
                 if '!' in condition:
                     condition = 'not(%s)' % condition.replace('!', '')
             if condition:
+                print(f"condition rust: #[cfg({condition})]")
                 result.append("#[cfg(%s)]" % condition)
+            else:
+                print(f"condition removed")
         result.append(generate_stub(arch, wordsize, interface_name, method_name,
                                     method_id, inputs, outputs, structs, use_only_ipc_buffer, comment, mcs))
 
