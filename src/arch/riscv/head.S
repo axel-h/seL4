@@ -33,17 +33,20 @@ _start:
 1:auipc gp, %pcrel_hi(__global_pointer$)
   addi  gp, gp, %pcrel_lo(1b)
 .option pop
-  la sp, (kernel_stack_alloc + BIT(CONFIG_KERNEL_STACK_BITS))
-  csrw sscratch, x0 /* zero sscratch for the init task */
 
+  la sp, (kernel_stack_alloc + BIT(CONFIG_KERNEL_STACK_BITS))
 #ifdef CONFIG_ENABLE_SMP_SUPPORT
-/* setup the per-core stack */
+  /* Setup the core specific stack based on logical core ID in a7. Store it in
+  *  sscratch, so it can be found again easily on future kernel entries.
+   */
   mv t0, a7
   slli t0, t0, CONFIG_KERNEL_STACK_BITS
   add  sp, sp, t0
-  /* put the stack in sscratch */
   csrw sscratch, sp
-#endif
+#else
+  /* Zero sscratch, as it is not used on non-SMP. */
+  csrw sscratch, x0
+#endif /* CONFIG_ENABLE_SMP_SUPPORT */
 
   /* Call bootstrapping implemented in C with the same parameters that got
    * passed from the loader:
