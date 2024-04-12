@@ -40,6 +40,14 @@ jobs:
     steps:
     - id: matrix
       uses: axel-h/ci-actions/sel4test-hw-matrix@patch-axel-1
+    - env:
+        json_steps_matrix: ${{ toJSON(steps.matrix) }}
+        json_steps_matrix_outputs_matrix_build: ${{ toJSON(steps.matrix.outputs.matrix_build) }}
+        json_steps_matrix_outputs_matrix: ${{ toJSON(steps.matrix.outputs.matrix) }}
+      run: |
+        echo steps.matrix = ${json_steps_matrix}
+        echo steps.matrix.outputs.matrix = ${json_steps_matrix_outputs_matrix}
+        echo steps.matrix.outputs.matrix_build = ${json_steps_matrix_outputs_matrix}
 
   hw-build:
     name: HW Build
