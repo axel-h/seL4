@@ -59,6 +59,12 @@ elseif(KernelWordSize EQUAL 64)
     set(KernelCtz64 ON CACHE BOOL "")
 endif()
 
+message("KernelClz32: ${KernelClz32}")
+message("KernelCtz32: ${KernelCtz32}")
+message("KernelClz64: ${KernelClz64}")
+message("KernelCtz64: ${KernelCtz64}")
+
+
 if(KernelSel4ArchRiscV32)
     set(KernelPTLevels 2 CACHE STRING "" FORCE)
 endif()
