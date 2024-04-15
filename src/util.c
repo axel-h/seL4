@@ -413,34 +413,43 @@ static UNUSED CONST inline unsigned ctz64(uint64_t x)
     return count;
 }
 
-// GCC's builtins will emit calls to these functions when the platform does
-// not provide suitable inline assembly.
-// These are only provided when the relevant config items are set.
-// We define these separately from `ctz32` etc. so that we can verify all of
-// `ctz32` etc. without necessarily linking them into the kernel binary.
+// The compiler builtins will emit calls to these functions when the platform
+// does not provide suitable inline assembly. These are only provided when the
+// relevant config items are set. We define these separately from `ctz32` etc.
+// so that we can verify all of `ctz32` etc. without necessarily linking them
+// into the kernel binary. Explicitly using 'VISIBLE' is required for
+// CONFIG_KERNEL_FWHOLE_PROGRAM, otherwise the symbols are removed due to
+// inlining, which leads to linking failures evenutally.
+
+#if defined(CONFIG_KERNEL_FWHOLE_PROGRAM) && !defined(__clang__)
+#define CxZxi2_VISIBLE  VISIBLE
+#else
+#define CxZxi2_VISIBLE
+#endif
+
 #ifdef CONFIG_CLZ_32
-CONST int __clzsi2(uint32_t x)
+CONST int CxZxi2_VISIBLE __clzsi2(uint32_t x)
 {
     return clz32(x);
 }
 #endif
 
 #ifdef CONFIG_CLZ_64
-CONST int __clzdi2(uint64_t x)
+CONST int CxZxi2_VISIBLE __clzdi2(uint64_t x)
 {
     return clz64(x);
 }
 #endif
 
 #ifdef CONFIG_CTZ_32
-CONST int __ctzsi2(uint32_t x)
+CONST int CxZxi2_VISIBLE __ctzsi2(uint32_t x)
 {
     return ctz32(x);
 }
 #endif
 
 #ifdef CONFIG_CTZ_64
-CONST int __ctzdi2(uint64_t x)
+CONST int CxZxi2_VISIBLE __ctzdi2(uint64_t x)
 {
     return ctz64(x);
 }
