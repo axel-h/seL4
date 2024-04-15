@@ -178,11 +178,11 @@ compile_assert(clz_word_size, sizeof(unsigned long) * 8 == CONFIG_WORD_SIZE);
 // These functions are potentially `UNUSED` because we want to always expose
 // them to verification without necessarily linking them into the kernel
 // binary.
-static UNUSED CONST inline unsigned clz32(uint32_t x)
+static inline CONST int clz32(uint32_t x)
 {
     // Compiler builtins typically return int, but we use unsigned internally
     // to reduce the number of guards we see in the proofs.
-    unsigned count = 32;
+    unsigned int count = 32;
     uint32_t mask = UINT32_MAX;
 
     // Each iteration i (counting backwards) considers the least significant
@@ -243,9 +243,9 @@ static UNUSED CONST inline unsigned clz32(uint32_t x)
     return count - x;
 }
 
-static UNUSED CONST inline unsigned clz64(uint64_t x)
+static inline CONST unsigned int clz64(uint64_t x)
 {
-    unsigned count = 64;
+    unsigned int count = 64;
     uint64_t mask = UINT64_MAX;
 
     // Although we could implement this using clz32, we spell out the
@@ -300,9 +300,9 @@ static UNUSED CONST inline unsigned clz64(uint64_t x)
 
 // Count trailing zeros.
 // See comments on clz32.
-static UNUSED CONST inline unsigned ctz32(uint32_t x)
+static inline CONST unsigned int ctz32(uint32_t x)
 {
-    unsigned count = (x == 0);
+    unsigned int count = (x == 0);
     uint32_t mask = UINT32_MAX;
 
     // Each iteration i (counting backwards) considers the least significant
@@ -362,9 +362,9 @@ static UNUSED CONST inline unsigned ctz32(uint32_t x)
     return count;
 }
 
-static UNUSED CONST inline unsigned ctz64(uint64_t x)
+static inline CONST unsigned int ctz64(uint64_t x)
 {
-    unsigned count = (x == 0);
+    unsigned int count = (x == 0);
     uint64_t mask = UINT64_MAX;
 
     if (1) {
@@ -413,6 +413,38 @@ static UNUSED CONST inline unsigned ctz64(uint64_t x)
     return count;
 }
 
+//
+// /usr/bin/riscv64-unknown-elf-gcc
+//    --sysroot=/home/codasip.com/axel.heider/projects/cheri/hobgoblin/build-sel4_hello_world-qemu-riscv-virt
+//    -D__KERNEL_64__
+//    -march=rv64imac
+//    -mabi=lp64
+//    -O2
+//    -g
+//    -DNDEBUG
+//    -D__KERNEL_64__
+//    -march=rv64imac
+//    -mabi=lp64
+//    -static
+//    -Wl,--build-id=none
+//    -Wl,-n
+//    -O2
+//    -nostdlib
+//    -fno-pic
+//    -fno-pie
+//    -fwhole-program
+//    -DDEBUG
+//    -g
+//    -ggdb
+//    -mcmodel=medany
+//    -msmall-data-limit=1024
+//    -Wl,-T /home/codasip.com/axel.heider/projects/cheri/hobgoblin/build-sel4_hello_world-qemu-riscv-virt/kernel/linker.lds_pp
+//    kernel/CMakeFiles/kernel.elf.dir/src/arch/riscv/head.S.obj
+//    kernel/CMakeFiles/kernel.elf.dir/src/arch/riscv/traps.S.obj
+//    kernel/CMakeFiles/kernel.elf.dir/kernel_all.c.obj
+//    -o kernel/kernel.elf
+//
+
 // The compiler builtins will emit calls to these functions when the platform
 // does not provide suitable inline assembly. These are only provided when the
 // relevant config items are set. We define these separately from `ctz32` etc.
@@ -430,27 +462,27 @@ static UNUSED CONST inline unsigned ctz64(uint64_t x)
 #ifdef CONFIG_CLZ_32
 CONST int CxZxi2_VISIBLE __clzsi2(uint32_t x)
 {
-    return clz32(x);
+    return (int)clz32(x);
 }
 #endif
 
 #ifdef CONFIG_CLZ_64
 CONST int CxZxi2_VISIBLE __clzdi2(uint64_t x)
 {
-    return clz64(x);
+    return (int)clz64(x);
 }
 #endif
 
 #ifdef CONFIG_CTZ_32
 CONST int CxZxi2_VISIBLE __ctzsi2(uint32_t x)
 {
-    return ctz32(x);
+    return (int)ctz32(x);
 }
 #endif
 
 #ifdef CONFIG_CTZ_64
 CONST int CxZxi2_VISIBLE __ctzdi2(uint64_t x)
 {
-    return ctz64(x);
+    return (int)ctz64(x);
 }
 #endif
