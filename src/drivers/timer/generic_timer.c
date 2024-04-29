@@ -10,16 +10,12 @@ BOOT_CODE void initGenericTimer(void)
 {
     if (config_set(CONFIG_DEBUG_BUILD)) {
         /* check the frequency is correct */
+        uint64_t timer_hz = (uint64_t)(TIMER_CLOCK_HZ);
         word_t gpt_cntfrq = 0;
         SYSTEM_READ_WORD(CNTFRQ, gpt_cntfrq);
-        /* The CNTFRQ register is a 32-bit register, its value can safely be
-         * compared with TIMER_CLOCK_HZ.
-         */
-        if ((gpt_cntfrq != 0) && (gpt_cntfrq != TIMER_CLOCK_HZ)) {
-            /* TIMER_CLOCK_HZ is defined as a unsigned long long constant on
-             * every architecture. */
-            printf("Warning:  gpt_cntfrq %"SEL4_PRIu_word", expected %llu\n",
-                   gpt_cntfrq, TIMER_CLOCK_HZ);
+        if ((gpt_cntfrq != 0) && (gpt_cntfrq != timer_hz)) {
+            printf("Warning:  gpt_cntfrq %"SEL4_PRIu_word", expected %"PRIu64"\n",
+                   gpt_cntfrq, timer_hz);
         }
     }
 
