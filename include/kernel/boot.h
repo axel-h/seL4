@@ -138,13 +138,21 @@ static inline BOOT_CODE pptr_t it_alloc_paging(void)
 /* return the amount of paging structures required to cover v_reg */
 word_t arch_get_n_paging(v_region_t it_veg);
 
-#if defined(CONFIG_DEBUG_BUILD) && defined(ENABLE_SMP_SUPPORT) && defined(CONFIG_KERNEL_MCS) && !defined(CONFIG_PLAT_QEMU_ARM_VIRT)
+#if defined(CONFIG_DEBUG_BUILD) && defined(ENABLE_SMP_SUPPORT) && defined(CONFIG_KERNEL_MCS)
 /* Test whether clocks are synchronised across nodes */
 #define ENABLE_SMP_CLOCK_SYNC_TEST_ON_BOOT
 #endif
 
 #ifdef ENABLE_SMP_CLOCK_SYNC_TEST_ON_BOOT
-BOOT_CODE void clock_sync_test(void);
+/* Test whether clocks are synchronised across nodes */
+void clock_sync_test(void);
+void clock_sync_test_evaluation(void);
+#define SMP_CLOCK_SYNC_TEST_UPDATE_TIME() \
+    do { \
+        NODE_STATE(ksCurTime) = getCurrentTime(); \
+        __atomic_thread_fence(__ATOMIC_RELEASE); \
+    } while(0)
 #else
 #define clock_sync_test()
+#define SMP_CLOCK_SYNC_TEST_UPDATE_TIME()   ((void)0)
 #endif

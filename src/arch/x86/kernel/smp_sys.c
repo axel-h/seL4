@@ -58,18 +58,19 @@ BOOT_CODE void start_boot_aps(void)
          * as APIC ID are not continoius e.g. 0,2,1,3 for 4 cores with hyperthreading
          * we need to store a mapping to translate the index to real APIC ID */
         cpu_mapping.index_to_cpu_id[current_ap_index] = boot_state.cpus[current_ap_index];
+        SMP_CLOCK_SYNC_TEST_UPDATE_TIME();
         start_cpu(boot_state.cpus[current_ap_index], BOOT_NODE_PADDR);
 
         /* wait for current AP to boot up */
-        while (ksNumCPUs == current_ap_index) {
-#ifdef ENABLE_SMP_CLOCK_SYNC_TEST_ON_BOOT
-            NODE_STATE(ksCurTime) = getCurrentTime();
-            __atomic_thread_fence(__ATOMIC_ACQ_REL);
-#else
-            __atomic_thread_fence(__ATOMIC_RELEASE);
-#endif
+        while (smp_aps_index == current_ap_index) {
+            SMP_CLOCK_SYNC_TEST_UPDATE_TIME();
         }
     }
+
+#ifdef ENABLE_SMP_CLOCK_SYNC_TEST_ON_BOOT
+    clock_sync_test_evaluation();
+#endif
+
 }
 
 BOOT_CODE bool_t copy_boot_code_aps(uint32_t mem_lower)
