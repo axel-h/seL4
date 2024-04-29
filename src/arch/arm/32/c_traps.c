@@ -5,12 +5,14 @@
  */
 
 #include <config.h>
+#include <util.h>
 #include <model/statedata.h>
 #include <arch/fastpath/fastpath.h>
 #include <arch/kernel/traps.h>
 #include <arch/machine/debug.h>
 #include <arch/machine/debug_conf.h>
 #include <api/syscall.h>
+#include <api/debug.h>
 #include <linker.h>
 #include <machine/fpu.h>
 
@@ -64,6 +66,23 @@ void VISIBLE NORETURN restore_user_context(void)
                      : /* no output */
                      : [cur_thread] "r"(cur_thread_reg + NextIP * sizeof(word_t))
                     );
+    }
+    UNREACHABLE();
+}
+
+/** DONT_TRANSLATE */
+void NORETURN NO_INLINE VISIBLE halt(void)
+{
+    /* disable all interrupts */
+    cpsid_iaf();
+
+#ifdef CONFIG_PRINTING
+    debug_msg_halt();
+#endif /* CONFIG_PRINTING */
+
+    /* loop forever */
+    for (;;) {
+        wfi();
     }
     UNREACHABLE();
 }
