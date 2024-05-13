@@ -59,5 +59,3 @@ static inline CONST cpu_id_t getCurrentCPUIndex(void)
 }
 
 #endif /* ENABLE_SMP_SUPPORT */
-
-
