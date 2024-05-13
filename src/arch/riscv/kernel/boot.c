@@ -466,6 +466,9 @@ BOOT_CODE VISIBLE void init_kernel(
 {
     bool_t result;
 
+    printf("hart_id %"SEL4_PRIu_word", core_id %"SEL4_PRIu_word", CONFIG_FIRST_HART_ID %d\n",
+           hart_id, core_id, CONFIG_FIRST_HART_ID);
+
 #ifdef ENABLE_SMP_SUPPORT
     add_hart_to_core_map(hart_id, core_id);
     if (core_id == 0) {

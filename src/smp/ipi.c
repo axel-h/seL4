@@ -121,6 +121,8 @@ void doMaskReschedule(word_t mask)
 
 void generic_ipi_send_mask(irq_t ipi, word_t mask, bool_t isBlocking)
 {
+    printf("generic_ipi_send_mask 0x%"SEL4_PRIx_word"\n", mask);
+
     word_t nr_target_cores = 0;
     uint16_t target_cores[CONFIG_MAX_NUM_NODES];
 
@@ -132,6 +134,7 @@ void generic_ipi_send_mask(irq_t ipi, word_t mask, bool_t isBlocking)
             nr_target_cores++;
         } else {
             IPI_MEM_BARRIER;
+            printf("call ipi_send_target index %d\n", index);
             ipi_send_target(ipi, cpuIndexToID(index));
         }
         mask &= ~BIT(index);
@@ -141,6 +144,7 @@ void generic_ipi_send_mask(irq_t ipi, word_t mask, bool_t isBlocking)
         /* sending IPIs... */
         IPI_MEM_BARRIER;
         for (int i = 0; i < nr_target_cores; i++) {
+            printf("call ipi_send_target target_cores[%d] %d\n", i, target_cores[i]);
             ipi_send_target(ipi, cpuIndexToID(target_cores[i]));
         }
     }
