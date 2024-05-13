@@ -33,12 +33,17 @@ pte_t kernel_image_level2_log_buffer_pt[BIT(PT_INDEX_BITS)] ALIGN_BSS(BIT(seL4_P
  */
 core_map_t coreMap;
 
+cpu_id_t cpuIndexToID(word_t index)
+{
+    if (index >= ARRAY_SIZE(coreMap.cores)) {
+        printf("index 0x%"SEL4_PRIx_word" exceeds coreMap.cores[]\n", index);
+        halt();
+    }
+    return coreMap.cores[index].hart_id;
+}
 
 word_t get_current_hart_id(void)
 {
-#ifdef CONFIG_ENABLE_SMP_SUPPORT
-    return cpuIndexToID(getCurrentCPUIndex());
-#else
-    return coreMap.cores[0].hart_id;
-#endif
+    word_t index = CURRENT_CPU_INDEX();
+    return cpuIndexToID(index);
 }

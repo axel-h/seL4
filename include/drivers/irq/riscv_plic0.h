@@ -29,6 +29,7 @@
 
 /* The memory map is based on the PLIC section in
  * https://static.dev.sifive.com/U54-MC-RVCoreIP.pdf
+ * The PLIC has separate register sets for each hart and the hart's context.
  */
 
 #define PLIC_PPTR_BASE          PLIC_PPTR
@@ -110,10 +111,6 @@ static inline bool_t plic_pending_interrupt(word_t interrupt)
     }
 }
 
-/* The PLIC has separate register sets for each hart and the hart's context.
- * This returns the hart ID used by the PLIC for the hart this code is currently
- * executing on.
- */
 
 
 static inline irq_t plic_get_claim(void)

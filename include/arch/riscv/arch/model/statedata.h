@@ -46,4 +46,5 @@ extern pte_t kernel_image_level2_dev_pt[BIT(PT_INDEX_BITS)];
 extern pte_t kernel_image_level2_log_buffer_pt[BIT(PT_INDEX_BITS)];
 #endif
 
+cpu_id_t cpuIndexToID(word_t index);
 word_t get_current_hart_id(void);

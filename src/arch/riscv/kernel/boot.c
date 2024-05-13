@@ -472,8 +472,8 @@ BOOT_CODE VISIBLE void init_kernel(
     word_t core_id
 )
 {
-    printf("hart_id %"SEL4_PRIu_word", core_id %"SEL4_PRIu_word", CONFIG_FIRST_HART_ID %d\n",
-           hart_id, core_id, CONFIG_FIRST_HART_ID);
+    printf("hart_id %"SEL4_PRIu_word", core_id %"SEL4_PRIu_word"\n",
+           hart_id, core_id);
 
     if (0 == core_id) {
         if (!try_init_kernel(ui_p_reg_start, ui_p_reg_end, pv_offset, v_entry,

@@ -16,15 +16,6 @@
 extern char kernel_stack_alloc[CONFIG_MAX_NUM_NODES][BIT(CONFIG_KERNEL_STACK_BITS)];
 compile_assert(kernel_stack_4k_aligned, KERNEL_STACK_ALIGNMENT == 4096)
 
-static inline cpu_id_t cpuIndexToID(word_t index)
-{
-    if (index >= ARRAY_SIZE(coreMap.cores)) {
-        printf("ERROR: coreMap index invalid: %"SEL4_PRIu_word"\n", index);
-        halt();
-    }
-    return coreMap.cores[index].hart_id;
-}
-
 static inline word_t hartIDToCoreID(word_t hart_id)
 {
     for (word_t i = 0; i < ARRAY_SIZE(coreMap.cores); i++) {
