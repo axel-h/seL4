@@ -161,11 +161,11 @@ void refill_new(sched_context_t *sc, word_t max_refills, ticks_t budget, ticks_t
     sc->scRefillHead = 0;
     sc->scRefillTail = 0;
     sc->scRefillMax = max_refills;
-    assert(budget >= MIN_BUDGET);
+    assert(budget >= MIN_BUDGET_TICKS);
     /* full budget available */
     refill_head(sc)->rAmount = budget;
     /* budget can be used from now */
-    refill_head(sc)->rTime = NODE_STATE(ksCurTime);
+    refill_head(sc)->rTime = NODE_STATE(ksCurTicks);
     maybe_add_empty_tail(sc);
     REFILL_SANITY_CHECK(sc, budget);
 }
@@ -192,7 +192,7 @@ void refill_update(sched_context_t *sc, ticks_t new_period, ticks_t new_budget, 
     sc->scPeriod = new_period;
 
     if (refill_ready(sc)) {
-        refill_head(sc)->rTime = NODE_STATE(ksCurTime);
+        refill_head(sc)->rTime = NODE_STATE(ksCurTicks);
     }
 
     if (refill_head(sc)->rAmount >= new_budget) {
@@ -263,7 +263,7 @@ void refill_budget_check(ticks_t usage)
      * that assertion we ensure that we never delate a refill past this
      * point in the future.
      */
-    while (refill_head(sc)->rAmount <= usage && refill_head(sc)->rTime < MAX_RELEASE_TIME) {
+    while (refill_head(sc)->rAmount <= usage && refill_head(sc)->rTime < MAX_RELEASE_TICKS) {
         usage -= refill_head(sc)->rAmount;
 
         if (refill_single(sc)) {
@@ -279,7 +279,7 @@ void refill_budget_check(ticks_t usage)
      * If the head time is still sufficiently far from the point of
      * integer overflow then the usage must be smaller than the head.
      */
-    if (usage > 0 && refill_head(sc)->rTime < MAX_RELEASE_TIME) {
+    if (usage > 0 && refill_head(sc)->rTime < MAX_RELEASE_TICKS) {
         assert(refill_head(sc)->rAmount > usage);
         refill_t used = (refill_t) {
             .rAmount = usage,
@@ -302,7 +302,7 @@ void refill_budget_check(ticks_t usage)
     }
 
     /* Ensure the head refill has the minimum budget */
-    while (refill_head(sc)->rAmount < MIN_BUDGET) {
+    while (refill_head(sc)->rAmount < MIN_BUDGET_TICKS) {
         refill_t head = refill_pop_head(sc);
         refill_head(sc)->rAmount += head.rAmount;
         /* Delay head to ensure the subsequent refill doesn't end any
@@ -325,7 +325,7 @@ void refill_unblock_check(sched_context_t *sc)
     /* advance earliest activation time to now */
     REFILL_SANITY_START(sc);
     if (refill_ready(sc)) {
-        refill_head(sc)->rTime = NODE_STATE(ksCurTime);
+        refill_head(sc)->rTime = NODE_STATE(ksCurTicks);
         NODE_STATE(ksReprogram) = true;
 
         /* merge available replenishments */

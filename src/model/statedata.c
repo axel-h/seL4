@@ -53,7 +53,7 @@ UP_STATE_DEFINE(ticks_t, ksConsumed);
 /* whether we need to reprogram the timer before exiting the kernel */
 UP_STATE_DEFINE(bool_t, ksReprogram);
 /* the current kernel time (recorded on kernel entry) */
-UP_STATE_DEFINE(ticks_t, ksCurTime);
+UP_STATE_DEFINE(ticks_t, ksCurTicks);
 /* current scheduling context pointer */
 UP_STATE_DEFINE(sched_context_t *, ksCurSC);
 UP_STATE_DEFINE(sched_context_t *, ksIdleSC);
@@ -86,9 +86,9 @@ dom_t ksCurDomain;
 
 /* Domain timeslice remaining */
 #ifdef CONFIG_KERNEL_MCS
-ticks_t ksDomainTime;
+ticks_t ksDomainTicks;
 #else
-word_t ksDomainTime;
+word_t ksDomainTicks;
 #endif
 
 /* An index into ksDomSchedule for active domain and length. */

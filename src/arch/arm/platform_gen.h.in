@@ -40,6 +40,6 @@ enum IRQConstants {
 #ifdef CONFIG_KERNEL_MCS
 static inline CONST time_t getKernelWcetUs(void)
 {
-    return @CONFIGURE_KERNEL_WCET@;
+    return _as_time_t(@CONFIGURE_KERNEL_WCET@);
 }
 #endif

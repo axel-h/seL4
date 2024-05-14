@@ -15,7 +15,7 @@ static inline void resetTimer(void)
 
 #ifdef CONFIG_KERNEL_MCS
 /** DONT_TRANSLATE **/
-static inline ticks_t getCurrentTime(void)
+static inline ticks_t getCurrentTicks(void)
 {
     uint32_t hi, hi2, lo;
     hi2 = mct->global.cnth;
@@ -26,7 +26,8 @@ static inline ticks_t getCurrentTime(void)
         hi2 = mct->global.cnth;
     } while (hi != hi2);
 
-    return ((((uint64_t) hi) << 32llu) | (uint64_t) lo);
+    uint64_t val = ((uint64_t)hi << 32) | lo;
+    return (ticks_t)val;
 }
 
 /** DONT_TRANSLATE **/

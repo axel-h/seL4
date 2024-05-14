@@ -293,7 +293,7 @@ BOOT_CODE bool_t init_sys_state(
     write_it_asid_pool(it_ap_cap, it_vspace_cap);
 
 #ifdef CONFIG_KERNEL_MCS
-    NODE_STATE(ksCurTime) = getCurrentTime();
+    NODE_STATE(ksCurTicks) = getCurrentTime();
 #endif
 
     /* create the idle thread */

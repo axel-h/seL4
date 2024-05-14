@@ -19,7 +19,7 @@
 static inline CONST time_t getKernelWcetUs(void)
 {
     /* Copied from x86_64. Hopefully it's an overestimate here. */
-    return  10u;
+    return _as_time_t(10u);
 }
 
 static inline PURE ticks_t usToTicks(time_t us)
@@ -29,7 +29,7 @@ static inline PURE ticks_t usToTicks(time_t us)
 
 static inline PURE time_t ticksToUs(ticks_t ticks)
 {
-    return div64(ticks, TICKS_IN_US);
+    return _as_time_t(div64(ticks, TICKS_IN_US));
 }
 
 static inline PURE ticks_t getTimerPrecision(void)
@@ -50,7 +50,7 @@ static inline CONST ticks_t getMaxTicksToUs(void)
  */
 static inline CONST time_t getMaxUsToTicks(void)
 {
-    return UINT64_MAX / TICKS_IN_US;
+    return _as_time_t(UINT64_MAX / TICKS_IN_US);
 }
 
 /* Read the current time from the timer. */

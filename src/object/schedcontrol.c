@@ -105,27 +105,27 @@ static exception_t decodeSchedControl_ConfigureFlags(word_t length, cap_t cap, w
         return EXCEPTION_SYSCALL_ERROR;
     }
 
-    if (budget_us > MAX_PERIOD_US || budget_ticks < MIN_BUDGET) {
+    if (_from_time_t(budget_us) > _from_time_t(MAX_PERIOD_US) || budget_ticks < MIN_BUDGET_TICKS) {
         userError("SchedControl_ConfigureFlags: budget out of range.");
         current_syscall_error.type = seL4_RangeError;
-        current_syscall_error.rangeErrorMin = MIN_BUDGET_US;
-        current_syscall_error.rangeErrorMax = MAX_PERIOD_US;
+        current_syscall_error.rangeErrorMin = _from_time_t(MIN_BUDGET_US);
+        current_syscall_error.rangeErrorMax = _from_time_t(MAX_PERIOD_US);
         return EXCEPTION_SYSCALL_ERROR;
     }
 
-    if (period_us > MAX_PERIOD_US || period_ticks < MIN_BUDGET) {
+    if (_from_time_t(period_us) > _from_time_t(MAX_PERIOD_US) || period_ticks < MIN_BUDGET_TICKS) {
         userError("SchedControl_ConfigureFlags: period out of range.");
         current_syscall_error.type = seL4_RangeError;
-        current_syscall_error.rangeErrorMin = MIN_BUDGET_US;
-        current_syscall_error.rangeErrorMax = MAX_PERIOD_US;
+        current_syscall_error.rangeErrorMin = _from_time_t(MIN_BUDGET_US);
+        current_syscall_error.rangeErrorMax = _from_time_t(MAX_PERIOD_US);
         return EXCEPTION_SYSCALL_ERROR;
     }
 
     if (budget_ticks > period_ticks) {
         userError("SchedControl_ConfigureFlags: budget must be <= period");
         current_syscall_error.type = seL4_RangeError;
-        current_syscall_error.rangeErrorMin = MIN_BUDGET_US;
-        current_syscall_error.rangeErrorMax = period_us;
+        current_syscall_error.rangeErrorMin = _from_time_t(MIN_BUDGET_US);
+        current_syscall_error.rangeErrorMax = _from_time_t(period_us);
         return EXCEPTION_SYSCALL_ERROR;
     }
 

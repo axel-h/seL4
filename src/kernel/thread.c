@@ -311,9 +311,9 @@ static void nextDomain(void)
     ksWorkUnitsCompleted = 0;
     ksCurDomain = ksDomSchedule[ksDomScheduleIdx].domain;
 #ifdef CONFIG_KERNEL_MCS
-    ksDomainTime = usToTicks(ksDomSchedule[ksDomScheduleIdx].length * US_IN_MS);
+    ksDomainTicks = usToTicks(_as_time_t(ksDomSchedule[ksDomScheduleIdx].length * US_IN_MS));
 #else
-    ksDomainTime = ksDomSchedule[ksDomScheduleIdx].length;
+    ksDomainTicks = ksDomSchedule[ksDomScheduleIdx].length;
 #endif
 }
 
@@ -342,7 +342,7 @@ static void switchSchedContext(void)
 
 static void scheduleChooseNewThread(void)
 {
-    if (ksDomainTime == 0) {
+    if (ksDomainTicks == 0) {
         nextDomain();
     }
     chooseThread();
@@ -574,11 +574,11 @@ void postpone(sched_context_t *sc)
 
 void setNextInterrupt(void)
 {
-    ticks_t next_interrupt = NODE_STATE(ksCurTime) +
+    ticks_t next_interrupt = NODE_STATE(ksCurTicks) +
                              refill_head(NODE_STATE(ksCurThread)->tcbSchedContext)->rAmount;
 
     if (numDomains > 1) {
-        next_interrupt = MIN(next_interrupt, NODE_STATE(ksCurTime) + ksDomainTime);
+        next_interrupt = MIN(next_interrupt, NODE_STATE(ksCurTicks) + ksDomainTicks);
     }
 
     if (NODE_STATE(ksReleaseHead) != NULL) {
@@ -606,7 +606,7 @@ void chargeBudget(ticks_t consumed, bool_t canTimeoutFault)
             refill_budget_check(consumed);
         }
 
-        assert(refill_head(NODE_STATE(ksCurSC))->rAmount >= MIN_BUDGET);
+        assert(refill_sufficient(NODE_STATE(ksCurSC), 0));
         NODE_STATE(ksCurSC)->scConsumed += consumed;
     }
     NODE_STATE(ksConsumed) = 0;
@@ -653,8 +653,8 @@ void timerTick(void)
     }
 
     if (numDomains > 1) {
-        ksDomainTime--;
-        if (ksDomainTime == 0) {
+        ksDomainTicks--;
+        if (ksDomainTicks == 0) {
             rescheduleRequired();
         }
     }

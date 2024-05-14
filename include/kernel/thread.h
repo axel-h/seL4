@@ -118,7 +118,7 @@ static inline bool_t PURE isRoundRobin(sched_context_t *sc)
 static inline bool_t isCurDomainExpired(void)
 {
     return numDomains > 1 &&
-           ksDomainTime == 0;
+           ksDomainTicks == 0;
 }
 
 static inline void commitTime(void)
@@ -212,6 +212,7 @@ static inline void updateRestartPC(tcb_t *tcb)
 }
 
 #ifdef CONFIG_KERNEL_MCS
+
 /* End the timeslice for the current thread.
  * This will recharge the threads timeslice and place it at the
  * end of the scheduling queue for its priority.
@@ -221,28 +222,43 @@ void endTimeslice(bool_t can_timeout_fault);
 /* called when a thread has used up its head refill */
 void chargeBudget(ticks_t consumed, bool_t canTimeoutFault);
 
-/* Update the kernels timestamp and stores in ksCurTime.
+/* Update the kernel's timestamp and store it in ksCurTime.
  * The difference between the previous kernel timestamp and the one just read
- * is stored in ksConsumed.
+ * is added to ksConsumed.
  *
- * Should be called on every kernel entry
- * where threads can be billed.
+ * Should be called on every kernel entry where threads can be billed.
+ * Will be called without holding the kernel lock!
  */
 static inline void updateTimestamp(void)
 {
-    ticks_t prev = NODE_STATE(ksCurTime);
-    NODE_STATE(ksCurTime) = getCurrentTime();
-    assert(NODE_STATE(ksCurTime) < MAX_RELEASE_TIME);
-    ticks_t consumed = (NODE_STATE(ksCurTime) - prev);
+    ticks_t prev = NODE_STATE(ksCurTicks);
+    ticks_t now = getCurrentTicks();
+    /* The timestamp must be lower than max absolute values, which should never
+     * be a practical problem with 64-bit values. The timestamps must be sane,
+     * and there must not have been a roll-over.
+     */
+    assert(now < MAX_RELEASE_TICKS);
+    assert(now >= prev);
+    ticks_t consumed = now - prev;
+    /* Practically, the consumed time is always greater zero as the timestamps
+     * are increasing reasonably fast that we always see time passing. Thus
+     * there is not gain here to check if consumed is zero and avoid the memory
+     * accesses in this case.
+     */
+    NODE_STATE(ksCurTicks) = now;
     NODE_STATE(ksConsumed) += consumed;
+
     if (numDomains > 1) {
-        if ((consumed + MIN_BUDGET) >= ksDomainTime) {
-            ksDomainTime = 0;
+        /* Domains are not supported yet for SMP, thus there is no race
+         * condition here when modifying ksDomainTime. Otherwise this requires
+         * holding the BKL.
+         */
+        if ((consumed + MIN_BUDGET_TICKS) >= ksDomainTicks) {
+            ksDomainTicks = 0;
         } else {
-            ksDomainTime -= consumed;
+            ksDomainTicks -= consumed;
         }
     }
-
 }
 
 /*
@@ -307,5 +323,5 @@ void awaken(void);
 /* Place the thread bound to this scheduling context in the release queue
  * of periodic threads waiting for budget recharge */
 void postpone(sched_context_t *sc);
-#endif
 
+#endif /* CONFIG_KERNEL_MCS */

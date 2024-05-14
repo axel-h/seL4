@@ -66,7 +66,7 @@ NODE_STATE_DECLARE(tcb_t, *ksSchedulerAction);
 #ifdef CONFIG_KERNEL_MCS
 NODE_STATE_DECLARE(tcb_t, *ksReleaseHead);
 NODE_STATE_DECLARE(ticks_t, ksConsumed);
-NODE_STATE_DECLARE(ticks_t, ksCurTime);
+NODE_STATE_DECLARE(ticks_t, ksCurTicks);
 NODE_STATE_DECLARE(bool_t, ksReprogram);
 NODE_STATE_DECLARE(sched_context_t, *ksCurSC);
 NODE_STATE_DECLARE(sched_context_t, *ksIdleSC);
@@ -108,9 +108,9 @@ extern const word_t ksDomScheduleLength;
 extern word_t ksDomScheduleIdx;
 extern dom_t ksCurDomain;
 #ifdef CONFIG_KERNEL_MCS
-extern ticks_t ksDomainTime;
+extern ticks_t ksDomainTicks;
 #else
-extern word_t ksDomainTime;
+extern word_t ksDomainTicks;
 #endif
 extern word_t tlbLockCount VISIBLE;
 

@@ -467,8 +467,22 @@ BOOT_CODE bool_t init_sched_control(cap_t root_cnode_cap, word_t num_nodes)
 
 BOOT_CODE void create_idle_thread(void)
 {
-    pptr_t pptr;
+    printf("Clock Info:\n");
+#ifdef CONFIG_KERNEL_MCS
+    printf("  CONFIG_BOOT_THREAD_TIME_SLICE = %d\n", CONFIG_BOOT_THREAD_TIME_SLICE);
+    printf("    in us = %"PRIu64"\n", usToTicks(CONFIG_BOOT_THREAD_TIME_SLICE * US_IN_MS));
+#else /* not CONFIG_KERNEL_MCS */
+    printf("  CONFIG_TIMER_TICK_MS %d\n", CONFIG_TIMER_TICK_MS);
+#ifdef TICKS_PER_MS
+    printf("  TICKS_PER_MS = %"PRIu64"\n", (uint64_t)TICKS_PER_MS);
+#endif /* TICKS_PER_MS */
+#endif /* [not] CONFIG_KERNEL_MCS */
+#ifdef TIMER_CLOCK_HZ
+    printf("  TIMER_CLOCK_HZ = %"PRIu64"\n", (uint64_t)TIMER_CLOCK_HZ);
+#endif /* TIMER_CLOCK_HZ */
 
+    printf("creating idle thread(s)\n");
+    pptr_t pptr;
 #ifdef ENABLE_SMP_SUPPORT
     for (unsigned int i = 0; i < CONFIG_MAX_NUM_NODES; i++) {
 #endif /* ENABLE_SMP_SUPPORT */
@@ -493,6 +507,7 @@ BOOT_CODE void create_idle_thread(void)
 BOOT_CODE tcb_t *create_initial_thread(cap_t root_cnode_cap, cap_t it_pd_cap, vptr_t ui_v_entry, vptr_t bi_frame_vptr,
                                        vptr_t ipcbuf_vptr, cap_t ipcbuf_cap)
 {
+    printf("creating initial thread\n");
     tcb_t *tcb = TCB_PTR(rootserver.tcb + TCB_OFFSET);
 #ifndef CONFIG_KERNEL_MCS
     tcb->tcbTimeSlice = CONFIG_TIME_SLICE;
@@ -543,11 +558,11 @@ BOOT_CODE tcb_t *create_initial_thread(cap_t root_cnode_cap, cap_t it_pd_cap, vp
 
     ksCurDomain = ksDomSchedule[ksDomScheduleIdx].domain;
 #ifdef CONFIG_KERNEL_MCS
-    ksDomainTime = usToTicks(ksDomSchedule[ksDomScheduleIdx].length * US_IN_MS);
+    ksDomainTicks = usToTicks(_as_time_t(ksDomSchedule[ksDomScheduleIdx].length * US_IN_MS));
 #else
-    ksDomainTime = ksDomSchedule[ksDomScheduleIdx].length;
+    ksDomainTicks = ksDomSchedule[ksDomScheduleIdx].length;
 #endif
-    assert(ksCurDomain < CONFIG_NUM_DOMAINS && ksDomainTime > 0);
+    assert(ksCurDomain < CONFIG_NUM_DOMAINS && ksDomainTicks > 0);
 
 #ifndef CONFIG_KERNEL_MCS
     SMP_COND_STATEMENT(tcb->tcbAffinity = 0);
@@ -575,11 +590,11 @@ BOOT_CODE void clock_sync_test(void)
     ticks_t margin = usToTicks(1) + getTimerPrecision();
 
     assert(getCurrentCPUIndex() != 0);
-    t = NODE_STATE_ON_CORE(ksCurTime, 0);
+    t = NODE_STATE_ON_CORE(ksCurTicks, 0);
     do {
-        /* perform a memory acquire to get new values of ksCurTime */
+        /* perform a memory acquire to get new values of ksCurTicks */
         __atomic_thread_fence(__ATOMIC_ACQUIRE);
-        t0 = NODE_STATE_ON_CORE(ksCurTime, 0);
+        t0 = NODE_STATE_ON_CORE(ksCurTicks, 0);
     } while (t0 == t);
     t = getCurrentTime();
     printf("clock_sync_test[%d]: t0 = %"PRIu64", t = %"PRIu64", td = %"PRIi64"\n",
@@ -609,7 +624,7 @@ BOOT_CODE void init_core_state(tcb_t *scheduler_action)
     NODE_STATE(ksConsumed) = 0;
     NODE_STATE(ksReprogram) = true;
     NODE_STATE(ksReleaseHead) = NULL;
-    NODE_STATE(ksCurTime) = getCurrentTime();
+    NODE_STATE(ksCurTicks) = getCurrentTicks();
 #endif
 }
 
