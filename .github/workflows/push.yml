@@ -1,3 +1,4 @@
+# Copyright 2021, Proofcraft Pty Ltd
 # Copyright 2020, Data61, CSIRO (ABN 41 687 119 230)
 #
 # SPDX-License-Identifier: BSD-2-Clause
@@ -11,15 +12,71 @@ on:
       - master
   pull_request:
 
+# To reduce the load we cancel any older runs of this workflow for the current
+# PR. For deployment to the master branch, the workflow will run on each push.
+# and the `run_id` parameter will prevent cancellation.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.number) || format('run-{0}', github.run_id) }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   check:
     name: License Check
     runs-on: ubuntu-latest
     steps:
-    - uses: seL4/ci-actions/license-check@master
+    - uses: axel-h/ci-actions/license-check@patch-axel-7
 
   links:
     name: Links
     runs-on: ubuntu-latest
     steps:
-      - uses: seL4/ci-actions/link-check@master
+      - uses: axel-h/ci-actions/link-check@patch-axel-7
+
+  xmllint:
+    name: XML Lint
+    runs-on: ubuntu-latest
+    steps:
+    - name: install xmllint
+      run: |
+        sudo apt-get update
+        sudo apt-get install libxml2-utils
+    - uses: actions/checkout@v4
+    - name: run xmllint
+      run: |
+        find libsel4 -name "sel4*.xml" | \
+        xargs xmllint --schema libsel4/tools/sel4_idl.xsd --noout
+        xmllint --schema libsel4/include/api/syscall.xsd --noout libsel4/include/api/syscall.xml
+
+  manual:
+    name: Build PDF
+    runs-on: ubuntu-latest
+    steps:
+    - uses: axel-h/ci-actions/seL4-manual@patch-axel-7
+    - uses: actions/upload-artifact@v4
+      with:
+        name: PDF
+        path: manual/manual.pdf
+
+  cparser:
+    name: C Parser
+    runs-on: ubuntu-latest
+    steps:
+    - uses: axel-h/ci-actions/cparser-run@patch-axel-7
+
+  standalone_kernel:
+    name: kernel
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [ARM, ARM_HYP, AARCH64, RISCV32, RISCV64, IA32, X64]
+        compiler: [gcc, llvm]
+        exclude:
+          - arch: RISCV32 # no verified config
+          - arch: IA32 # no verified config
+    steps:
+    - uses: actions/checkout@v4
+    - uses: axel-h/ci-actions/standalone-kernel@patch-axel-7
+      with:
+        ARCH: ${{ matrix.arch }}
+        COMPILER: ${{ matrix.compiler }}

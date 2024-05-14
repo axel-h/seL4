@@ -11,7 +11,13 @@ name: seL4Test-HW
 on:
   # needs PR target for secrets access; guard by requiring label
   pull_request_target:
-    types: [opened, reopened, synchronize, labeled]
+    # For all events the property "github.event.pull_request" holds the details
+    # of the PR.
+    types:
+    - opened
+    - reopened
+    - synchronize  # push on PR's branch
+    - labeled  # label added to PR (there is "unlabled" also)
 
 # downgrade permissions to read-only as you would have in a standard PR action
 permissions:
@@ -31,18 +37,31 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  info:
+    name: Info
+    runs-on: ubuntu-latest
+    steps:
+    - name: show-info
+      env:
+        GITHUB_EVENT_NAME: ${{ toJson(github.event_name) }}
+        GITHUB_EVENT: ${{ toJson(github.event) }}
+      run: |
+        echo "github.event_name: ${GITHUB_EVENT_NAME}"
+        echo "github.event: ${GITHUB_EVENT}"
+
   hw-build:
     name: HW Build
     runs-on: ubuntu-latest
-    if: ${{ github.event_name == 'push' ||
-            github.event_name == 'pull_request_target' &&
-              github.event.action != 'labeled' &&
-              (contains(github.event.pull_request.labels.*.name, 'hw-build') ||
-               contains(github.event.pull_request.labels.*.name, 'hw-test')) ||
-            github.event_name == 'pull_request_target' &&
-              github.event.action == 'labeled' &&
-              (github.event.label.name == 'hw-build' ||
-               github.event.label.name == 'hw-test') }}
+    # Run if
+    # - one of the labels is added
+    # - a (re-)open/push happened and one of the labels was present.
+    # Do not run when other labels are added.
+    if: ${{ ((github.event.action != 'labeled') &&
+             (contains(github.event.pull_request.labels.*.name, 'hw-build') ||
+              contains(github.event.pull_request.labels.*.name, 'hw-test'))) ||
+            ((github.event.action == 'labeled') &&
+             ((github.event.label.name == 'hw-build') ||
+              (github.event.label.name == 'hw-test'))) }}
     strategy:
       fail-fast: false
       matrix:
@@ -51,7 +70,7 @@ jobs:
         compiler: [gcc, clang]
     steps:
     - name: Build
-      uses: seL4/ci-actions/sel4test-hw@master
+      uses: axel-h/ci-actions/sel4test-hw@patch-axel-7
       with:
         march: ${{ matrix.march }}
         compiler: ${{ matrix.compiler }}
@@ -75,20 +94,18 @@ jobs:
       matrix: ${{ steps.matrix.outputs.matrix }}
     steps:
     - id: matrix
-      uses: seL4/ci-actions/sel4test-hw-matrix@master
+      uses: axel-h/ci-actions/sel4test-hw-matrix@patch-axel-7
 
   hw-run:
     name: HW Run
     runs-on: ubuntu-latest
     needs: the_matrix
-    if: ${{ github.repository_owner == 'seL4' &&
-            (github.event_name == 'push' ||
-             github.event_name == 'pull_request_target' &&
-               github.event.action != 'labeled' &&
-               contains(github.event.pull_request.labels.*.name, 'hw-test') ||
-             github.event_name == 'pull_request_target' &&
-               github.event.action == 'labeled' &&
-               github.event.label.name == 'hw-test') }}
+    # The checks at the dependent step "hw-build" already filtered a lot, so we
+    # can use a much simpler check here. Run this step only if the 'hw-test' is
+    # present (the labeling event has also added it). Do not run on forks,
+    # because they can't access the hardware test farm.
+    if: ${{ (github.repository_owner == 'seL4') &&
+             contains(github.event.pull_request.labels.*.name, 'hw-test') }}
     strategy:
       fail-fast: false
       matrix: ${{ fromJson(needs.the_matrix.outputs.matrix) }}
@@ -103,7 +120,7 @@ jobs:
         with:
           name: images-${{ matrix.march }}-${{ matrix.compiler }}
       - name: Run
-        uses: seL4/ci-actions/sel4test-hw-run@master
+        uses: axel-h/ci-actions/sel4test-hw-run@patch-axel-7
         with:
           platform: ${{ matrix.platform }}
           compiler: ${{ matrix.compiler }}
