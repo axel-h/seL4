@@ -225,6 +225,7 @@ void handleInterrupt(irq_t irq)
     }
 
     case IRQTimer:
+        debug_timer_interrupt();
 #ifdef CONFIG_KERNEL_MCS
         ackDeadlineIRQ();
         NODE_STATE(ksReprogram) = true;
