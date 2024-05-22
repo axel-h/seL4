@@ -203,6 +203,7 @@ void handleInterrupt(irq_t irq)
 
     switch (intStateIRQTable[IRQT_TO_IDX(irq)]) {
     case IRQSignal: {
+        printf("signal IRQ: %d\n", (int)IRQT_TO_IRQ(irq));
         /* Merging the variable declaration and initialization into one line
          * requires an update in the proofs first. Might be a c89 legacy.
          */
@@ -240,6 +241,9 @@ void handleInterrupt(irq_t irq)
 #endif /* ENABLE_SMP_SUPPORT */
 
     case IRQReserved:
+#ifdef CONFIG_IRQ_REPORTING
+        printf("Received reserved IRQ: %d\n", (int)IRQT_TO_IRQ(irq));
+#endif
         handleReservedIRQ(irq);
         break;
 
@@ -255,6 +259,9 @@ void handleInterrupt(irq_t irq)
         break;
 
     default:
+#ifdef CONFIG_IRQ_REPORTING
+        printf("Received invalid IRQ: %d\n", (int)IRQT_TO_IRQ(irq));
+#endif
         /* No corresponding haskell error */
         fail("Invalid IRQ state");
     }
