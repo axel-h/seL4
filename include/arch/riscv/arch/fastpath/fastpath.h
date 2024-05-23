@@ -96,17 +96,27 @@ static inline int fastpath_reply_cap_check(cap_t cap)
 /** DONT_TRANSLATE */
 static inline void NORETURN FORCE_INLINE fastpath_restore(word_t badge, word_t msgInfo, tcb_t *cur_thread)
 {
+    c_exit_hook();
     NODE_UNLOCK_IF_HELD;
 
-    word_t cur_thread_regs = (word_t)cur_thread->tcbArch.tcbContext.registers;
+    word_t *regs = cur_thread->tcbArch.tcbContext.registers;
+
+    write_sstatus(regs[SSTATUS]);
+    write_sepc(regs[NextIP]);
 
 #ifdef ENABLE_SMP_SUPPORT
-    word_t sp = read_sscratch();
-    sp -= sizeof(word_t);
-    *((word_t *)sp) = cur_thread_regs;
+    /* CRS sscratch permanently holds the current core's stack pointer for
+     * kernel entry. Put the current thread's reg space as first element there,
+     * so it can be obtained easiy on the next entry.
+     */
+    word_t *kernel_stack = (word_t *)read_sscratch();
+    kernel_stack[-1] = (word_t)regs;
+#else
+    /* CRS sscratch holds the pointer to the regs of the current thread, so it
+     * can be obtained easiy on the next entry.
+     */
+    write_sscratch((word_t)regs);
 #endif
-
-    c_exit_hook();
 
 #ifdef CONFIG_HAVE_FPU
     lazyFPURestore(cur_thread);
@@ -122,61 +132,46 @@ static inline void NORETURN FORCE_INLINE fastpath_restore(word_t badge, word_t m
      * register (although impossible to use gainfully on most implementations).
      */
 
-    register word_t badge_reg asm("a0") = badge;
-    register word_t msgInfo_reg asm("a1") = msgInfo;
-    register word_t cur_thread_reg asm("t0") = cur_thread_regs;
+    register word_t reg_a0 asm("a0") = badge;
+    register word_t reg_a1 asm("a1") = msgInfo;
+    register word_t reg_t6 asm("t6") = (word_t)regs;
 
     asm volatile(
-        LOAD_S "  ra, (0*%[REGSIZE])(t0)  \n"
-        LOAD_S "  sp, (1*%[REGSIZE])(t0)  \n"
-        LOAD_S "  gp, (2*%[REGSIZE])(t0)  \n"
-        LOAD_S "  tp, (3*%[REGSIZE])(t0)  \n"
-        /* skip t0/x5, t1/x6, they are restored later */
-        LOAD_S "  t2, (6*%[REGSIZE])(t0)  \n"
-        LOAD_S "  s0, (7*%[REGSIZE])(t0)  \n"
-        LOAD_S "  s1, (8*%[REGSIZE])(t0)  \n"
-        /* skip a0/x10, a1/x11, they have been restored already */
-        LOAD_S "  a2, (11*%[REGSIZE])(t0) \n"
-        LOAD_S "  a3, (12*%[REGSIZE])(t0) \n"
-        LOAD_S "  a4, (13*%[REGSIZE])(t0) \n"
-        LOAD_S "  a5, (14*%[REGSIZE])(t0) \n"
-        LOAD_S "  a6, (15*%[REGSIZE])(t0) \n"
-        LOAD_S "  a7, (16*%[REGSIZE])(t0) \n"
-        LOAD_S "  s2, (17*%[REGSIZE])(t0) \n"
-        LOAD_S "  s3, (18*%[REGSIZE])(t0) \n"
-        LOAD_S "  s4, (19*%[REGSIZE])(t0) \n"
-        LOAD_S "  s5, (20*%[REGSIZE])(t0) \n"
-        LOAD_S "  s6, (21*%[REGSIZE])(t0) \n"
-        LOAD_S "  s7, (22*%[REGSIZE])(t0) \n"
-        LOAD_S "  s8, (23*%[REGSIZE])(t0) \n"
-        LOAD_S "  s9, (24*%[REGSIZE])(t0) \n"
-        LOAD_S "  s10, (25*%[REGSIZE])(t0)\n"
-        LOAD_S "  s11, (26*%[REGSIZE])(t0)\n"
-        LOAD_S "  t3, (27*%[REGSIZE])(t0) \n"
-        LOAD_S "  t4, (28*%[REGSIZE])(t0) \n"
-        LOAD_S "  t5, (29*%[REGSIZE])(t0) \n"
-        LOAD_S "  t6, (30*%[REGSIZE])(t0) \n"
-        /* get sepc */
-        LOAD_S "  t1, (34*%[REGSIZE])(t0)\n"
-        "csrw sepc, t1  \n"
-#ifndef ENABLE_SMP_SUPPORT
-        /* Write back sscratch with cur_thread_reg to get it back on the next trap entry */
-        "csrw sscratch, t0\n"
-#endif
-        LOAD_S "  t1, (32*%[REGSIZE])(t0) \n"
-        "csrw sstatus, t1\n"
-
-        LOAD_S "  t1, (5*%[REGSIZE])(t0) \n"
-        LOAD_S "  t0, (4*%[REGSIZE])(t0) \n"
+        LOAD_REG("ra",  0,  "t6") /* x1  */
+        LOAD_REG("sp",  1,  "t6") /* x2  */
+        LOAD_REG("gp",  2,  "t6") /* x3  */
+        LOAD_REG("tp",  3,  "t6") /* x4  */
+        LOAD_REG("t0",  4,  "t6") /* x5  */
+        LOAD_REG("t1",  5,  "t6") /* x6  */
+        LOAD_REG("t2",  6,  "t6") /* x7  */
+        LOAD_REG("s0",  7,  "t6") /* x8  */
+        LOAD_REG("s1",  8,  "t6") /* x9  */
+        /* a0/x10, a1/x11 are already set */
+        LOAD_REG("a2",  11, "t6") /* x12 */
+        LOAD_REG("a3",  12, "t6") /* x13 */
+        LOAD_REG("a4",  13, "t6") /* x14 */
+        LOAD_REG("a5",  14, "t6") /* x15 */
+        LOAD_REG("a6",  15, "t6") /* x16 */
+        LOAD_REG("a7",  16, "t6") /* x17 */
+        LOAD_REG("s2",  17, "t6") /* x18 */
+        LOAD_REG("s3",  18, "t6") /* x19 */
+        LOAD_REG("s4",  19, "t6") /* x20 */
+        LOAD_REG("s5",  20, "t6") /* x21 */
+        LOAD_REG("s6",  21, "t6") /* x22 */
+        LOAD_REG("s7",  22, "t6") /* x23 */
+        LOAD_REG("s8",  23, "t6") /* x24 */
+        LOAD_REG("s9",  24, "t6") /* x25 */
+        LOAD_REG("s10", 25, "t6") /* x26 */
+        LOAD_REG("s11", 26, "t6") /* x27 */
+        LOAD_REG("t3",  27, "t6") /* x28 */
+        LOAD_REG("t4",  28, "t6") /* x29 */
+        LOAD_REG("t5",  29, "t6") /* x30 */
+        LOAD_REG("t6",  30, "t6") /* x31 */
         "sret"
         : /* no output */
-        : "r"(cur_thread_reg),
-        [REGSIZE] "i"(sizeof(word_t)),
-        "r"(badge_reg),
-        "r"(msgInfo_reg)
+        : "r"(reg_a0), "r"(reg_a1), "r"(reg_t6)
         : "memory"
     );
 
     UNREACHABLE();
 }
-

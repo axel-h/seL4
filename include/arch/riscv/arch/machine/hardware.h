@@ -118,10 +118,19 @@ static inline void arch_clean_invalidate_caches(void)
 {
     /* RISC-V doesn't have an architecture defined way of flushing caches */
 }
-#endif /* __ASSEMBLER__ */
 
 #define LOAD_S STRINGIFY(LOAD)
 #define STORE_S STRINGIFY(STORE)
+
+#define OP_REG_IDX(op, reg, idx, base_reg) \
+    op " " reg ",((" STRINGIFY(idx) ")*(1 << " STRINGIFY(seL4_WordSizeBits) "))(" base_reg ") \n"
+
+#define LOAD_REG(reg, idx, base)    OP_REG_IDX(LOAD_S, reg, idx, base)
+#define STORE_REG(reg, idx, base)   OP_REG_IDX(STORE_S, reg, idx, base)
+
+
+#endif /* __ASSEMBLER__ */
+
 
 #define IPI_MEM_BARRIER \
     do { \
