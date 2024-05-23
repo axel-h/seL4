@@ -183,11 +183,21 @@ static inline word_t read_sepc(void)
     return temp;
 }
 
+static inline void write_sepc(word_t value)
+{
+    asm volatile("csrw sepc, %0" :: "rK"(value));
+}
+
 static inline word_t read_sstatus(void)
 {
     word_t temp;
     asm volatile("csrr %0, sstatus" : "=r"(temp));
     return temp;
+}
+
+static inline void write_sstatus(word_t value)
+{
+    asm volatile("csrw sstatus, %0" :: "rK"(value));
 }
 
 static inline word_t read_sip(void)
@@ -226,6 +236,11 @@ static inline word_t read_sscratch(void)
     word_t temp;
     asm volatile("csrr %0, sscratch" : "=r"(temp));
     return temp;
+}
+
+static inline void write_sscratch(word_t value)
+{
+    asm volatile("csrw sscratch, %0" :: "rK"(value));
 }
 
 #ifdef CONFIG_HAVE_FPU
