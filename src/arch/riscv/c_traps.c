@@ -21,106 +21,40 @@
 /** DONT_TRANSLATE */
 void VISIBLE NORETURN restore_user_context(void)
 {
-    c_exit_hook();
-    NODE_UNLOCK_IF_HELD;
-
     tcb_t *cur_thread = NODE_STATE(ksCurThread);
     word_t *regs = cur_thread->tcbArch.tcbContext.registers;
 
-    write_sstatus(regs[SSTATUS]);
-    write_sepc(regs[NextIP]);
+    compile_assert(a0_is_badge_reg, a0 == badgeRegister)
+    word_t reg_a0 = regs[a0];
 
-#ifdef ENABLE_SMP_SUPPORT
-    /* CRS sscratch permanently holds the current core's stack pointer for
-     * kernel entry. Put the current thread's reg space as first element there,
-     * so it can be obtained easiy on the next entry.
-     * We avoid manipulating the stack from C code, which would be
-     *     word_t *kernel_stack = (word_t *)read_sscratch();
-     *     kernel_stack[-1] = (word_t)regs;
-     * See instead the asm code below.
+    compile_assert(a1_is_msginfo_reg, a1 == msgInfoRegister)
+    word_t reg_a1 = regs[a1];
+
+    /* The RISC-V A-Extension defines the LR/SC instruction pair for
+     * conditional stores using a reservation. We have to clear any existing
+     * reservation here, because we don't know where the user thread got
+     * interrupted. Clearing does not happen automatically, the following
+     * core-specific implementation behavior is known:
+     * - SAIL Model: The current (May/2024) model clears the reservation
+     *      on traps, xRET and WFI. There is a discussion to remove this and
+     *      align it with the common RISC-V silicon implementations, where
+     *      only an explict sc.w instruction clears the reservation.
+     * - SiFive U54/U74, Codasip A700, Ariane:
+     *      Only an explicit sc.w instruction is guaranteed to clear any
+     *      reservations.
+     * - XuanTie C906/C920: ??
+     * - RocketChip: Reservations time out after at most 80 cycles. Since
+     *      there is no path through the scheduler that takes less time than
+     *      that, no manual maintenance is be necessary, because no issues
+     *      are observable.
+     *
+     * Explictly clear any outstanding reservations with a dummy sc.w on
+     * regs[a0]. This store operation is very likely to fail, because there is
+     * no reservation. But if it succeeds, it does no harm.
      */
-#else
-    /* CRS sscratch holds the pointer to the regs of the current thread, so it
-     * can be obtained easiy on the next entry.
-     */
-    write_sscratch((word_t)regs);
-#endif
+    dummy_sc_w(regs[a0], regs);
 
-#ifdef CONFIG_HAVE_FPU
-    lazyFPURestore(cur_thread);
-    set_tcb_fs_state(cur_thread, isFpuEnable());
-#endif
-
-    register word_t reg_t6 asm("t6") = (word_t)regs;
-
-    asm volatile(
-#ifdef ENABLE_SMP_SUPPORT
-        "csrr sp, sscratch \n"
-        STORE_REG("t6", -1, "sp")
-#endif
-        LOAD_REG("ra",  0,  "t6") /* x1  */
-
-        /* The RISC-V A-Extension defines the LR/SC instruction pair for
-         * conditional stores using a reservation. We have to clear any existing
-         * reservation here, because we don't know where the user thread got
-         * interrupted. Clearing does not happen automatically, the following
-         * core-specific implementation behavior is known:
-         * - SAIL Model: The current (May/2024) model clears the reservation
-         *      on traps, xRET and WFI. There is a discussion to remove this and
-         *      align it with the common RISC-V silicon implementations, where
-         *      only an explict sc.w instruction clears the reservation.
-         * - SiFive U54/U74, Codasip A700, Ariane:
-         *      Only an explicit sc.w instruction is guaranteed to clear any
-         *      reservations.
-         * - XuanTie C906/C920: ??
-         * - RocketChip: Reservations time out after at most 80 cycles. Since
-         *      there is no path through the scheduler that takes less time than
-         *      that, no manual maintenance is be necessary, because no issues
-         *      are observable.
-         *
-         * Explictly clear any outstanding reservations with a dummy sc.w on
-         * ra/t6. The code above has put cur_thread[0] into ra, so simply
-         * write it back. This store operation is very likely to fail, because
-         * there is no reservation. But if it succeeds, it does no harm.
-         */
-        "sc.w zero, ra, (t6)\n"
-
-        LOAD_REG("sp",  1,  "t6") /* x2  */
-        LOAD_REG("gp",  2,  "t6") /* x3  */
-        LOAD_REG("tp",  3,  "t6") /* x4  */
-        LOAD_REG("t0",  4,  "t6") /* x5  */
-        LOAD_REG("t1",  5,  "t6") /* x6  */
-        LOAD_REG("t2",  6,  "t6") /* x7  */
-        LOAD_REG("s0",  7,  "t6") /* x8  */
-        LOAD_REG("s1",  8,  "t6") /* x9  */
-        LOAD_REG("a0",  9,  "t6") /* x10 */
-        LOAD_REG("a1",  10, "t6") /* x11 */
-        LOAD_REG("a2",  11, "t6") /* x12 */
-        LOAD_REG("a3",  12, "t6") /* x13 */
-        LOAD_REG("a4",  13, "t6") /* x14 */
-        LOAD_REG("a5",  14, "t6") /* x15 */
-        LOAD_REG("a6",  15, "t6") /* x16 */
-        LOAD_REG("a7",  16, "t6") /* x17 */
-        LOAD_REG("s2",  17, "t6") /* x18 */
-        LOAD_REG("s3",  18, "t6") /* x19 */
-        LOAD_REG("s4",  19, "t6") /* x20 */
-        LOAD_REG("s5",  20, "t6") /* x21 */
-        LOAD_REG("s6",  21, "t6") /* x22 */
-        LOAD_REG("s7",  22, "t6") /* x23 */
-        LOAD_REG("s8",  23, "t6") /* x24 */
-        LOAD_REG("s9",  24, "t6") /* x25 */
-        LOAD_REG("s10", 25, "t6") /* x26 */
-        LOAD_REG("s11", 26, "t6") /* x27 */
-        LOAD_REG("t3",  27, "t6") /* x28 */
-        LOAD_REG("t4",  28, "t6") /* x29 */
-        LOAD_REG("t5",  29, "t6") /* x30 */
-        LOAD_REG("t6",  30, "t6") /* x31 */
-        "sret"
-        : /* no output */
-        : "r"(reg_t6)
-        : "memory"
-    );
-
+    fastpath_restore(reg_a0, reg_a1, cur_thread);
     UNREACHABLE();
 }
 
