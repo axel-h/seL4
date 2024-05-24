@@ -257,6 +257,28 @@ static inline void write_fcsr(uint32_t value)
 }
 #endif
 
+static inline word_t sc_w(word_t value, word_t *addr)
+{
+    word_t result;
+    asm volatile(
+        "sc.w %0, %1, (%2)"
+        : "=r"(result)
+        : "r"(value), "r"(addr)
+        : "memory"
+    );
+    return result;
+}
+
+static inline void dummy_sc_w(word_t value, word_t *addr)
+{
+    asm volatile(
+        "sc.w zero, %0, (%1)"
+        : /* no output */
+        : "r"(value), "r"(addr)
+        : "memory"
+    );
+}
+
 #if CONFIG_PT_LEVELS == 2
 #define SATP_MODE SATP_MODE_SV32
 #elif CONFIG_PT_LEVELS == 3
