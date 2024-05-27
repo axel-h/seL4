@@ -31,12 +31,12 @@ BEGIN_FUNC(trap_entry)
    * stack is a pointer to the space where to store the thread context.
    */
   csrrw sp, sscratch, sp        /* swap sp/x1 and sscratch to get the kernel stack */
-  STORE tp, (-2*REGBYTES)(sp)   /* sp[-2] = tp/x4 (temporarily save tp/x4 on kernel stack) */
-  LOAD  tp, (-1*REGBYTES)(sp)   /* tp = sp[-1] (get thread context space) */
+  STORE tp, (-1*REGBYTES)(sp)   /* sp[-1] = tp/x4 (temporarily save tp/x4 on kernel stack) */
+  LOAD  tp, (0*REGBYTES)(sp)    /* tp = sp[0] (get thread context space) */
   STORE ra, (0*REGBYTES)(tp)    /* tp[0] = ra/x1 */
   csrrw ra, sscratch, sp        /* ra/x1 <- sscratch (user's sp/x2) <- sp/x1 */
   STORE ra, (1*REGBYTES)(tp)    /* tp[1] = user sp/x2 (stored temporaily in ra/x1) */
-  LOAD  ra, (-2*REGBYTES)(sp)   /* ra/x1 = user's tp/x4 (stored temporaily in sp[-2] */
+  LOAD  ra, (-1*REGBYTES)(sp)   /* ra/x1 = user's tp/x4 (stored temporaily in sp[-1] */
 #else
   /* SSCRATCH holds a pointer to the space where to store the thread context. */
   csrrw tp, sscratch, tp        /* swap tp/x4 and sscratch */
