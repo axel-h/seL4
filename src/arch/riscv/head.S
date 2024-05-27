@@ -9,6 +9,8 @@
 #include <config.h>
 #include <util.h>
 
+#define REGBYTES (CONFIG_WORD_SIZE / 8)
+
 .section .boot.text, "ax"
 .global _start
 .extern init_kernel
@@ -34,6 +36,7 @@ _start:
 /* setup the per-core stack */
   mv t0, a7
   slli t0, t0, CONFIG_KERNEL_STACK_BITS
+  sub  t0, t0, 4 * REGBYTES
   add  sp, sp, t0
   /* put the stack in sscratch */
   csrw sscratch, sp

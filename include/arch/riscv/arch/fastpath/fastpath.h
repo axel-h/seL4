@@ -108,11 +108,9 @@ static inline void NORETURN FORCE_INLINE fastpath_restore(word_t badge, word_t m
     /* CRS sscratch permanently holds the current core's stack pointer for
      * kernel entry. Put the current thread's reg space as first element there,
      * so it can be obtained easiy on the next entry.
-     * We avoid manipulating the stack from C code, which would be
-     *     word_t *kernel_stack = (word_t *)read_sscratch();
-     *     kernel_stack[-1] = (word_t)regs;
-     * See instead the asm code below.
      */
+    core_info_t *info = (core_info_t)read_sscratch();
+    info->user_thread_regs = regs;
 #else
     /* CRS sscratch holds the pointer to the regs of the current thread, so it
      * can be obtained easiy on the next entry.
@@ -139,10 +137,6 @@ static inline void NORETURN FORCE_INLINE fastpath_restore(word_t badge, word_t m
     register word_t reg_t6 asm("t6") = (word_t)regs;
 
     asm volatile(
-#ifdef ENABLE_SMP_SUPPORT
-        "csrr sp, sscratch \n"
-        STORE_REG("t6", -1, "sp") /* stack[-1] = regs */
-#endif
         LOAD_REG("ra",  0,  "t6") /* x1  */
         LOAD_REG("sp",  1,  "t6") /* x2  */
         LOAD_REG("gp",  2,  "t6") /* x3  */

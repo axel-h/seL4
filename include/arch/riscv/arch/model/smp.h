@@ -12,6 +12,14 @@
 
 #ifdef ENABLE_SMP_SUPPORT
 
+typedef struct {
+    word_t *user_thread_regs;
+    word_t reserved;
+    word_t core_id;
+    word_t hart_id;
+} core_info_t;
+
+
 typedef struct core_map {
     word_t map[CONFIG_MAX_NUM_NODES];
 } core_map_t;
@@ -61,27 +69,25 @@ static inline CONST cpu_id_t getCurrentCPUIndex(void)
     /* RISC-V has no dedicated S-Mode register for the current hart ID, this
      * information is passed from the bootloader to the kernel, which is
      * supposed to store it somewhere. We explicitly store it, but keep it
-     * implicitly in the core specific stack pointer, which is kept in SSCRATCH.
-     * Thus, we can derive the hart ID from the hart's stack pointer. Each
-     * core's stack's size is BIT(CONFIG_KERNEL_STACK_BITS). All stacks are in
-     * the memory region of the array 'kernel_stack_alloc'.
+     * implicitly in the core specific memory page, which is kept in SSCRATCH.
      *
-     *                    +---------------+  <- SSCRATCH for Hart #n
-     *                    | Stack Hart #n |
-     *                    +---------------+  <- SSCRATCH for Hart #n-1
-     *                    :               :
-     *                    :               :
-     *                    +---------------+  <- SSCRATCH for Hart #1
-     *                    | Stack Hart #1 |
-     *                    +---------------+  <- SSCRATCH for Hart #0
-     *                    | Stack Hart #0 |
-     *                    +---------------+  <- kernel_stack_alloc
      *
+     *     0x1000   +---------------------------------+
+     *              |                                 |
+     *              | Kernel Stack                    |
+     *              |                                 |
+     *              +---------------------------------+  <------ SSCRATCH
+     *              | ptr to user thread regs         | word_t
+     *              +---------------------------------+
+     *              | (reserved for 64-bit alignment) | word_t
+     *              +---------------------------------+
+     *              | Logical Core Number             | word_t
+     *              +---------------------------------+
+     *              | Hard ID                         | word_t
+     *     0x0000   +---------------------------------+
      */
-    word_t sp = read_sscratch();
-    assert(sp > (word_t)kernel_stack_alloc);
-    sp -= (word_t)kernel_stack_alloc;
-    word_t idx = (sp - 1) >> CONFIG_KERNEL_STACK_BITS;
+    core_info_t *info = (core_info_t)read_sscratch();
+    word_t idx = info->core_id;
     assert(idx < CONFIG_MAX_NUM_NODES);
     return idx;
 }
