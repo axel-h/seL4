@@ -72,6 +72,16 @@ enum _register {
     n_contextRegisters
 };
 
+#if defined(CONFIG_PRINTING) && defined(CONFIG_DEBUG_BUILD)
+static UNUSED const char *register_names[n_contextRegisters] = {
+    "x1/ra", "x2/sp", "x3/gp", "x4/tp", "x5/t0", "x6/t1", "x7/t2", "x8/s0",
+    "x9/s1", "x10/a0", "x11/a1", "x12/a2", "x13/a3", "x14/a4", "x15/a5",
+    "x16/a6", "x17/a7", "x18/s2", "x19/s3", "x20/s4", "x21/s5", "x22/s6",
+    "x23/s7", "x24/s8", "x25/s9", "x26/s10", "x27/s11", "x28/t3", "x29/t4",
+    "x30/t5", "x31/t6", "scause", "sstatus", "FaultIP", "NextIP"
+};
+#endif /* defined(CONFIG_PRINTING) && defined(CONFIG_DEBUG_BUILD) */
+
 typedef uint8_t register_t;
 
 enum messageSizes {
@@ -183,6 +193,48 @@ static inline word_t CONST sanitiseRegister(register_t reg, word_t v, bool_t arc
     [seL4_TimeoutReply_t6] = t6, \
     [seL4_TimeoutReply_TP] = TP, \
 }
+
+#define RISCV_CSR_CYCLE     0xc00
+#define RISCV_CSR_TIME      0xc01
+#define RISCV_CSR_INSTRET   0xc02
+#ifdef CONFIG_ARCH_RISCV32
+#define RISCV_CSR_CYCLEH    0xc80
+#define RISCV_CSR_TIMEH     0xc81
+#define RISCV_CSR_INSTRETH  0xc82
+#endif /* CONFIG_ARCH_RISCV32 */
+
+
+#define RISCV_CSR_READ(_id_, _var_) \
+    asm volatile("csrr %0, " #_id_ : "=r" (_var_) : : "memory")
+
+#define declare_helper_riscv_read_csr(_name_, _id_) \
+    static inline word_t riscv_read_csr_##_name_(void) \
+    { \
+        register word_t val; \
+        RISCV_CSR_READ(_id_, val); \
+        return val; \
+    }
+
+/* create riscv_read_csr_cycle() */
+declare_helper_riscv_read_csr(cycle, RISCV_CSR_CYCLE)
+#ifdef CONFIG_ARCH_RISCV32
+/* create riscv_read_csr_cycleh() */
+declare_helper_riscv_read_csr(cycleh, RISCV_CSR_CYCLEH)
+#endif
+
+/* create riscv_read_csr_time() */
+declare_helper_riscv_read_csr(time, RISCV_CSR_TIME)
+#ifdef CONFIG_ARCH_RISCV32
+/* create riscv_read_csr_timeh() */
+declare_helper_riscv_read_csr(timeh, RISCV_CSR_TIMEH)
+#endif
+
+/* create riscv_read_csr_instret() */
+declare_helper_riscv_read_csr(instret, RISCV_CSR_INSTRET)
+#ifdef CONFIG_ARCH_RISCV32
+/* create riscv_read_csr_instreth() */
+declare_helper_riscv_read_csr(instreth, RISCV_CSR_INSTRETH)
+#endif
 
 #endif /* __ASSEMBLER__ */
 

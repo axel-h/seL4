@@ -53,7 +53,7 @@ BOOT_CODE cap_t create_mapped_it_frame_cap(cap_t pd_cap, pptr_t pptr, vptr_t vpt
               vptr                             /* capFMappedAddress    */
           );
 
-    map_it_frame_cap(pd_cap, cap);
+    map_it_frame_cap(pd_cap, cap, executable);
     return cap;
 }
 
@@ -200,7 +200,7 @@ static BOOT_CODE bool_t try_init_kernel(
 )
 {
     cap_t root_cnode_cap;
-    cap_t it_pd_cap;
+    cap_t vspace_cap;
     cap_t it_ap_cap;
     cap_t ipcbuf_cap;
     region_t ui_reg = paddr_to_pptr_reg((p_region_t) {
@@ -333,8 +333,8 @@ static BOOT_CODE bool_t try_init_kernel(
 
     /* Construct an initial address space with enough virtual addresses
      * to cover the user image + ipc buffer and bootinfo frames */
-    it_pd_cap = create_it_address_space(root_cnode_cap, it_v_reg);
-    if (cap_get_capType(it_pd_cap) == cap_null_cap) {
+    vspace_cap = create_it_address_space(root_cnode_cap, it_v_reg);
+    if (cap_get_capType(vspace_cap) == cap_null_cap) {
         printf("ERROR: address space creation for initial thread failed\n");
         return false;
     }
@@ -342,7 +342,7 @@ static BOOT_CODE bool_t try_init_kernel(
     /* Create and map bootinfo frame cap */
     create_bi_frame_cap(
         root_cnode_cap,
-        it_pd_cap,
+        vspace_cap,
         bi_frame_vptr
     );
 
@@ -355,7 +355,7 @@ static BOOT_CODE bool_t try_init_kernel(
         extra_bi_ret =
             create_frames_of_region(
                 root_cnode_cap,
-                it_pd_cap,
+                vspace_cap,
                 extra_bi_region,
                 true,
                 pptr_to_paddr((void *)extra_bi_region.start) - extra_bi_frame_vptr
@@ -372,7 +372,7 @@ static BOOT_CODE bool_t try_init_kernel(
 #endif
 
     /* create the initial thread's IPC buffer */
-    ipcbuf_cap = create_ipcbuf_frame_cap(root_cnode_cap, it_pd_cap, ipcbuf_vptr);
+    ipcbuf_cap = create_ipcbuf_frame_cap(root_cnode_cap, vspace_cap, ipcbuf_vptr);
     if (cap_get_capType(ipcbuf_cap) == cap_null_cap) {
         printf("ERROR: could not create IPC buffer for initial thread\n");
         return false;
@@ -382,7 +382,7 @@ static BOOT_CODE bool_t try_init_kernel(
     create_frames_ret =
         create_frames_of_region(
             root_cnode_cap,
-            it_pd_cap,
+            vspace_cap,
             ui_reg,
             true,
             pv_offset
@@ -399,7 +399,7 @@ static BOOT_CODE bool_t try_init_kernel(
         printf("ERROR: could not create ASID pool for initial thread\n");
         return false;
     }
-    write_it_asid_pool(it_ap_cap, it_pd_cap);
+    write_it_asid_pool(it_ap_cap, vspace_cap);
 
 #ifdef CONFIG_KERNEL_MCS
     NODE_STATE(ksCurTime) = getCurrentTime();
@@ -411,7 +411,7 @@ static BOOT_CODE bool_t try_init_kernel(
     /* create the initial thread */
     tcb_t *initial = create_initial_thread(
                          root_cnode_cap,
-                         it_pd_cap,
+                         vspace_cap,
                          v_entry,
                          bi_frame_vptr,
                          ipcbuf_vptr,

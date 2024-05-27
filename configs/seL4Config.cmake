@@ -116,21 +116,81 @@ macro(check_platform_and_fallback_to_default var_cmake_kernel_plat default_sub_p
     endif()
 endmacro()
 
-# CLK_SHIFT and CLK_MAGIC are generated from tools/reciprocal.py
-# based on the TIMER_CLK_HZ to simulate division.
-# This could be moved to a cmake function
-# in future to build the values on the first build. Note the calculation
-# can take a long time though.
-macro(declare_default_headers)
-    cmake_parse_arguments(
-        CONFIGURE
-        ""
-        "TIMER_FREQUENCY;MAX_IRQ;NUM_PPI;INTERRUPT_CONTROLLER;TIMER;SMMU;CLK_SHIFT;CLK_MAGIC;KERNEL_WCET;TIMER_PRECISION;TIMER_OVERHEAD_TICKS;MAX_SID;MAX_CB"
-        ""
-        ${ARGN}
+function(declare_default_headers)
+    set(TAGS
+        # Interrupt settings
+        "MAX_IRQ"
+        "NUM_PPI"
+        "INTERRUPT_CONTROLLER"
+        # Timer related settings. The tool tools/reciprocal.py can determine
+        # the values for CLK_SHIFT and CLK_MAGIC for a given TIMER_FREQUENCY
+        # Since the calulation takes some time, this is not part of the build.
+        "TIMER_FREQUENCY"
+        "TIMER"
+        "CLK_SHIFT"
+        "CLK_MAGIC"
+        "KERNEL_WCET"
+        "TIMER_PRECISION"
+        "TIMER_OVERHEAD_TICKS"
+        # SMMU related settings
+        "SMMU"
+        "MAX_SID"
+        "MAX_CB"
     )
-    set(CALLED_declare_default_headers 1)
-endmacro()
+    cmake_parse_arguments(
+        PARSE_ARGV 0
+        PARAM
+        ""
+        "${TAGS}"
+        ""
+    )
+    if(PARAM_UNPARSED_ARGUMENTS)
+        message( FATAL_ERROR "Unknown arguments: ${PARAM_UNPARSED_ARGUMENTS}")
+    endif()
+
+    # check required and default parameters
+    set(DEFAULT_PARAM_TIMER_PRECISION 0)
+    set(DEFAULT_PARAM_TIMER_OVERHEAD_TICKS 0)
+    if(KernelArchARM)
+        set(REQUIRED_PARAM "TIMER_FREQUENCY;MAX_IRQ;INTERRUPT_CONTROLLER")
+        set(DEFAULT_PARAM_TIMER "drivers/timer/arm_generic.h")
+        set(DEFAULT_PARAM_NUM_PPI 0)
+    elseif(KernelArchRiscV)
+        set(REQUIRED_PARAM "TIMER_FREQUENCY;MAX_IRQ")
+        set(DEFAULT_PARAM_INTERRUPT_CONTROLLER "drivers/irq/riscv_plic0.h")
+        set(DEFAULT_PARAM_TIMER "drivers/timer/risc-v_sbi-timer.h")
+    else()
+        message(FATAL_ERROR "unsupported kernel architecture")
+
+    endif()
+
+    foreach(tag IN LISTS REQUIRED_PARAM)
+        if("${PARAM_${tag}}" STREQUAL "")
+            message(FATAL_ERROR "missing parameter: ${tag}")
+        endif()
+    endforeach()
+
+
+    foreach(tag IN LISTS TAGS)
+        # none of the config variable must not be already defined, as this
+        # indicates a configuration quirk.
+        if(DEFINED CONFIG_${tag})
+            message(FATAL_ERROR "variable already exists: CONFIG_${tag}")
+        endif()
+        # apply default value if nothing is given.
+        set(value "${PARAM_${tag}}")
+        if("${value}" STREQUAL "")
+            set(value "${DEFAULT_PARAM_${tag}}")
+        endif()
+        # create the CONFIGURE_xxx values in caller's scope.
+        if(NOT "${value}" STREQUAL "")
+            set(CONFIGURE_${tag} "${value}" PARENT_SCOPE)
+        endif()
+    endforeach()
+
+    set(CALLED_declare_default_headers 1 PARENT_SCOPE)
+
+endfunction()
 
 # For all of the common variables we set a default value here if they haven't
 # been set by a platform.

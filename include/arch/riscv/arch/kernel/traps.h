@@ -10,14 +10,22 @@
 #include <config.h>
 #include <util.h>
 
+static uint64_t entry_cycles = 0;
+static uint64_t entry_instret = 0;
+
+static uint64_t exit_cycles = 0;
+static uint64_t exit_instret = 0;
+
 static inline void arch_c_entry_hook(void)
 {
-    /* Nothing architecture specific to be done. */
+    entry_cycles = riscv_read_cycle();
+    entry_instret = riscv_read_instret();
 }
 
 static inline void arch_c_exit_hook(void)
 {
-    /* Nothing architecture specific to be done. */
+    exit_instret = riscv_read_instret();
+    exit_cycles = riscv_read_cycle();
 }
 
 /* ASM trap entry. */
