@@ -49,6 +49,7 @@
             <syscall name="DebugCapPaddr"/>
             <syscall name="DebugSnapshot" />
             <syscall name="DebugNameThread"/>
+            <syscall name="DebugCapIsLastCopy"/>
         </config>
         <config>
             <condition>

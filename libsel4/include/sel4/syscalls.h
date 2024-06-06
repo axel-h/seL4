@@ -117,6 +117,19 @@ LIBSEL4_INLINE_FUNC seL4_Word
 seL4_DebugCapPaddr(seL4_CPtr cap);
 
 /**
+ * @xmlonly <manual name="Cap Is Last Copy" label="sel4_debugcapislastcopy"/> @endxmlonly
+ * @brief Identify whether or not a capability in the current cspace has any copies or descendants.
+ *
+ * This debugging system call refers to a capability in a capability slot in the current cspace. 
+ * It returns true iff the cap is a last copy, ie. has no copies or descendants.
+ *
+ * @param cap A capability slot in the current cspace.
+ * @return 1 if the capability passed in is the last copy, 0 otherwise.
+ */
+LIBSEL4_INLINE_FUNC seL4_Word
+seL4_DebugCapIsLastCopy(seL4_CPtr cap);
+
+/**
  * @xmlonly <manual name="Name Thread" label="sel4_debugnamethread"/> @endxmlonly
  * @brief Name a thread.
  *

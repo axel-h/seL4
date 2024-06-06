@@ -117,6 +117,16 @@ exception_t handleUnknownSyscall(word_t w)
         setRegister(NODE_STATE(ksCurThread), capRegister, cap_paddr);
         return EXCEPTION_NONE;
     }
+    if (w == SysDebugCapIsLastCopy)
+    {
+        word_t cptr = getRegister(NODE_STATE(ksCurThread), capRegister);
+        lookupCapAndSlot_ret_t lu_ret = lookupCapAndSlot(NODE_STATE(ksCurThread), cptr);
+
+        bool_t result = isFinalCapability(lu_ret.slot);
+
+        setRegister(NODE_STATE(ksCurThread), capRegister, result);
+        return EXCEPTION_NONE;
+    }
     if (w == SysDebugNameThread) {
         /* This is a syscall meant to aid debugging, so if anything goes wrong
          * then assume the system is completely misconfigured and halt */

@@ -641,6 +641,18 @@ LIBSEL4_INLINE_FUNC seL4_Word seL4_DebugCapPaddr(seL4_CPtr cap)
     return (seL4_Word)cap;
 }
 
+LIBSEL4_INLINE_FUNC seL4_Word seL4_DebugCapIsLastCopy(seL4_CPtr cap)
+{
+    seL4_Word unused0 = 0;
+    seL4_Word unused1 = 0;
+    seL4_Word unused2 = 0;
+    seL4_Word unused3 = 0;
+    seL4_Word unused4 = 0;
+
+    arm_sys_send_recv(seL4_SysDebugCapIsLastCopy, cap, &cap, 0, &unused0, &unused1, &unused2, &unused3, &unused4, 0);
+    return (seL4_Word)cap;
+}
+
 char *strcpy(char *, const char *);
 LIBSEL4_INLINE_FUNC void seL4_DebugNameThread(seL4_CPtr tcb, const char *name)
 {
