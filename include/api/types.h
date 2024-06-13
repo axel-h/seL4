@@ -100,24 +100,19 @@ static inline word_t CONST wordFromMessageInfo(seL4_MessageInfo_t mi)
 }
 
 #ifdef CONFIG_PRINTING
+
 #ifdef CONFIG_COLOUR_PRINTING
-#define ANSI_RESET "\033[0m"
-#define ANSI_GREEN ANSI_RESET "\033[32m"
-#define ANSI_BOLD  ANSI_RESET "\033[1m"
+#define ANSI_ESC_SEQUENCE(seq) "\033[" seq "m"
+#define ANSI_RESET ANSI_ESC_SEQUENCE("0")
+#define ANSI_GREEN ANSI_ESC_SEQUENCE("0;32")
+#define ANSI_BOLD  ANSI_ESC_SEQUENCE("0;1")
 #else
 #define ANSI_RESET ""
-#define ANSI_GREEN ANSI_RESET ""
-#define ANSI_BOLD  ANSI_RESET ""
+#define ANSI_GREEN ""
+#define ANSI_BOLD  ""
+
 #endif
 
-/*
- * thread name is only available if the kernel is built in debug mode.
- */
-#ifdef CONFIG_DEBUG_BUILD
-#define THREAD_NAME TCB_PTR_DEBUG_PTR(NODE_STATE(ksCurThread))->tcbName
-#else
-#define THREAD_NAME ""
-#endif
 
 #ifdef CONFIG_KERNEL_INVOCATION_REPORT_ERROR_IPC
 extern struct debug_syscall_error current_debug_error;
@@ -133,15 +128,21 @@ extern struct debug_syscall_error current_debug_error;
  * Print to serial a message helping userspace programmers to determine why the
  * kernel is not performing their requested operation.
  */
-#define userError(M, ...) \
+#define userError(MSG, ...) \
     do {                                                                       \
-        out_error(ANSI_BOLD "<<" ANSI_GREEN "seL4(CPU %" SEL4_PRIu_word ")"    \
-                ANSI_BOLD " [%s/%d T%p \"%s\" @%lx]: " M ">>" ANSI_RESET "\n", \
-                CURRENT_CPU_INDEX(),                                           \
-                __func__, __LINE__, NODE_STATE(ksCurThread),                   \
-                THREAD_NAME,                                                   \
-                (word_t)getRestartPC(NODE_STATE(ksCurThread)),                 \
-                ## __VA_ARGS__);                                               \
+        tcb_t *thread = NODE_STATE(ksCurThread);                               \
+        const char *name = config_ternary(CONFIG_DEBUG_BUILD,                  \
+                                          TCB_PTR_DEBUG_PTR(thread)->tcbName,  \
+                                          NULL);                               \
+        out_error(ANSI_BOLD "<<"                                               \
+                  ANSI_GREEN "seL4(CPU %" SEL4_PRIu_word ") "                  \
+                  ANSI_BOLD "[%s/%d T%p%s%s%s @%p]: " MSG ">>"                 \
+                  ANSI_RESET "\n",                                             \
+                  CURRENT_CPU_INDEX(),                                         \
+                  __func__, __LINE__, thread,                                  \
+                  name ? " \"" : "", name, name ? "\"" : "",                   \
+                  (void*)getRestartPC(thread),                                 \
+                  ## __VA_ARGS__);                                             \
     } while (0)
 #else /* !CONFIG_PRINTING */
 #define userError(...)

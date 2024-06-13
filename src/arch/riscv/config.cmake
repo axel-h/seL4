@@ -95,7 +95,6 @@ add_sources(
     PREFIX src/arch/riscv
     CFILES
         c_traps.c
-        idle.c
         api/faults.c
         api/benchmark.c
         kernel/boot.c
@@ -111,7 +110,7 @@ add_sources(
         object/objecttype.c
         object/tcb.c
         smp/ipi.c
-    ASMFILES head.S traps.S
+    ASMFILES head.S traps.S idle.S
 )
 
 add_bf_source_old("KernelArchRiscV" "structures.bf" "include/arch/riscv" "arch/object")

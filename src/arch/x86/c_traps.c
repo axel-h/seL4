@@ -5,6 +5,7 @@
  */
 
 #include <config.h>
+#include <util.h>
 #include <model/statedata.h>
 #include <machine/fpu.h>
 #include <arch/fastpath/fastpath.h>
@@ -12,6 +13,7 @@
 #include <machine/debug.h>
 #include <arch/object/vcpu.h>
 #include <api/syscall.h>
+#include <api/debug.h>
 #include <sel4/arch/vmenter.h>
 
 #include <benchmark/benchmark_track.h>
@@ -223,3 +225,20 @@ void VISIBLE NORETURN c_handle_vmexit(void)
     UNREACHABLE();
 }
 #endif
+
+/** DONT_TRANSLATE */
+void NORETURN VISIBLE halt(void)
+{
+    /* disable all interrupts */
+    x86_cli();
+
+#ifdef CONFIG_PRINTING
+    debug_msg_halt();
+#endif /* CONFIG_PRINTING */
+
+    /* loop forever */
+    for (;;) {
+        x86_hlt();
+    }
+    UNREACHABLE();
+}
