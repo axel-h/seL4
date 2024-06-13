@@ -21,7 +21,16 @@ typedef struct smpStatedata {
 
 extern smpStatedata_t ksSMP[CONFIG_MAX_NUM_NODES];
 
+static bool_t is_valid_core(word_t core) {
+    /* Currently the affinity value in both userland and kernel is a linear core
+     * IDs. The actual mapping is architecture and platform specific. We check
+     * against ksNumCPUs, because this is the number of cores that booted
+     * successfully. This is supposed to be equal to CONFIG_MAX_NUM_NODES, which
+     * is the number of cores the kernel tries to boot.
+     */
+    return (core < ksNumCPUs);
+}
+
 void migrateTCB(tcb_t *tcb, word_t new_core);
 
 #endif /* ENABLE_SMP_SUPPORT */
-
