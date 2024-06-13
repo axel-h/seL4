@@ -115,6 +115,11 @@ BOOT_CODE static bool_t arch_init_freemem(p_region_t ui_p_reg,
                         it_v_reg, extra_bi_size_bits);
 }
 
+/* This is called from init_core_state() */
+BOOT_CODE void arch_init_core_state()
+{
+    /* Nothing to be done */
+}
 
 BOOT_CODE static void init_irqs(cap_t root_cnode_cap)
 {
@@ -292,6 +297,8 @@ BOOT_CODE static bool_t try_init_kernel_secondary_core(void)
 
 BOOT_CODE static void release_secondary_cpus(void)
 {
+    SMP_CLOCK_SYNC_TEST_UPDATE_TIME();
+
     /* release the cpus at the same time */
     assert(0 == node_boot_lock); /* Sanity check for a proper lock state. */
     node_boot_lock = 1;
@@ -315,12 +322,14 @@ BOOT_CODE static void release_secondary_cpus(void)
 
     /* Wait until all the secondary cores are done initialising */
     while (ksNumCPUs != CONFIG_MAX_NUM_NODES) {
-#ifdef ENABLE_SMP_CLOCK_SYNC_TEST_ON_BOOT
-        NODE_STATE(ksCurTime) = getCurrentTime();
-#endif
-        /* perform a memory acquire to get new values of ksNumCPUs, release for ksCurTime */
-        __atomic_thread_fence(__ATOMIC_ACQ_REL);
+        SMP_CLOCK_SYNC_TEST_UPDATE_TIME();
+        /* perform a memory acquire to get new values of ksNumCPUs */
+        __atomic_thread_fence(__ATOMIC_ACQUIRE);
     }
+
+#ifdef ENABLE_SMP_CLOCK_SYNC_TEST_ON_BOOT
+    clock_sync_test_evaluation();
+#endif
 }
 #endif /* ENABLE_SMP_SUPPORT */
 
