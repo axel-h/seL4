@@ -19,8 +19,6 @@
 #define seL4_InstructionFault 1
 
 /* for x86-64, the large page size is 2 MiB and huge page size is 1 GiB */
-#define seL4_WordBits           64
-#define seL4_WordSizeBits       3
 #define seL4_PageBits           12
 #define seL4_SlotBits           5
 #if CONFIG_XSAVE_SIZE >= 832

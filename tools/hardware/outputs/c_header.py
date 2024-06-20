@@ -32,9 +32,9 @@ HEADER_TEMPLATE = '''/*
 #ifndef __ASSEMBLER__
 
 #include <config.h>
-#include <mode/hardware.h>  /* for KDEV_BASE */
-#include <linker.h>         /* for BOOT_RODATA */
-#include <basic_types.h>    /* for p_region_t, kernel_frame_t (arch/types.h) */
+#include <hardware.h>  /* for KDEV_BASE */
+#include <linker.h>    /* for BOOT_RODATA */
+#include <types.h>     /* for p_region_t, kernel_frame_t (arch/types.h) */
 
 /* Wrap raw physBase location constant to give it a symbolic name in C that's
  * visible to verification. This is necessary as there are no real constants

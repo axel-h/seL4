@@ -8,6 +8,8 @@
 
 #include <config.h>
 #include <util.h>
+/* plat/machine/devices_gen.h defines "physBase", but some quirk prevents including it here */
+#include <sel4/plat/api/constants.h> /* seL4_UserTop */
 
 /*
  *         2^32 +-------------------+

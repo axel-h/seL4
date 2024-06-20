@@ -6,11 +6,12 @@
 
 #pragma once
 
+/* includes by convention, regardless of a dependency */
+#include <config.h>
+/* includes due to an actual dependency */
+#include <stdint.h>
 #include <assert.h>
 
 compile_assert(long_is_32bits, sizeof(unsigned long) == 4)
-
-#define wordRadix 5
-#define wordBits (1 << wordRadix)
 
 typedef uint32_t timestamp_t;

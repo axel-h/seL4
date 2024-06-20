@@ -6,8 +6,10 @@
 
 #pragma once
 
+/* includes by convention, regardless of a dependency */
 #include <config.h>
 #include <mode/types.h>
+/* includes due to an actual dependency */
 #include <stdint.h>
 
 typedef unsigned long word_t;

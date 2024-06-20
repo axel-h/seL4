@@ -6,10 +6,9 @@
 
 #pragma once
 
+/* includes by convention, regardless of a dependency */
 #include <config.h>
+/* includes due to an actual dependency */
 #include <assert.h>
-#include <stdint.h>
 
 compile_assert(long_is_64bits, sizeof(unsigned long) == 8)
-
-#define wordRadix 6

@@ -7,10 +7,12 @@
 
 #pragma once
 
+/* includes by convention, regardless of a dependency */
 #include <config.h>
-#include <assert.h>
-#include <stdint.h>
 #include <mode/types.h>
+/* includes due to an actual dependency */
+#include <util.h>
+#include <stdint.h>
 
 typedef unsigned long word_t;
 typedef signed long sword_t;
@@ -27,8 +29,6 @@ typedef word_t node_id_t;
 typedef word_t dom_t;
 
 typedef uint64_t timestamp_t;
-
-#define wordBits BIT(wordRadix)
 
 typedef struct kernel_frame {
     paddr_t paddr;
