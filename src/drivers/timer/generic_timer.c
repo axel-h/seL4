@@ -23,13 +23,22 @@ BOOT_CODE void initGenericTimer(void)
         }
     }
 
+    /*
+     * For MSC there are no fixed time slices, so we enable the timer, but keep
+     * it masked. It's unmasked when the kernel is left with the current time
+     * slice set up. For non-MSC, there are fixed time slices, so the first
+     * first time slice is set up here and the timer is enabled.
+     */
 #ifdef CONFIG_KERNEL_MCS
-    /* this sets the irq to UINT64_MAX */
-    ackDeadlineIRQ();
-#else /* CONFIG_KERNEL_MCS */
-    resetTimer();
-#endif /* !CONFIG_KERNEL_MCS */
-    SYSTEM_WRITE_WORD(CNT_CTL, BIT(0));
+    SYSTEM_WRITE_WORD(CNT_CTL, CNT_CTL_ENABLE | CNT_CTL_IMASK);
+#else  /* not CONFIG_KERNEL_MCS */
+    SYSTEM_WRITE_WORD(CNT_TVAL, TIMER_RELOAD);
+    SYSTEM_WRITE_WORD(CNT_CTL, CNT_CTL_ENABLE);
+#endif /* [not] CONFIG_KERNEL_MCS */
+    /*
+     * An explicit barrier here is not needed to ensure the timer setting get
+     * applies before we leave this function.
+     */
 }
 
 /*

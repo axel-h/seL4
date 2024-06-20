@@ -4,10 +4,11 @@
  * SPDX-License-Identifier: GPL-2.0-only
  */
 
+#pragma once
+
 #include <config.h>
 
 #ifdef CONFIG_DEBUG_BUILD
-#pragma once
 
 #include <benchmark/benchmark_track.h>
 #include <arch/api/syscall.h>
@@ -134,3 +135,14 @@ static inline void debug_dumpScheduler(void)
 #endif /* CONFIG_PRINTING */
 #endif /* CONFIG_DEBUG_BUILD */
 
+#ifdef CONFIG_PRINTING
+
+static inline void debug_msg_halt(void)
+{
+    printf("halting...");
+#ifdef CONFIG_DEBUG_BUILD
+    debug_printKernelEntryReason();
+#endif /* CONFIG_DEBUG_BUILD */
+}
+
+#endif /* CONFIG_PRINTING */

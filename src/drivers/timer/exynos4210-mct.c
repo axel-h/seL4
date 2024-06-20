@@ -2,6 +2,8 @@
  * Copyright 2014, General Dynamics C4 Systems
  *
  * SPDX-License-Identifier: GPL-2.0-only
+ *
+ * Driver for the Samsung Multi Core Timer (MCT)
  */
 
 #include <config.h>
@@ -17,16 +19,19 @@
 #include <drivers/timer/arm_generic.h>
 #include <drivers/timer/mct.h>
 
-timer_t *mct = (timer_t *) EXYNOS_MCT_PPTR;
-
 BOOT_CODE void initTimer(void)
 {
-    mct_clear_write_status();
+    timer_t *mct = mct_get_timer();
+
+    mct_clear_write_status(mct);
 
     /* use the arm generic timer, backed by the mct */
     /* enable the timer */
     mct->global.tcon = GTCON_EN;
-    while (mct->global.wstat != GWSTAT_TCON);
+    while (mct->global.wstat != GWSTAT_TCON) {
+        /* busy loop */
+    }
+    /* clear the bit */
     mct->global.wstat = GWSTAT_TCON;
 
     initGenericTimer();
