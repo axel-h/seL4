@@ -217,11 +217,6 @@ typedef enum {
 #define seL4_ARM_VCPUBits       12
 #define seL4_IOPageTableBits    12
 
-/* bits in a word */
-#define seL4_WordBits (sizeof(seL4_Word) * 8)
-/* log 2 bits in a word */
-#define seL4_WordSizeBits 2
-
 #ifndef __ASSEMBLER__
 SEL4_SIZE_SANITY(seL4_PageTableEntryBits, seL4_PageTableIndexBits, seL4_PageTableBits);
 SEL4_SIZE_SANITY(seL4_PageDirEntryBits,   seL4_PageDirIndexBits,   seL4_PageDirBits);
