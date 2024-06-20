@@ -37,7 +37,7 @@
 BOOT_BSS static volatile int node_boot_lock;
 #endif /* ENABLE_SMP_SUPPORT */
 
-BOOT_BSS static region_t reserved[NUM_RESERVED_REGIONS];
+BOOT_BSS static p_region_t reserved[NUM_RESERVED_REGIONS];
 
 BOOT_CODE static bool_t arch_init_freemem(p_region_t ui_p_reg,
                                           p_region_t dtb_p_reg,
@@ -45,7 +45,7 @@ BOOT_CODE static bool_t arch_init_freemem(p_region_t ui_p_reg,
                                           word_t extra_bi_size_bits)
 {
     /* reserve the kernel image region */
-    reserved[0] = paddr_to_pptr_reg(get_p_reg_kernel_img());
+    reserved[0] = get_p_reg_kernel_img();
 
     int index = 1;
 
@@ -55,8 +55,7 @@ BOOT_CODE static bool_t arch_init_freemem(p_region_t ui_p_reg,
             printf("ERROR: no slot to add DTB to reserved regions\n");
             return false;
         }
-        reserved[index].start = (pptr_t) paddr_to_pptr(dtb_p_reg.start);
-        reserved[index].end = (pptr_t) paddr_to_pptr(dtb_p_reg.end);
+        reserved[index] = dtb_p_reg;
         index++;
     }
 
@@ -68,45 +67,31 @@ BOOT_CODE static bool_t arch_init_freemem(p_region_t ui_p_reg,
         printf("ERROR: MODE_RESERVED > 1 unsupported!\n");
         return false;
     }
-    if (ui_p_reg.start < PADDR_TOP) {
-        region_t ui_reg = paddr_to_pptr_reg(ui_p_reg);
-        if (MODE_RESERVED == 1) {
-            if (index + 1 >= ARRAY_SIZE(reserved)) {
-                printf("ERROR: no slot to add the user image and the "
-                       "mode-reserved region to the reserved regions\n");
-                return false;
-            }
-            if (ui_reg.end > mode_reserved_region[0].start) {
-                reserved[index] = mode_reserved_region[0];
-                index++;
-                reserved[index] = ui_reg;
-            } else {
-                reserved[index] = ui_reg;
-                index++;
-                reserved[index] = mode_reserved_region[0];
-            }
+    p_region_t mode_reserved_p_reg = pptr_to_paddr_reg(mode_reserved_region[0]);
+    if (MODE_RESERVED == 1) {
+        if (index + 1 >= ARRAY_SIZE(reserved)) {
+            printf("ERROR: no slot to add the user image and the "
+                   "mode-reserved region to the reserved regions\n");
+            return false;
+        }
+        if (ui_p_reg.end > mode_reserved_p_reg.start) {
+            reserved[index] = mode_reserved_p_reg;
             index++;
+            reserved[index] = ui_p_reg;
         } else {
-            if (index >= ARRAY_SIZE(reserved)) {
-                printf("ERROR: no slot to add the user image to the reserved"
-                       "regions\n");
-                return false;
-            }
-            reserved[index] = ui_reg;
+            reserved[index] = ui_p_reg;
             index++;
+            reserved[index] = mode_reserved_p_reg;
         }
+        index++;
     } else {
-        if (MODE_RESERVED == 1) {
-            if (index >= ARRAY_SIZE(reserved)) {
-                printf("ERROR: no slot to add the mode-reserved region\n");
-                return false;
-            }
-            reserved[index] = mode_reserved_region[0];
-            index++;
+        if (index >= ARRAY_SIZE(reserved)) {
+            printf("ERROR: no slot to add the user image to the reserved"
+                   "regions\n");
+            return false;
         }
-
-        /* Reserve the ui_p_reg region still so it doesn't get turned into device UT. */
-        reserve_region(ui_p_reg);
+        reserved[index] = ui_p_reg;
+        index++;
     }
 
     /* avail_p_regs comes from the auto-generated code */
@@ -339,10 +324,7 @@ static BOOT_CODE bool_t try_init_kernel(
     cap_t it_ap_cap;
     cap_t it_pd_cap;
     cap_t ipcbuf_cap;
-    p_region_t ui_p_reg = (p_region_t) {
-        ui_p_reg_start, ui_p_reg_end
-    };
-    region_t ui_reg = paddr_to_pptr_reg(ui_p_reg);
+    p_region_t ui_p_reg = { .start = ui_p_reg_start, .end = ui_p_reg_end };
     word_t extra_bi_size = 0;
     pptr_t extra_bi_offset = 0;
     vptr_t extra_bi_frame_vptr;
@@ -535,7 +517,7 @@ static BOOT_CODE bool_t try_init_kernel(
         create_frames_of_region(
             root_cnode_cap,
             it_pd_cap,
-            ui_reg,
+            paddr_to_pptr_reg(ui_p_reg),
             true,
             pv_offset
         );
