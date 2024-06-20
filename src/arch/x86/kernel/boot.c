@@ -24,7 +24,7 @@
 #include <plat/machine/intel-vtd.h>
 
 #define MAX_RESERVED 1
-BOOT_BSS static region_t reserved[MAX_RESERVED];
+BOOT_BSS static p_region_t reserved[MAX_RESERVED];
 
 /* functions exactly corresponding to abstract specification */
 
@@ -72,11 +72,14 @@ BOOT_CODE static bool_t arch_init_freemem(p_region_t ui_p_reg,
                                           mem_p_regs_t *mem_p_regs,
                                           word_t extra_bi_size_bits)
 {
-    // Extend the reserved region down to include the base of the kernel image.
-    // KERNEL_ELF_PADDR_BASE is the lowest physical load address used
-    // in the x86 linker script.
-    ui_p_reg.start = KERNEL_ELF_PADDR_BASE;
-    reserved[0] = paddr_to_pptr_reg(ui_p_reg);
+    /* The reserved region is not only the user image, but starts at the base of
+     * the kernel image. KERNEL_ELF_PADDR_BASE is the lowest physical load
+     * address used in the x86 linker script.
+     */
+    reserved[0] = (p_region_t) {
+        .start = KERNEL_ELF_PADDR_BASE,
+        .end   = ui_p_reg.end
+    };
     return init_freemem(mem_p_regs->count, mem_p_regs->list, MAX_RESERVED,
                         reserved, it_v_reg, extra_bi_size_bits);
 }
@@ -107,11 +110,6 @@ BOOT_CODE bool_t init_sys_state(
     word_t        extra_bi_size = sizeof(seL4_BootInfoHeader);
     pptr_t        extra_bi_offset = 0;
     uint32_t      tsc_freq;
-    create_frames_of_region_ret_t create_frames_ret;
-    create_frames_of_region_ret_t extra_bi_ret;
-
-    /* convert from physical addresses to kernel pptrs */
-    region_t ui_reg             = paddr_to_pptr_reg(ui_info.p_reg);
 
     /* convert from physical addresses to userland vptrs */
     v_region_t ui_v_reg;
@@ -252,18 +250,16 @@ BOOT_CODE bool_t init_sys_state(
     );
 
     /* create and map extra bootinfo region */
-    extra_bi_ret =
-        create_frames_of_region(
-            root_cnode_cap,
-            it_vspace_cap,
-            extra_bi_region,
-            true,
-            pptr_to_paddr((void *)(extra_bi_region.start - extra_bi_frame_vptr))
-        );
-    if (!extra_bi_ret.success) {
+    p_region_t extra_bi_p_reg = pptr_to_paddr_reg(extra_bi_region);
+    sword_t extra_bi_pv_offset = extra_bi_p_reg.start - extra_bi_frame_vptr;
+    if (!create_frames_of_phys_region(root_cnode_cap,
+                                      it_vspace_cap,
+                                      extra_bi_p_reg,
+                                      extra_bi_pv_offset,
+                                      &ndks_boot.bi_frame->extraBIPages)) {
+        printf("ERROR: mapping extra boot info to initial thread failed\n");
         return false;
     }
-    ndks_boot.bi_frame->extraBIPages = extra_bi_ret.region;
 
     /* create the initial thread's IPC buffer */
     ipcbuf_cap = create_ipcbuf_frame_cap(root_cnode_cap, it_vspace_cap, ipcbuf_vptr);
@@ -271,19 +267,17 @@ BOOT_CODE bool_t init_sys_state(
         return false;
     }
 
-    /* create all userland image frames */
-    create_frames_ret =
-        create_frames_of_region(
-            root_cnode_cap,
-            it_vspace_cap,
-            ui_reg,
-            true,
-            ui_info.pv_offset
-        );
-    if (!create_frames_ret.success) {
+    /* Create image frames for the part of the user image that is visible in the
+     * kernel window.
+     */
+    if (!create_frames_of_phys_region(root_cnode_cap,
+                                      it_vspace_cap,
+                                      ui_info.p_reg,
+                                      ui_info.pv_offset,
+                                      &ndks_boot.bi_frame->userImageFrames)) {
+        printf("ERROR: could not create userland image frames\n");
         return false;
     }
-    ndks_boot.bi_frame->userImageFrames = create_frames_ret.region;
 
     /* create the initial thread's ASID pool */
     it_ap_cap = create_it_asid_pool(root_cnode_cap);

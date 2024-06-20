@@ -6,7 +6,7 @@
 
 #pragma once
 
-#include <mode/stdint.h>
+#include <config.h>
 
 typedef unsigned char uint8_t;
 typedef unsigned short uint16_t;
@@ -33,3 +33,17 @@ typedef int64_t     intmax_t;
 #define PRIi64     "lli"
 #define PRIu64     "llu"
 #define PRIx64     "llx"
+
+#if CONFIG_WORD_SIZE == 32
+
+#define UINTPTR_MAX UINT32_MAX
+typedef uint32_t    uintptr_t;
+
+#elif CONFIG_WORD_SIZE == 64
+
+#define UINTPTR_MAX UINT64_MAX
+typedef uint64_t    uintptr_t;
+
+#else
+#error "unsupported CONFIG_WORD_SIZE"
+#endif

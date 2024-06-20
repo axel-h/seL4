@@ -37,7 +37,7 @@
 BOOT_BSS static volatile int node_boot_lock;
 #endif /* ENABLE_SMP_SUPPORT */
 
-BOOT_BSS static region_t reserved[NUM_RESERVED_REGIONS];
+BOOT_BSS static p_region_t reserved[NUM_RESERVED_REGIONS];
 
 BOOT_CODE static bool_t arch_init_freemem(p_region_t ui_p_reg,
                                           p_region_t dtb_p_reg,
@@ -45,7 +45,7 @@ BOOT_CODE static bool_t arch_init_freemem(p_region_t ui_p_reg,
                                           word_t extra_bi_size_bits)
 {
     /* reserve the kernel image region */
-    reserved[0] = paddr_to_pptr_reg(get_p_reg_kernel_img());
+    reserved[0] = get_p_reg_kernel_img();
 
     int index = 1;
 
@@ -55,8 +55,7 @@ BOOT_CODE static bool_t arch_init_freemem(p_region_t ui_p_reg,
             printf("ERROR: no slot to add DTB to reserved regions\n");
             return false;
         }
-        reserved[index].start = (pptr_t) paddr_to_pptr(dtb_p_reg.start);
-        reserved[index].end = (pptr_t) paddr_to_pptr(dtb_p_reg.end);
+        reserved[index] = dtb_p_reg;
         index++;
     }
 
@@ -68,45 +67,31 @@ BOOT_CODE static bool_t arch_init_freemem(p_region_t ui_p_reg,
         printf("ERROR: MODE_RESERVED > 1 unsupported!\n");
         return false;
     }
-    if (ui_p_reg.start < PADDR_TOP) {
-        region_t ui_reg = paddr_to_pptr_reg(ui_p_reg);
-        if (MODE_RESERVED == 1) {
-            if (index + 1 >= ARRAY_SIZE(reserved)) {
-                printf("ERROR: no slot to add the user image and the "
-                       "mode-reserved region to the reserved regions\n");
-                return false;
-            }
-            if (ui_reg.end > mode_reserved_region[0].start) {
-                reserved[index] = mode_reserved_region[0];
-                index++;
-                reserved[index] = ui_reg;
-            } else {
-                reserved[index] = ui_reg;
-                index++;
-                reserved[index] = mode_reserved_region[0];
-            }
+    p_region_t mode_reserved_p_reg = pptr_to_paddr_reg(mode_reserved_region[0]);
+    if (MODE_RESERVED == 1) {
+        if (index + 1 >= ARRAY_SIZE(reserved)) {
+            printf("ERROR: no slot to add the user image and the "
+                   "mode-reserved region to the reserved regions\n");
+            return false;
+        }
+        if (ui_p_reg.end > mode_reserved_p_reg.start) {
+            reserved[index] = mode_reserved_p_reg;
             index++;
+            reserved[index] = ui_p_reg;
         } else {
-            if (index >= ARRAY_SIZE(reserved)) {
-                printf("ERROR: no slot to add the user image to the reserved"
-                       "regions\n");
-                return false;
-            }
-            reserved[index] = ui_reg;
+            reserved[index] = ui_p_reg;
             index++;
+            reserved[index] = mode_reserved_p_reg;
         }
+        index++;
     } else {
-        if (MODE_RESERVED == 1) {
-            if (index >= ARRAY_SIZE(reserved)) {
-                printf("ERROR: no slot to add the mode-reserved region\n");
-                return false;
-            }
-            reserved[index] = mode_reserved_region[0];
-            index++;
+        if (index >= ARRAY_SIZE(reserved)) {
+            printf("ERROR: no slot to add the user image to the reserved"
+                   "regions\n");
+            return false;
         }
-
-        /* Reserve the ui_p_reg region still so it doesn't get turned into device UT. */
-        reserve_region(ui_p_reg);
+        reserved[index] = ui_p_reg;
+        index++;
     }
 
     /* avail_p_regs comes from the auto-generated code */
@@ -339,17 +324,12 @@ static BOOT_CODE bool_t try_init_kernel(
     cap_t it_ap_cap;
     cap_t it_pd_cap;
     cap_t ipcbuf_cap;
-    p_region_t ui_p_reg = (p_region_t) {
-        ui_p_reg_start, ui_p_reg_end
-    };
-    region_t ui_reg = paddr_to_pptr_reg(ui_p_reg);
+    p_region_t ui_p_reg = { .start = ui_p_reg_start, .end = ui_p_reg_end };
     word_t extra_bi_size = 0;
     pptr_t extra_bi_offset = 0;
     vptr_t extra_bi_frame_vptr;
     vptr_t bi_frame_vptr;
     vptr_t ipcbuf_vptr;
-    create_frames_of_region_ret_t create_frames_ret;
-    create_frames_of_region_ret_t extra_bi_ret;
 
     /* convert from physical addresses to userland vptrs */
     v_region_t ui_v_reg = {
@@ -498,25 +478,21 @@ static BOOT_CODE bool_t try_init_kernel(
         bi_frame_vptr
     );
 
-    /* create and map extra bootinfo region */
+    /* create and map extra bootinfo region to root task */
     if (extra_bi_size > 0) {
-        region_t extra_bi_region = {
+        p_region_t extra_bi_p_reg = pptr_to_paddr_reg((region_t) {
             .start = rootserver.extra_bi,
-            .end = rootserver.extra_bi + extra_bi_size
-        };
-        extra_bi_ret =
-            create_frames_of_region(
-                root_cnode_cap,
-                it_pd_cap,
-                extra_bi_region,
-                true,
-                pptr_to_paddr((void *)extra_bi_region.start) - extra_bi_frame_vptr
-            );
-        if (!extra_bi_ret.success) {
+            .end   = rootserver.extra_bi + extra_bi_size
+        });
+        sword_t extra_bi_pv_offset = extra_bi_p_reg.start - extra_bi_frame_vptr;
+        if (!create_frames_of_phys_region(root_cnode_cap,
+                                          it_pd_cap,
+                                          extra_bi_p_reg,
+                                          extra_bi_pv_offset,
+                                          &ndks_boot.bi_frame->extraBIPages)) {
             printf("ERROR: mapping extra boot info to initial thread failed\n");
             return false;
         }
-        ndks_boot.bi_frame->extraBIPages = extra_bi_ret.region;
     }
 
 #ifdef CONFIG_KERNEL_MCS
@@ -530,20 +506,17 @@ static BOOT_CODE bool_t try_init_kernel(
         return false;
     }
 
-    /* create all userland image frames */
-    create_frames_ret =
-        create_frames_of_region(
-            root_cnode_cap,
-            it_pd_cap,
-            ui_reg,
-            true,
-            pv_offset
-        );
-    if (!create_frames_ret.success) {
-        printf("ERROR: could not create all userland image frames\n");
+    /* Create image frames for the part of the user image that is visible in the
+     * kernel window.
+     */
+    if (!create_frames_of_phys_region(root_cnode_cap,
+                                      it_pd_cap,
+                                      ui_p_reg,
+                                      pv_offset,
+                                      &ndks_boot.bi_frame->userImageFrames)) {
+        printf("ERROR: could not create userland image frames\n");
         return false;
     }
-    ndks_boot.bi_frame->userImageFrames = create_frames_ret.region;
 
     /* create/initialise the initial thread's ASID pool */
     it_ap_cap = create_it_asid_pool(root_cnode_cap);
