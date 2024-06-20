@@ -115,6 +115,11 @@ BOOT_CODE static bool_t arch_init_freemem(p_region_t ui_p_reg,
                         it_v_reg, extra_bi_size_bits);
 }
 
+/* This is called from init_core_state() */
+BOOT_CODE void arch_init_core_state()
+{
+    /* Nothing to be done */
+}
 
 BOOT_CODE static void init_irqs(cap_t root_cnode_cap)
 {
@@ -280,17 +285,11 @@ BOOT_CODE static bool_t try_init_kernel_secondary_core(void)
     setIRQState(IRQReserved, CORE_IRQ_TO_IRQT(getCurrentCPUIndex(), INTERRUPT_VGIC_MAINTENANCE));
     setIRQState(IRQReserved, CORE_IRQ_TO_IRQT(getCurrentCPUIndex(), INTERRUPT_VTIMER_EVENT));
 #endif /* CONFIG_ARM_HYPERVISOR_SUPPORT */
-    NODE_LOCK_SYS;
 
-    clock_sync_test();
-    ksNumCPUs++;
-
-    init_core_state(SchedulerAction_ResumeCurrentThread);
-
-    return true;
+    return finalize_init_kernel_on_secondary_core();
 }
 
-BOOT_CODE static void release_secondary_cpus(void)
+BOOT_CODE void release_secondary_cores(void)
 {
     /* release the cpus at the same time */
     assert(0 == node_boot_lock); /* Sanity check for a proper lock state. */
@@ -315,11 +314,9 @@ BOOT_CODE static void release_secondary_cpus(void)
 
     /* Wait until all the secondary cores are done initialising */
     while (ksNumCPUs != CONFIG_MAX_NUM_NODES) {
-#ifdef ENABLE_SMP_CLOCK_SYNC_TEST_ON_BOOT
-        NODE_STATE(ksCurTime) = getCurrentTime();
-#endif
-        /* perform a memory acquire to get new values of ksNumCPUs, release for ksCurTime */
-        __atomic_thread_fence(__ATOMIC_ACQ_REL);
+        SMP_CLOCK_SYNC_TEST_UPDATE_TIME();
+        /* perform a memory acquire to get new values of ksNumCPUs */
+        __atomic_thread_fence(__ATOMIC_ACQUIRE);
     }
 }
 #endif /* ENABLE_SMP_SUPPORT */
@@ -609,21 +606,7 @@ static BOOT_CODE bool_t try_init_kernel(
 
     ksNumCPUs = 1;
 
-    /* initialize BKL before booting up other cores */
-    SMP_COND_STATEMENT(clh_lock_init());
-    SMP_COND_STATEMENT(release_secondary_cpus());
-
-    /* All cores are up now, so there can be concurrency. The kernel booting is
-     * supposed to be finished before the secondary cores are released, all the
-     * primary has to do now is schedule the initial thread. Currently there is
-     * nothing that touches any global data structures, nevertheless we grab the
-     * BKL here to play safe. It is released when the kernel is left. */
-    NODE_LOCK_SYS;
-
-    printf("Booting all finished, dropped to user space\n");
-
-    /* kernel successfully initialized */
-    return true;
+    return finalize_init_kernel();
 }
 
 BOOT_CODE VISIBLE void init_kernel(
@@ -635,38 +618,22 @@ BOOT_CODE VISIBLE void init_kernel(
     uint32_t dtb_size
 )
 {
-    bool_t result;
-
 #ifdef ENABLE_SMP_SUPPORT
     /* we assume there exists a cpu with id 0 and will use it for bootstrapping */
-    if (getCurrentCPUIndex() == 0) {
-        result = try_init_kernel(ui_p_reg_start,
-                                 ui_p_reg_end,
-                                 pv_offset,
-                                 v_entry,
-                                 dtb_addr_p, dtb_size);
-    } else {
-        result = try_init_kernel_secondary_core();
+    word_t core_idx = getCurrentCPUIndex();
+    if (core_idx != 0) {
+        if (!try_init_kernel_secondary_core()) {
+            fail("ERROR: kernel init failed in secondary core %"SEL4_PRIx_word,
+                 core_idx);
+            UNREACHABLE();
+        }
+        return;
     }
+#endif
 
-#else
-    result = try_init_kernel(ui_p_reg_start,
-                             ui_p_reg_end,
-                             pv_offset,
-                             v_entry,
-                             dtb_addr_p, dtb_size);
-
-#endif /* ENABLE_SMP_SUPPORT */
-
-    if (!result) {
+    if (!try_init_kernel(ui_p_reg_start, ui_p_reg_end, pv_offset, v_entry,
+                        dtb_addr_p, dtb_size)) {
         fail("ERROR: kernel init failed");
         UNREACHABLE();
     }
-
-#ifdef CONFIG_KERNEL_MCS
-    NODE_STATE(ksCurTime) = getCurrentTime();
-    NODE_STATE(ksConsumed) = 0;
-#endif
-    schedule();
-    activateThread();
 }

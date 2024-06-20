@@ -67,6 +67,13 @@ BOOT_CODE static void init_irqs(cap_t root_cnode_cap)
     write_slot(SLOT_PTR(pptr_of_cap(root_cnode_cap), seL4_CapIRQControl), cap_irq_control_cap_new());
 }
 
+/* This is called from init_core_state() */
+BOOT_CODE void arch_init_core_state()
+{
+    ARCH_NODE_STATE(x86KScurInterrupt) = int_invalid;
+    ARCH_NODE_STATE(x86KSPendingInterrupt) = int_invalid;
+}
+
 BOOT_CODE static bool_t arch_init_freemem(p_region_t ui_p_reg,
                                           v_region_t it_v_reg,
                                           mem_p_regs_t *mem_p_regs,

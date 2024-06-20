@@ -24,7 +24,11 @@ void migrateTCB(tcb_t *tcb, word_t new_core)
         switchFpuOwner(NULL, tcb->tcbAffinity);
     }
 #endif /* CONFIG_HAVE_FPU */
+
+    /* Don't migrate to a non-existing or inactive core. */
+    assert(is_valid_core(new_core));
     tcb->tcbAffinity = new_core;
+
 #ifdef CONFIG_DEBUG_BUILD
     tcbDebugAppend(tcb);
 #endif

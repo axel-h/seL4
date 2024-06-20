@@ -569,24 +569,59 @@ BOOT_CODE tcb_t *create_initial_thread(cap_t root_cnode_cap, cap_t it_pd_cap, vp
 }
 
 #ifdef ENABLE_SMP_CLOCK_SYNC_TEST_ON_BOOT
-BOOT_CODE void clock_sync_test(void)
-{
-    ticks_t t, t0;
-    ticks_t margin = usToTicks(1) + getTimerPrecision();
 
-    assert(getCurrentCPUIndex() != 0);
-    t = NODE_STATE_ON_CORE(ksCurTime, 0);
+struct {
+    time_t t_local;
+    time_t t_primary;
+} clock_sync_info[CONFIG_MAX_NUM_NODES - 1];
+
+BOOT_CODE static void clock_sync_test(void)
+{
+    /* This must be called on secondary cores only. */
+    word_t core_idx = getCurrentCPUIndex();
+    assert(core_idx != 0);
+
+    /* Loop until the primary core's timestamp changes*/
+    __atomic_thread_fence(__ATOMIC_ACQUIRE);
+    ticks_t t0_primary = NODE_STATE_ON_CORE(ksCurTime, 0);
+    ticks_t t_primary;
     do {
-        /* perform a memory acquire to get new values of ksCurTime */
         __atomic_thread_fence(__ATOMIC_ACQUIRE);
-        t0 = NODE_STATE_ON_CORE(ksCurTime, 0);
-    } while (t0 == t);
-    t = getCurrentTime();
-    printf("clock_sync_test[%d]: t0 = %"PRIu64", t = %"PRIu64", td = %"PRIi64"\n",
-           (int)getCurrentCPUIndex(), t0, t, t - t0);
-    assert(t0 <= margin + t && t <= t0 + margin);
+        t_primary = NODE_STATE_ON_CORE(ksCurTime, 0);
+    } while (t_primary != t0_primary);
+
+    assert(core_idx <= ARRAY_SIZE(clock_sync_info));
+    clock_sync_info[core_idx - 1].t_local = getCurrentTime();
+    clock_sync_info[core_idx - 1].t_primary = t_primary;
 }
+
+BOOT_CODE static void clock_sync_test_evaluation(void)
+{
+    bool_t clock_sync_test_passed = true;
+    ticks_t margin = usToTicks(1) + getTimerPrecision();
+    for(int i = 0; i < ARRAY_SIZE(clock_sync_info); i++) {
+        time_t t_local = clock_sync_info[i].t_local;
+        time_t t_primary = clock_sync_info[i].t_primary;
+        ticks_t delta = t_local - t_primary;
+        printf("clock_sync_test on node %d: delta = %"PRIi64
+               ", local = %"PRIu64", primary = %"PRIu64"\n",
+               i+1, delta, t_local, t_primary);
+        if (((delta < 0) ? -delta : delta) > margin) {
+            clock_sync_test_passed = false;
+        }
+    }
+    if (!clock_sync_test_passed) {
+        printf("clock delta exceeds margin %"PRIi64"\n", margin);
+#if defined(CONFIG_PLAT_QEMU_ARM_VIRT) || defined(CONFIG_PLAT_QEMU_RISCV_VIRT)
+        printf("ignoring on QEMU");
+#else
+        halt();
+        UNREACHABLE();
 #endif
+    }
+}
+
+#endif /* ENABLE_SMP_CLOCK_SYNC_TEST_ON_BOOT */
 
 BOOT_CODE void init_core_state(tcb_t *scheduler_action)
 {
@@ -602,8 +637,10 @@ BOOT_CODE void init_core_state(tcb_t *scheduler_action)
     }
     tcbDebugAppend(NODE_STATE(ksIdleThread));
 #endif
+
     NODE_STATE(ksSchedulerAction) = scheduler_action;
     NODE_STATE(ksCurThread) = NODE_STATE(ksIdleThread);
+
 #ifdef CONFIG_KERNEL_MCS
     NODE_STATE(ksCurSC) = NODE_STATE(ksCurThread->tcbSchedContext);
     NODE_STATE(ksConsumed) = 0;
@@ -612,7 +649,10 @@ BOOT_CODE void init_core_state(tcb_t *scheduler_action)
     NODE_STATE(ksReleaseQueue.end) = NULL;
     NODE_STATE(ksCurTime) = getCurrentTime();
 #endif
+
+    arch_init_core_state();
 }
+
 
 /**
  * Sanity check if a kernel-virtual pointer is in the kernel window that maps
@@ -1065,3 +1105,76 @@ BOOT_CODE bool_t init_freemem(word_t n_available, const p_region_t *available,
            "objects, need size/alignment of 2^%"SEL4_PRIu_word"\n", max);
     return false;
 }
+
+static BOOT_CODE bool_t run_kernel(void)
+{
+#ifdef CONFIG_KERNEL_MCS
+
+    assert(0 == NODE_STATE(ksConsumed));
+    uint64_t timestamp = getCurrentTime();
+    if (timestamp > NODE_STATE(ksCurTime)) {
+        fail("timestamp delta %"PRIu64"\n", timestamp);
+    }
+
+    /* Ensure the most recent timestamp is used. */
+    NODE_STATE(ksCurTime) = getCurrentTime();
+#endif
+    schedule();
+    activateThread();
+    return true;
+}
+
+BOOT_CODE bool_t finalize_init_kernel()
+{
+    SMP_COND_STATEMENT(clh_lock_init());
+    /* grab the BKL before releasing the secondary cores, so they cannot
+     * overtake the primary core
+     */
+    NODE_LOCK_SYS;
+    SMP_CLOCK_SYNC_TEST_UPDATE_TIME();
+    SMP_COND_STATEMENT(release_secondary_cores());
+#ifdef ENABLE_SMP_CLOCK_SYNC_TEST_ON_BOOT
+    clock_sync_test_evaluation();
+#endif
+    debug_capDL();
+    printf("Booting all finished, dropped to user space\n");
+    return run_kernel();
+}
+
+#ifdef ENABLE_SMP_SUPPORT
+
+BOOT_CODE bool_t finalize_init_kernel_on_secondary_core(void)
+{
+
+#ifdef ENABLE_SMP_CLOCK_SYNC_TEST_ON_BOOT
+    clock_sync_test();
+#endif
+
+    /* The primary core spins waiting for this value to increase. Ensure the
+     * values is also visible in the primary core. */
+    ksNumCPUs++;
+    __atomic_thread_fence(__ATOMIC_RELEASE);
+
+    /* Now there can be concurrency, as other secondary cores are also starting
+     * up. Everything that affects global data should only be done with the
+     * BLK held.
+     */
+
+    init_core_state(SchedulerAction_ResumeCurrentThread);
+
+
+#ifdef CONFIG_ARCH_RISCV
+    /* ToDo: Is this really needed? Should this be generic? */
+    ifence_local();
+#endif
+    /* The primary core holds the BKL until is has finished booting, Grabbing
+     * the BKL here ensure secondary cores will not drop to userland before
+     * the primary core did this. However, there is a change that userland my
+     * issues a kernel call that grabs the BLK again before a secondary cores
+     * finished booting.
+     */
+    NODE_LOCK_SYS;
+    return run_kernel();
+}
+
+#endif /* ENABLE_SMP_SUPPORT */
