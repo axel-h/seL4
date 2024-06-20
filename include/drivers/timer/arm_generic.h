@@ -24,24 +24,36 @@ static inline ticks_t getCurrentTime(void)
 /** DONT_TRANSLATE **/
 static inline void setDeadline(ticks_t deadline)
 {
+    /* The timer interrupt condition is met when the counter is greater than or
+     * equal to the compare value written here. Thus, writing a values that is
+     * in the past is fine.
+     */
     SYSTEM_WRITE_64(CNT_CVAL, deadline);
+    /* If is is called in the context of an interrupt we have to ensure that the
+     * timer deasserts the IRQ before GIC EOIR/DIR. This is sufficient to remove
+     * the pending state from the GICR and avoid the timer interrupt happening
+     * twice due to the level sensitive configuration.
+     * The only case where we are not called from an interrupt is currently from
+     * ackDeadlineIRQ() below. The barrier does no matter in this case. But in
+     * general, callers of this function expectsthe new timer values to be set
+     * when this returns, otherwise unexpected side effects could happen.
+     */
+    isb();
 }
 
 static inline void ackDeadlineIRQ(void)
 {
-    ticks_t deadline = UINT64_MAX;
-    setDeadline(deadline);
-    /* Ensure that the timer deasserts the IRQ before GIC EOIR/DIR.
-     * This is sufficient to remove the pending state from the GICR
-     * and avoid the interrupt happening twice because of the level
-     * sensitive configuration. */
-    isb();
+    /* Setting the new value to the maximum practically disables it. It remains
+     * unclear why we don't disable it, maybe that is too much overhead given a
+     * new timer value is set by the scheduler on kernel exit. The only
+     */
+    setDeadline(UINT64_MAX);
 }
 #else /* CONFIG_KERNEL_MCS */
 #include <arch/machine/timer.h>
 static inline void resetTimer(void)
 {
-    SYSTEM_WRITE_WORD(CNT_TVAL, TIMER_RELOAD);
+    SYSTEM_WRITE_WORD(CNT_TVAL, TIMER_RELOAD_TICKS);
     /* Ensure that the timer deasserts the IRQ before GIC EOIR/DIR.
      * This is sufficient to remove the pending state from the GICR
      * and avoid the interrupt happening twice because of the level
