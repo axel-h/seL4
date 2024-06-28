@@ -170,19 +170,14 @@ foreach(file ${result})
     include("${file}")
 endforeach()
 
-# Verify that, as a minimum any variables that are used
-# to find other build files are actually defined at this
-# point. This means at least: KernelArch KernelWordSize
-
-if("${KernelArch}" STREQUAL "")
-    message(FATAL_ERROR "Variable 'KernelArch' is not set.")
-endif()
-
-if("${KernelWordSize}" STREQUAL "")
-    message(FATAL_ERROR "Variable 'KernelWordSize' is not set.")
-endif()
-
 config_choice(KernelPlatform PLAT "Select the platform" ${kernel_platforms})
+
+# Verify that a proper minimal configuration has been selected.
+foreach(var IN ITEMS KernelPlatform KernelSel4Arch KernelArch KernelWordSize)
+    if (NOT ${var})
+        message(FATAL_ERROR "Variable '${var}' is not set.")
+    endif()
+endforeach()
 
 # Now enshrine all the common variables in the config
 config_set(KernelArmCortexA7 ARM_CORTEX_A7 "${KernelArmCortexA7}")

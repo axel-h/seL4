@@ -16,5 +16,5 @@ typedef struct cmdline_opt {
     bool_t   disable_iommu;
 } cmdline_opt_t;
 
-void cmdline_parse(const char *cmdline, cmdline_opt_t *cmdline_opt);
+void cmdline_parse(const char *cmdline, cmdline_opt_t *opt);
 
