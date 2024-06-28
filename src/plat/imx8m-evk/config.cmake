@@ -37,10 +37,8 @@ if(KernelPlatformImx8mq-evk OR KernelPlatformImx8mm-evk OR KernelPlatformImx8mp-
         MAX_IRQ ${IMX8M_MAX_IRQ}
         TIMER drivers/timer/arm_generic.h
         INTERRUPT_CONTROLLER arch/machine/gic_v3.h
-        NUM_PPI 32
         CLK_MAGIC 1llu
         CLK_SHIFT 3u
-        KERNEL_WCET 10u
     )
 endif()
 

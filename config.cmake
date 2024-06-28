@@ -49,21 +49,21 @@ set_property(
 # These options are now set in seL4Config.cmake
 if(DEFINED CALLED_declare_default_headers)
     # calculate the irq cnode size based on MAX_NUM_IRQ
-    if("${KernelArch}" STREQUAL "riscv")
+    if(KernelArchRiscV)
         math(EXPR MAX_NUM_IRQ "${CONFIGURE_MAX_IRQ} + 2")
-    else()
-        if(
-            DEFINED KernelMaxNumNodes
-            AND CONFIGURE_NUM_PPI GREATER "0"
-            AND "${KernelArch}" STREQUAL "arm"
-        )
+    elseif(KernelArchARM)
+        set(MAX_NUM_IRQ "${CONFIGURE_MAX_IRQ}")
+        if(DEFINED CONFIGURE_NUM_PPI)
+            # The PPIs are a part of CONFIGURE_MAX_IRQ, but they are separate
+            # for each core.
             math(
                 EXPR MAX_NUM_IRQ
-                "(${KernelMaxNumNodes}-1)*${CONFIGURE_NUM_PPI} + ${CONFIGURE_MAX_IRQ}"
+                "${MAX_NUM_IRQ} + ((${KernelMaxNumNodes} - 1) * ${CONFIGURE_NUM_PPI})"
             )
-        else()
-            set(MAX_NUM_IRQ "${CONFIGURE_MAX_IRQ}")
         endif()
+    else()
+        # Don't make any assumption about other architectures.
+        message(FATAL_ERROR "unsupported architecture: '${KernelArch}'")
     endif()
     set(BITS "0")
     while(MAX_NUM_IRQ GREATER "0")
@@ -71,12 +71,6 @@ if(DEFINED CALLED_declare_default_headers)
         math(EXPR MAX_NUM_IRQ "${MAX_NUM_IRQ} >> 1")
     endwhile()
     set(CONFIGURE_IRQ_SLOT_BITS "${BITS}" CACHE INTERNAL "")
-    if(NOT DEFINED CONFIGURE_TIMER_PRECISION)
-        set(CONFIGURE_TIMER_PRECISION "0")
-    endif()
-    if(NOT DEFINED CONFIGURE_TIMER_OVERHEAD_TICKS)
-        set(CONFIGURE_TIMER_OVERHEAD_TICKS "0")
-    endif()
     configure_file(
         src/arch/${KernelArch}/platform_gen.h.in
         ${CMAKE_CURRENT_BINARY_DIR}/gen_headers/plat/platform_gen.h @ONLY

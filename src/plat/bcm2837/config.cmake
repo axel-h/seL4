@@ -21,10 +21,8 @@ if(KernelPlatformRpi3)
     declare_default_headers(
         TIMER_FREQUENCY 19200000
         MAX_IRQ 127
-        NUM_PPI 32
         TIMER drivers/timer/arm_generic.h
         INTERRUPT_CONTROLLER drivers/irq/bcm2836-armctrl-ic.h
-        KERNEL_WCET 10u
         CLK_MAGIC 458129845llu
         CLK_SHIFT 43u
     )
