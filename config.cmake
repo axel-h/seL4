@@ -437,12 +437,27 @@ else()
     config_set(KernelEnableBenchmarks ENABLE_BENCHMARKS OFF)
 endif()
 
-# Reflect the existence of kernel Log buffer
-if(KernelBenchmarksTrackKernelEntries OR KernelBenchmarksTracepoints)
-    config_set(KernelLogBuffer KERNEL_LOG_BUFFER ON)
+if(KernelBenchmarksTrackKernelEntries OR KernelBenchmarksTrackUtilisation OR KernelDebugBuild)
+    config_set(KernelTrackKernelEntries TRACE_KERNEL_ENTRIES ON)
 else()
-    config_set(KernelLogBuffer KERNEL_LOG_BUFFER OFF)
+    config_set(KernelTrackKernelEntries TRACE_KERNEL_ENTRIES OFF)
 endif()
+
+# CONFIG_ENABLE_KERNEL_LOG_BUFFER is set automatically if a feature is used that
+# needs the kernel log buffer.
+if(KernelBenchmarksTrackKernelEntries OR KernelBenchmarksTracepoints)
+    config_set(KernelLogBuffer ENABLE_KERNEL_LOG_BUFFER ON)
+else()
+    config_set(KernelLogBuffer ENABLE_KERNEL_LOG_BUFFER OFF)
+endif()
+
+config_string(
+    KernelLogBufferSize KERNEL_LOG_BUFFER_SIZE
+    "Kernel Log Buffer Size."
+    DEFAULT 20
+    DEPENDS "KernelLogBuffer" DEFAULT_DISABLED 0
+    UNQUOTE
+)
 
 config_string(
     KernelMaxNumTracePoints MAX_NUM_TRACE_POINTS

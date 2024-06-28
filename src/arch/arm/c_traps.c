@@ -10,20 +10,16 @@
 #include <arch/machine/registerset.h>
 #include <api/syscall.h>
 #include <machine/fpu.h>
-
-#include <sel4/benchmark_track_types.h>
-#include <benchmark/benchmark_track.h>
-#include <benchmark/benchmark_utilisation.h>
 #include <arch/machine.h>
+#include <benchmark/benchmark.h>
 
 void VISIBLE NORETURN c_handle_undefined_instruction(void)
 {
     NODE_LOCK_SYS;
     c_entry_hook();
-
-#ifdef TRACK_KERNEL_ENTRIES
-    ksKernelEntry.path = Entry_UserLevelFault;
-    ksKernelEntry.word = getRegister(NODE_STATE(ksCurThread), NextIP);
+#ifdef ENABLE_TRACE_KERNEL_ENTRY_EXIT
+    trace_kernel_entry(Entry_UserLevelFault,
+                       getRegister(NODE_STATE(ksCurThread), NextIP));
 #endif
 
 #if defined(CONFIG_HAVE_FPU) && defined(CONFIG_ARCH_AARCH32)
@@ -55,6 +51,10 @@ void VISIBLE NORETURN c_handle_undefined_instruction(void)
 void VISIBLE NORETURN c_handle_enfp(void)
 {
     c_entry_hook();
+#ifdef ENABLE_TRACE_KERNEL_ENTRY_EXIT
+    trace_kernel_entry(Entry_UserLevelFault,
+                       getRegister(NODE_STATE(ksCurThread), NextIP));
+#endif
 
     handleFPUFault();
     restore_user_context();
@@ -75,11 +75,10 @@ static inline void NORETURN c_handle_vm_fault(vm_fault_type_t type)
 {
     NODE_LOCK_SYS;
     c_entry_hook();
-
-#ifdef TRACK_KERNEL_ENTRIES
-    ksKernelEntry.path = Entry_VMFault;
-    ksKernelEntry.word = getRegister(NODE_STATE(ksCurThread), NextIP);
-    ksKernelEntry.is_fastpath = false;
+#ifdef ENABLE_TRACE_KERNEL_ENTRY_EXIT
+    trace_kernel_entry(Entry_VMFault,
+                       getRegister(NODE_STATE(ksCurThread), NextIP));
+    // ksKernelEntry.is_fastpath = false;
 #endif
 
 #ifdef CONFIG_EXCEPTION_FASTPATH
@@ -105,11 +104,8 @@ void VISIBLE NORETURN c_handle_interrupt(void)
 {
     NODE_LOCK_IRQ_IF(IRQT_TO_IRQ(getActiveIRQ()) != irq_remote_call_ipi);
     c_entry_hook();
-
-#ifdef TRACK_KERNEL_ENTRIES
-    ksKernelEntry.path = Entry_Interrupt;
-    ksKernelEntry.word = IRQT_TO_IRQ(getActiveIRQ());
-    ksKernelEntry.core = CURRENT_CPU_INDEX();
+#ifdef ENABLE_TRACE_KERNEL_ENTRY_EXIT
+    trace_kernel_entry(Entry_Interrupt, IRQT_TO_IRQ(getActiveIRQ()));
 #endif
 
     handleInterruptEntry();
@@ -143,10 +139,9 @@ void VISIBLE c_handle_syscall(word_t cptr, word_t msgInfo, syscall_t syscall)
     NODE_LOCK_SYS;
 
     c_entry_hook();
-#ifdef TRACK_KERNEL_ENTRIES
-    benchmark_debug_syscall_start(cptr, msgInfo, syscall);
-    ksKernelEntry.is_fastpath = 0;
-#endif /* DEBUG */
+#ifdef ENABLE_TRACE_KERNEL_ENTRY_EXIT
+    trace_kernel_entry_syscall(syscall, cptr, msgInfo, 0);
+#endif
 
     slowpath(syscall);
     UNREACHABLE();
@@ -159,10 +154,9 @@ void VISIBLE c_handle_fastpath_call(word_t cptr, word_t msgInfo)
     NODE_LOCK_SYS;
 
     c_entry_hook();
-#ifdef TRACK_KERNEL_ENTRIES
-    benchmark_debug_syscall_start(cptr, msgInfo, SysCall);
-    ksKernelEntry.is_fastpath = 1;
-#endif /* DEBUG */
+#ifdef ENABLE_TRACE_KERNEL_ENTRY_EXIT
+    trace_kernel_entry_syscall(SysCall, cptr, msgInfo, 1);
+#endif
 
     fastpath_call(cptr, msgInfo);
     UNREACHABLE();
@@ -196,10 +190,9 @@ void VISIBLE c_handle_fastpath_reply_recv(word_t cptr, word_t msgInfo)
     NODE_LOCK_SYS;
 
     c_entry_hook();
-#ifdef TRACK_KERNEL_ENTRIES
-    benchmark_debug_syscall_start(cptr, msgInfo, SysReplyRecv);
-    ksKernelEntry.is_fastpath = 1;
-#endif /* DEBUG */
+#ifdef ENABLE_TRACE_KERNEL_ENTRY_EXIT
+    trace_kernel_entry_syscall(SysReplyRecv, cptr, msgInfo, 1);
+#endif
 
 #ifdef CONFIG_KERNEL_MCS
     fastpath_reply_recv(cptr, msgInfo, reply);
@@ -217,11 +210,10 @@ VISIBLE NORETURN void c_handle_vcpu_fault(word_t hsr)
     NODE_LOCK_SYS;
 
     c_entry_hook();
-
-#ifdef TRACK_KERNEL_ENTRIES
-    ksKernelEntry.path = Entry_VCPUFault;
-    ksKernelEntry.word = hsr;
+#ifdef ENABLE_TRACE_KERNEL_ENTRY_EXIT
+    trace_kernel_entry(Entry_VCPUFault, hsr);
 #endif
+
     handleVCPUFault(hsr);
     restore_user_context();
     UNREACHABLE();
