@@ -34,8 +34,6 @@ volatile struct gic_cpu_iface_map *const gic_cpuiface =
     (volatile struct gic_cpu_iface_map *)(GIC_V2_CONTROLLER_PPTR);
 #endif /* GIC_CONTROLLER_PPTR */
 
-word_t active_irq[CONFIG_MAX_NUM_NODES] = {IRQ_NONE};
-
 /* Get the target id for this processor. We rely on the constraint that the registers
  * for PPI are read only and return only the current processor as the target.
  * If this doesn't lead to a valid ID, we emit a warning and default to core 0.
