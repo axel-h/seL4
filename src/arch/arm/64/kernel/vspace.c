@@ -1983,7 +1983,7 @@ exception_t benchmark_arch_map_logBuffer(word_t frame_cptr)
 
     ksUserLogBuffer = pptr_to_paddr((void *) frame_pptr);
 
-    *armKSGlobalLogPTE = pte_pte_page_new(
+    pte_t pte = pte_pte_page_new(
 #ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
                              0, // XN
 #else
@@ -1996,8 +1996,22 @@ exception_t benchmark_arch_map_logBuffer(word_t frame_cptr)
                              0,                         /* VMKernelOnly */
                              NORMAL_WT);
 
-    cleanByVA_PoU((vptr_t)armKSGlobalLogPTE, addrFromKPPtr(armKSGlobalLogPTE));
+    compile_assert(
+        log_pte_lvl1_is_correct_preallocated,
+        GET_KPT_INDEX(KS_LOG_PPTR, KLVL_FRM_ARM_PT_LVL(1)) == BIT(PT_INDEX_BITS) - 1);
+
+    compile_assert(
+        log_pte_lvl2_is_correct_preallocated,
+        GET_KPT_INDEX(KS_LOG_PPTR, KLVL_FRM_ARM_PT_LVL(2)) == BIT(PT_INDEX_BITS) - 2);
+
+    pte_t *slot = &armKSGlobalKernelPDs[BIT(PT_INDEX_BITS) - 1][BIT(PT_INDEX_BITS) - 2]
+
+    /* update page table entry */
+    *slot = pte;
+    /* ensure the update propagates */
+    cleanByVA_PoU((vptr_t)slot, addrFromKPPtr(slot));
     invalidateTranslationSingle(KS_LOG_PPTR);
+
     return EXCEPTION_NONE;
 }
 #endif /* CONFIG_KERNEL_LOG_BUFFER */
