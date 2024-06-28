@@ -42,7 +42,6 @@ typedef pde_t vspace_root_t;
 
 #define PGDE_SIZE_BITS seL4_PGDEntryBits
 #define PDE_SIZE_BITS  seL4_PageDirEntryBits
-#define PTE_SIZE_BITS  seL4_PageTableEntryBits
 #define PGD_INDEX_BITS seL4_PGDIndexBits
 #define PD_INDEX_BITS seL4_PageDirIndexBits
 #define PT_INDEX_BITS seL4_PageTableIndexBits

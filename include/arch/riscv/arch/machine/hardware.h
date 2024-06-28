@@ -45,8 +45,8 @@
  * configured RISC-V system with CONFIG_PT_LEVEL (which can be 2 on Sv32,
  * 3 on Sv39, or 4 on Sv48)
  */
-#define RISCV_GET_PT_INDEX(addr, n)  (((addr) >> (((PT_INDEX_BITS) * (((CONFIG_PT_LEVELS) - 1) - (n))) + seL4_PageBits)) & MASK(PT_INDEX_BITS))
-#define RISCV_GET_LVL_PGSIZE_BITS(n) (((PT_INDEX_BITS) * (((CONFIG_PT_LEVELS) - 1) - (n))) + seL4_PageBits)
+#define RISCV_GET_PT_INDEX(addr, n)  (((addr) >> (((seL4_PageTableIndexBits) * (((CONFIG_PT_LEVELS) - 1) - (n))) + seL4_PageBits)) & MASK(seL4_PageTableIndexBits))
+#define RISCV_GET_LVL_PGSIZE_BITS(n) (((seL4_PageTableIndexBits) * (((CONFIG_PT_LEVELS) - 1) - (n))) + seL4_PageBits)
 #define RISCV_GET_LVL_PGSIZE(n)      BIT(RISCV_GET_LVL_PGSIZE_BITS((n)))
 /*
  * These values are defined in RISC-V priv-1.10 manual, they represent the
