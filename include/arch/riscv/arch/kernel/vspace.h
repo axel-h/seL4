@@ -9,10 +9,12 @@
 
 #include <config.h>
 #include <types.h>
+#include <bootinfo.h>
 #include <api/failures.h>
 #include <object/structures.h>
 
-cap_t create_it_address_space(cap_t root_cnode_cap, v_region_t it_v_reg);
+cap_t create_it_address_space(cap_t root_cnode_cap, seL4_BootInfo *bi,
+                              v_region_t it_v_reg);
 void map_it_pt_cap(cap_t vspace_cap, cap_t pt_cap);
 void map_it_frame_cap(cap_t vspace_cap, cap_t frame_cap);
 void map_kernel_window(void);
