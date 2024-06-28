@@ -1,0 +1,31 @@
+/*
+ * Copyright 2022, Axel Heider <axelheider@gmx.de>
+ * Copyright 2020, Data61, CSIRO (ABN 41 687 119 230)
+ *
+ * SPDX-License-Identifier: GPL-2.0-only
+ */
+
+#pragma once
+
+#include <config.h>
+
+#define TIMER_CLOCK_HZ ULL_CONST(@CONFIGURE_TIMER_FREQUENCY@)
+
+#include <machine/interrupt.h>
+
+enum IRQConstants {
+    MAX_IRQ = (@CONFIGURE_MAX_NUM_INT@),
+#ifdef ENABLE_SMP_SUPPORT
+    INTERRUPT_IPI,
+#endif
+    KERNEL_TIMER_IRQ,
+    maxIRQ = KERNEL_TIMER_IRQ,
+} platform_interrupt_t;
+
+enum irqNumbers {
+    irqInvalid = 0
+};
+
+#define IRQ_CNODE_SLOT_BITS (@CONFIGURE_IRQ_SLOT_BITS@)
+
+// #include <@CONFIGURE_INTERRUPT_CONTROLLER@>
