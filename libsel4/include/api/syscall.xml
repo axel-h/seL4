@@ -46,6 +46,7 @@
             <condition><config var="CONFIG_DEBUG_BUILD"/></condition>
             <syscall name="DebugHalt"     />
             <syscall name="DebugCapIdentify"   />
+            <syscall name="DebugCapAddr"   />
             <syscall name="DebugSnapshot" />
             <syscall name="DebugNameThread"/>
         </config>

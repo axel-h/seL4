@@ -693,6 +693,7 @@ BOOT_CODE static bool_t provide_untyped_cap(
             .isDevice = device_memory,
             .padding  = {0}
         };
+        printf("Kernel init: untyped cap at paddr: %lx\n", ndks_boot.bi_frame->untypedList[i].paddr);
         ut_cap = cap_untyped_cap_new(MAX_FREE_INDEX(size_bits),
                                      device_memory, size_bits, pptr);
         ret = provide_cap(root_cnode_cap, ut_cap);
