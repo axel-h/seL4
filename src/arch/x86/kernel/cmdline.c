@@ -103,7 +103,7 @@ static void UNUSED parse_uint16_array(char *str, uint16_t *array, int array_size
     }
 }
 
-void cmdline_parse(const char *cmdline, cmdline_opt_t *cmdline_opt)
+void cmdline_parse(const char *cmdline, cmdline_opt_t *opt)
 {
 #if defined(CONFIG_PRINTING) || defined(CONFIG_DEBUG_BUILD)
     /* use BIOS data area to read serial configuration. The BDA is not
@@ -125,42 +125,42 @@ void cmdline_parse(const char *cmdline, cmdline_opt_t *cmdline_opt)
 
 #ifdef CONFIG_PRINTING
     /* initialise to default or use BDA if available */
-    cmdline_opt->console_port = bda_ports_count && *bda_port ? *bda_port : 0x3f8;
+    opt->console_port = bda_ports_count && *bda_port ? *bda_port : 0x3f8;
 
     if (parse_opt(cmdline, "console_port", cmdline_val, MAX_CMDLINE_VAL_LEN) != -1) {
-        parse_uint16_array(cmdline_val, &cmdline_opt->console_port, 1);
+        parse_uint16_array(cmdline_val, &opt->console_port, 1);
     }
 
     /* initialise console ports to enable debug output */
-    if (cmdline_opt->console_port) {
-        serial_init(cmdline_opt->console_port);
-        x86KSconsolePort = cmdline_opt->console_port;
+    if (opt->console_port) {
+        serial_init(opt->console_port);
+        x86KSconsolePort = opt->console_port;
     }
 
     /* only start printing here after having parsed/set/initialised the console_port */
     printf("\nBoot config: parsing cmdline '%s'\n", cmdline);
 
-    if (cmdline_opt->console_port) {
-        printf("Boot config: console_port = 0x%x\n", cmdline_opt->console_port);
+    if (opt->console_port) {
+        printf("Boot config: console_port = 0x%x\n", opt->console_port);
     }
 #endif
 
 #if defined(CONFIG_PRINTING) || defined(CONFIG_DEBUG_BUILD)
     /* initialise to default or use BDA if available */
-    cmdline_opt->debug_port = bda_ports_count && *bda_port ? *bda_port : 0x3f8;
+    opt->debug_port = bda_ports_count && *bda_port ? *bda_port : 0x3f8;
     if (parse_opt(cmdline, "debug_port", cmdline_val, MAX_CMDLINE_VAL_LEN) != -1) {
-        parse_uint16_array(cmdline_val, &cmdline_opt->debug_port, 1);
+        parse_uint16_array(cmdline_val, &opt->debug_port, 1);
     }
 
     /* initialise debug ports */
-    if (cmdline_opt->debug_port) {
-        serial_init(cmdline_opt->debug_port);
-        x86KSdebugPort = cmdline_opt->debug_port;
-        printf("Boot config: debug_port = 0x%x\n", cmdline_opt->debug_port);
+    if (opt->debug_port) {
+        serial_init(opt->debug_port);
+        x86KSdebugPort = opt->debug_port;
+        printf("Boot config: debug_port = 0x%x\n", opt->debug_port);
     }
 #pragma GCC diagnostic pop
 #endif
 
-    cmdline_opt->disable_iommu = parse_bool(cmdline, cmdline_str_disable_iommu);
-    printf("Boot config: disable_iommu = %s\n", cmdline_opt->disable_iommu ? "true" : "false");
+    opt->disable_iommu = parse_bool(cmdline, cmdline_str_disable_iommu);
+    printf("Boot config: disable_iommu = %s\n", opt->disable_iommu ? "true" : "false");
 }

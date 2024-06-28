@@ -40,6 +40,12 @@ additional_commands:
     kwargs:
       CFILES: '*'
       PREFIX: '*'
+  find_in_map:
+    kwargs:
+      RESULT_VAR: '1'
+      KEY_VAR: '1'
+      DEFAULT: '1'
+      MAP: '1+'
   declare_default_headers:
     kwargs:
         TIMER_FREQUENCY: '*'
@@ -55,3 +61,15 @@ additional_commands:
         SMMU: '*'
         MAX_SID: '*'
         MAX_CB: '*'
+  declare_platform:
+    flags:
+    - NO_DEFAULT_DTS
+    kwargs:
+        NAME: '*'
+        ARCH: '*'
+        CAMKE_VAR: '*'
+        MACH: '*'
+        C_DEFINE: '*'
+        FLAGS: '*'
+        SOURCES: '*'
+        BOARDS: '*'

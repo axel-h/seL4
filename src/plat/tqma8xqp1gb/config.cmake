@@ -6,18 +6,28 @@
 
 cmake_minimum_required(VERSION 3.7.2)
 
-declare_platform(tqma8xqp1gb KernelPlatformTqma8xqp1gb PLAT_TQMA8XQP1GB KernelArchARM)
+declare_platform(
+    "tqma8xqp1gb"
+    ARCH "aarch64"
+    # use default DTS at tools/dts/<board-name>.dts
+    CAMKE_VAR "KernelPlatformTqma8xqp1gb"
+    # C_DEFINE defaults to CONFIG_PLAT_TQMA8XQP1GB
+    FLAGS
+        "KernelArmCortexA35"
+        "KernelArchArmV8a"
+        "KernelArmGicV3"
+        "KernelArmDisableWFIWFETraps"
+    SOURCES
+        "src/arch/arm/machine/gic_v3.c"
+        "src/arch/arm/machine/l2c_nop.c"
+    # FLAGS: none
+    # SOURCES: none
+    # BOARDS: there is just one board, it defaults to the platform name
+)
 
 if(KernelPlatformTqma8xqp1gb)
-    declare_seL4_arch(aarch64)
-    set(KernelArmCortexA35 ON)
-    set(KernelArchArmV8a ON)
-    set(KernelArmGicV3 ON)
-    config_set(KernelARMPlatform ARM_PLAT ${KernelPlatform})
     set(KernelArmVtimerUpdateVOffset OFF)
-    set(KernelArmDisableWFIWFETraps ON)
-    list(APPEND KernelDTSList "tools/dts/${KernelPlatform}.dts")
-    list(APPEND KernelDTSList "src/plat/tqma8xqp1gb/overlay-${KernelPlatform}.dts")
+    add_platform_dts("${CMAKE_CURRENT_LIST_DIR}/overlay-${KernelPlatform}.dts")
     declare_default_headers(
         TIMER_FREQUENCY 8000000
         MAX_IRQ 511
@@ -30,8 +40,3 @@ if(KernelPlatformTqma8xqp1gb)
         KERNEL_WCET 10u
     )
 endif()
-
-add_sources(
-    DEP "KernelPlatformTqma8xqp1gb"
-    CFILES src/arch/arm/machine/gic_v3.c src/arch/arm/machine/l2c_nop.c
-)
