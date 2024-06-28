@@ -15,18 +15,35 @@
 #define GICD_SGIR_CPUTARGETLIST_SHIFT     16
 #define GICD_SGIR_TARGETLISTFILTER_SHIFT  24
 
-/* Special IRQ's */
-#define SPECIAL_IRQ_START 1020u
-#define IRQ_NONE          1023u
+enum {
+    /*
+     * The ARM GIC reserves interrupt 0-15 for SGIs (Software Generated
+     * Interrupt) and 16-31 for PPIs (Private Peripheral Interrupt). Both SGIs
+     * and PPIs are banked per core. Interrupt 32 and above are SPIs (Shared
+     * Peripheral Interrupt), which are global.
+     */
+    gic_irq_sgi_start               = 0,
+#ifdef ENABLE_SMP_SUPPORT
+    /* Use the first two SGIs for the IPI implementation */
+    gic_irq_remote_call_ipi         = 0,
+    gic_irq_reschedule_ipi          = 1,
+#endif /* ENABLE_SMP_SUPPORT */
+    gic_irq_ppi_start               = 16,
+    gic_irq_spi_start               = 32,
+    gic_irq_special_start           = 1020,
+    gic_irq_none                    = 1023,
+    gic_irq_invalid                 = (word_t)(-1)
+} gic_interrupts_t;
 
-/* CPU specific IRQ's */
-#define SGI_START         0u
-#define PPI_START         16u
+#define SGI_START         ((word_t)gic_irq_sgi_start)
+#define PPI_START         ((word_t)gic_irq_ppi_start)
+#define SPI_START         ((word_t)gic_irq_spi_start)
+#define SPECIAL_IRQ_START ((word_t)gic_irq_special_start)
+#define IRQ_NONE          ((word_t)gic_irq_none)
 
-/* Shared Peripheral Interrupts */
-#define SPI_START         32u
+/* ToDo: There is a CONFIG_NUM_PPI also, that is not sync'd with this define */
+#define NUM_PPI           SPI_START
 
-#define NUM_PPI SPI_START
 #define HW_IRQ_IS_SGI(irq) ((irq) < PPI_START)
 #define HW_IRQ_IS_PPI(irq) ((irq) < NUM_PPI)
 
@@ -51,11 +68,11 @@
                         CORE_IRQ_TO_IRQT(0, (idx) - (CONFIG_MAX_NUM_NODES-1)*NUM_PPI))
 #define IRQT_TO_CORE(irqt) (irqt.target_core)
 #define IRQT_TO_IRQ(irqt) (irqt.irq)
-irq_t irqInvalid = CORE_IRQ_TO_IRQT(-1, -1);
+irq_t irqInvalid = CORE_IRQ_TO_IRQT(-1, gic_irq_invalid);
 
 #else
 #define IRQ_IS_PPI(irq) HW_IRQ_IS_PPI(irq)
-irq_t irqInvalid = (uint16_t) -1;
+irq_t irqInvalid = gic_irq_invalid;
 #endif
 
 /* Setters/getters helpers for hardware irqs */
