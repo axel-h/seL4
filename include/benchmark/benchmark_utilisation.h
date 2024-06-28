@@ -7,13 +7,13 @@
 #pragma once
 
 #include <config.h>
-#include <arch/benchmark.h>
+
+#ifdef CONFIG_BENCHMARK_TRACK_UTILISATION
+
+#include <benchmark/benchmark.h>
 #include <sel4/benchmark_utilisation_types.h>
 #include <sel4/arch/constants.h>
 #include <model/statedata.h>
-
-#ifdef CONFIG_BENCHMARK_TRACK_UTILISATION
-extern timestamp_t ksEnter;
 
 void benchmark_track_utilisation_dump(void);
 

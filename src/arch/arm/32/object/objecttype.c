@@ -16,6 +16,7 @@
 #ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
 #include <arch/object/vcpu.h>
 #endif
+#include <benchmark/benchmark.h>
 
 bool_t Arch_isFrameType(word_t type)
 {

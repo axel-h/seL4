@@ -592,10 +592,6 @@ exception_t handleUserLevelDebugException(int int_vector)
     ksKernelEntry.word = int_vector;
 #endif /* DEBUG */
 
-#ifdef CONFIG_BENCHMARK_TRACK_KERNEL_ENTRIES
-    benchmark_track_start();
-#endif
-
     ct = NODE_STATE(ksCurThread);
 
     /* Software break request (INT3) is detected by the vector number */

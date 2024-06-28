@@ -38,11 +38,6 @@ extern asid_t armKSHWASIDTable[BIT(hwASIDBits)] VISIBLE;
 extern hw_asid_t armKSNextASID VISIBLE;
 #endif
 
-#ifdef CONFIG_KERNEL_LOG_BUFFER
-extern pte_t *armKSGlobalLogPTE;
-#endif
-
-
 #ifdef CONFIG_ARM_SMMU
 extern bool_t smmuStateSIDTable[SMMU_MAX_SID];
 extern cte_t smmuStateSIDNode[BIT(SMMU_SID_CNODE_SLOT_BITS)];
