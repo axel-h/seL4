@@ -183,11 +183,21 @@ static inline word_t read_sepc(void)
     return temp;
 }
 
+static inline void write_sepc(word_t value)
+{
+    asm volatile("csrw sepc, %0" :: "rK"(value));
+}
+
 static inline word_t read_sstatus(void)
 {
     word_t temp;
     asm volatile("csrr %0, sstatus" : "=r"(temp));
     return temp;
+}
+
+static inline void write_sstatus(word_t value)
+{
+    asm volatile("csrw sstatus, %0" :: "rK"(value));
 }
 
 static inline word_t read_sip(void)
@@ -228,6 +238,11 @@ static inline word_t read_sscratch(void)
     return temp;
 }
 
+static inline void write_sscratch(word_t value)
+{
+    asm volatile("csrw sscratch, %0" :: "rK"(value));
+}
+
 #ifdef CONFIG_HAVE_FPU
 static inline uint32_t read_fcsr(void)
 {
@@ -241,6 +256,28 @@ static inline void write_fcsr(uint32_t value)
     asm volatile("csrw fcsr, %0" :: "rK"(value));
 }
 #endif
+
+static inline word_t sc_w(word_t value, word_t *addr)
+{
+    word_t result;
+    asm volatile(
+        "sc.w %0, %1, (%2)"
+        : "=r"(result)
+        : "r"(value), "r"(addr)
+        : "memory"
+    );
+    return result;
+}
+
+static inline void dummy_sc_w(word_t value, word_t *addr)
+{
+    asm volatile(
+        "sc.w zero, %0, (%1)"
+        : /* no output */
+        : "r"(value), "r"(addr)
+        : "memory"
+    );
+}
 
 #if CONFIG_PT_LEVELS == 2
 #define SATP_MODE SATP_MODE_SV32
