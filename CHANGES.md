@@ -259,6 +259,7 @@ description indicates whether it is SOURCE-COMPATIBLE, BINARY-COMPATIBLE, or BRE
 * General minor build system improvements and clean-up
 * Set up automated tests for CI and GitHub pull requests on seL4
 * Add vulnerability disclosure policy
+* Removed autoconf.h for kernel and libsel4.
 
 ### Upgrade Notes
 
