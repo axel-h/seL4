@@ -64,6 +64,4 @@ if(KernelPlatformRocketchip)
             INTERRUPT_CONTROLLER drivers/irq/riscv_plic_dummy.h
         )
     endif()
-else()
-    unset(KernelPlatformFirstHartID CACHE)
 endif()

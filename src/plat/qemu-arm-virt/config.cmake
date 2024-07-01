@@ -76,8 +76,6 @@ if(KernelPlatformQEMUArmVirt)
         message(FATAL_ERROR "Unsupported ARM_CPU: '${ARM_CPU}'")
     endif()
 
-    config_set(KernelARMPlatform ARM_PLAT qemu-arm-virt)
-
     # If neither QEMU_DTS nor QEMU_DTB is set explicitly, the device tree is
     # extracted from QEMU. This keeps it nicely up to date with the the actual
     # QEMU versions that is used, and it's quite convenient for development.
@@ -172,7 +170,7 @@ if(KernelPlatformQEMUArmVirt)
             # it can be added to the DTS as reference. Every parameter must be
             # a separate string, as CMake will make it a dedicated argument
             # passed to QEMU then (e.g. "-machine virt" wont be recognized,
-            # but "-machine", "vir" is).
+            # but "-machine", "virt" is).
             set(
                 QEMU_CMD
                 "${QEMU_BINARY}"
