@@ -51,9 +51,6 @@ RequireFile(SYSCALL_STUB_GEN_PATH syscall_stub_gen.py PATHS tools)
 
 add_config_library(sel4 "${configure_string}")
 
-# Currently we use autoconf.h, so generate one of those
-generate_autoconf(sel4_autoconf "kernel;sel4")
-
 gen_invocation_header(
     OUTPUT "include/sel4/invocation.h"
     XML "include/interfaces/object-api.xml"
@@ -83,15 +80,10 @@ set(
 )
 include_directories("${source_header_dirs}")
 
-# Add the include directory of autoconf.h to the cflags for the bitfield generation
-include_directories("$<TARGET_PROPERTY:sel4_autoconf,INTERFACE_INCLUDE_DIRECTORIES>")
-
 function(genbf target_prefix pbf_location bf_location header_output)
-    get_generated_files(gen_list sel4_autoconf_Gen)
     cppfile(
         "${pbf_location}" ${target_prefix}_pbf "${bf_location}"
         EXTRA_FLAGS -P
-        EXTRA_DEPS sel4_autoconf_Gen ${gen_list}
     )
     GenHBFTarget(
         "libsel4"
@@ -176,7 +168,7 @@ add_custom_target(
 )
 
 add_library(sel4 src/sel4_bootinfo.c)
-target_link_libraries(sel4 PRIVATE kernel_Config sel4_Config sel4_autoconf)
+target_link_libraries(sel4 PRIVATE kernel_Config sel4_Config)
 target_include_directories(
     sel4
     PUBLIC
