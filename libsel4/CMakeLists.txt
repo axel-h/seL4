@@ -55,8 +55,8 @@ add_config_library(sel4 "${configure_string}")
 generate_autoconf(sel4_autoconf "kernel;sel4")
 
 gen_invocation_header(
-    OUTPUT include/sel4/invocation.h
-    XML include/interfaces/object-api.xml
+    OUTPUT "include/sel4/invocation.h"
+    XML "include/interfaces/object-api.xml"
     LIBSEL4
 )
 
