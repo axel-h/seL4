@@ -5,14 +5,16 @@
 #
 
 ''' generate a c header file from the device tree '''
+
+from __future__ import annotations
 import argparse
 import builtins
 import jinja2
-from typing import Dict, List
 import hardware
 from hardware.config import Config
 from hardware.fdt import FdtParser
-from hardware.utils.rule import HardwareYaml
+from hardware.memory import Region
+from hardware.utils.rule import HardwareYaml, KernelInterrupt, KernelRegionGroup
 
 
 HEADER_TEMPLATE = '''/*
@@ -131,7 +133,7 @@ static const p_region_t BOOT_RODATA avail_p_regs[] = {
 '''
 
 
-def get_kernel_devices(tree: FdtParser, hw_yaml: HardwareYaml) -> (List, Dict):
+def get_kernel_devices(tree: FdtParser, hw_yaml: HardwareYaml) -> tuple[list[KernelRegionGroup], dict[int, str]]:
     '''
     Given a device tree and a set of rules, returns a tuple (groups, offsets).
 
@@ -144,7 +146,7 @@ def get_kernel_devices(tree: FdtParser, hw_yaml: HardwareYaml) -> (List, Dict):
     kernel_devices = tree.get_kernel_devices()
 
     kernel_offset = 0
-    groups = []
+    groups: list[KernelRegionGroup] = []
     for dev in kernel_devices:
         dev_rule = hw_yaml.get_rule(dev)
         new_regions = dev_rule.get_regions(dev)
@@ -155,41 +157,38 @@ def get_kernel_devices(tree: FdtParser, hw_yaml: HardwareYaml) -> (List, Dict):
             else:
                 groups.append(reg)
 
-    offsets = {}
+    offsets: dict[int, str] = {}
     for group in groups:
         kernel_offset = group.set_kernel_offset(kernel_offset)
         offsets.update(group.get_labelled_addresses())
     return (groups, offsets)
 
 
-def get_interrupts(tree: FdtParser, hw_yaml: HardwareYaml) -> List:
+def get_interrupts(tree: FdtParser, hw_yaml: HardwareYaml) -> list[KernelInterrupt]:
     ''' Get dict of interrupts, {label: KernelInterrupt} from the DT and hardware rules. '''
     kernel_devices = tree.get_kernel_devices()
 
-    irqs = []
+    labeldIrqs: dict[str, KernelInterrupt] = {}
     for dev in kernel_devices:
         dev_rule = hw_yaml.get_rule(dev)
-        if len(dev_rule.interrupts.items()) > 0:
-            irqs += dev_rule.get_interrupts(tree, dev)
+        if len(dev_rule.interrupts.items()) == 0:
+            continue
+        for irq in dev_rule.get_interrupts(tree, dev):
+            label = irq.label
+            if (label in labeldIrqs) and (irq.prio <= labeldIrqs[label].prio):
+                continue
+            labeldIrqs[label] = irq
 
-    ret = {}
-    for irq in irqs:
-        if irq.label in ret:
-            if irq.prio > ret[irq.label].prio:
-                ret[irq.label] = irq
-        else:
-            ret[irq.label] = irq
-
-    ret = list(ret.values())
+    ret = list(labeldIrqs.values())
     ret.sort(key=lambda a: a.label)
     return ret
 
 
-def create_c_header_file(config, kernel_irqs: List, kernel_macros: Dict,
-                         kernel_regions: List, physBase: int, physical_memory,
+def create_c_header_file(config, kernel_irqs: list, kernel_macros: dict,
+                         kernel_regions: list, physBase: int, physical_memory,
                          outputStream):
 
-    jinja_env = jinja2.Environment(loader=jinja2.BaseLoader, trim_blocks=True,
+    jinja_env = jinja2.Environment(loader=jinja2.BaseLoader(), trim_blocks=True,
                                    lstrip_blocks=True)
 
     template = jinja_env.from_string(HEADER_TEMPLATE)
@@ -225,6 +224,6 @@ def run(tree: FdtParser, hw_yaml: HardwareYaml, config: Config, args: argparse.N
         args.header_out)
 
 
-def add_args(parser):
+def add_args(parser: argparse.ArgumentParser):
     parser.add_argument('--header-out', help='output file for c header',
                         type=argparse.FileType('w'))
