@@ -511,7 +511,7 @@ config_option(
     KernelFWholeProgram KERNEL_FWHOLE_PROGRAM
     "Enable -fwhole-program when linking kernel. This should work modulo gcc bugs, which \
     are not uncommon with -fwhole-program. Consider this feature experimental!"
-    DEFAULT OFF
+    DEFAULT ON
     DEPENDS "NOT KernelBinaryVerificationBuild"
 )
 
