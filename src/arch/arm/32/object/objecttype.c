@@ -195,11 +195,11 @@ finaliseCap_ret_t Arch_finaliseCap(cap_t cap, bool_t final)
                     ksUserLogBuffer = 0;
 
                     /* Invalidate log page table entries */
-                    clearMemory((void *) armKSGlobalLogPT, seL4_PageTableBits);
-
-                    cleanCacheRange_PoU((pptr_t) &armKSGlobalLogPT[0],
-                                        (pptr_t) &armKSGlobalLogPT[0] + BIT(seL4_PageTableBits),
-                                        addrFromKPPtr((void *)&armKSGlobalLogPT[0]));
+                    word_t len = BIT(seL4_PageTableBits)
+                    memzero((void *)armKSGlobalLogPT, len);
+                    cleanCacheRange_PoU((pptr_t)armKSGlobalLogPT,
+                                        (pptr_t)armKSGlobalLogPT + len,
+                                        addrFromKPPtr((void *)armKSGlobalLogPT));
 
                     for (int idx = 0; idx < BIT(PT_INDEX_BITS); idx++) {
                         invalidateTranslationSingle(KS_LOG_PPTR + (idx << seL4_PageBits));

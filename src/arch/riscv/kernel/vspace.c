@@ -1097,7 +1097,8 @@ exception_t performPageTableInvocationUnmap(cap_t cap, cte_t *ctSlot)
             cap_page_table_cap_get_capPTMappedAddress(cap),
             pt
         );
-        clearMemory((void *)pt, seL4_PageTableBits);
+        memzero((void *)pt, BIT(seL4_PageTableBits));
+        /* cache flush is not necessary */
     }
     cap_page_table_cap_ptr_set_capPTIsMapped(&(ctSlot->cap), 0);
 
