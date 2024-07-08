@@ -27,10 +27,6 @@
 #include <arch/object/vcpu.h>
 #include <arch/machine/tlb.h>
 
-#ifdef CONFIG_BENCHMARK_TRACK_KERNEL_ENTRIES
-#include <benchmark/benchmark_track.h>
-#endif
-
 /* ARM uses multiple identical mappings in a page table / page directory to construct
  * large mappings. In both cases it happens to be 16 entries, which can be calculated by
  * looking at the size difference of the mappings, and is done this way to remove magic
@@ -253,7 +249,7 @@ BOOT_CODE void map_kernel_window(void)
     /* crosscheck whether we have mapped correctly so far */
     assert(phys == PADDR_TOP);
 
-#ifdef CONFIG_KERNEL_LOG_BUFFER
+#ifdef CONFIG_ENABLE_KERNEL_LOG_BUFFER
     /* map log buffer page table. PTEs to be filled by user later by calling seL4_BenchmarkSetLogBuffer() */
     armKSGlobalPD[idx] =
         pde_pde_coarse_new(
@@ -266,7 +262,7 @@ BOOT_CODE void map_kernel_window(void)
 
     phys += BIT(pageBitsForSize(ARMSection));
     idx++;
-#endif /* CONFIG_KERNEL_LOG_BUFFER */
+#endif /* CONFIG_ENABLE_KERNEL_LOG_BUFFER */
 
     /* map page table covering last 1M of virtual address space to page directory */
     armKSGlobalPD[idx] =
@@ -1837,7 +1833,10 @@ static exception_t performPageTableInvocationUnmap(cap_t cap, cte_t *ctSlot)
             cap_page_table_cap_get_capPTMappedASID(cap),
             cap_page_table_cap_get_capPTMappedAddress(cap),
             pt);
-        clearMemory_PT((void *)pt, cap_get_capSizeBits(cap));
+        /* Cleaning memory and flush cache before page table walker access */
+        word_t len = BIT(cap_get_capSizeBits(cap));
+        memzero((void *)pt, len);
+        cleanCacheRange_PoU((word_t)pt, (word_t)pt + len - 1, addrFromPPtr(pt));
     }
     cap_page_table_cap_ptr_set_capPTIsMapped(&(ctSlot->cap), 0);
 
@@ -2667,7 +2666,7 @@ exception_t decodeARMMMUInvocation(word_t invLabel, word_t length, cptr_t cptr,
     }
 }
 
-#ifdef CONFIG_KERNEL_LOG_BUFFER
+#ifdef CONFIG_ENABLE_KERNEL_LOG_BUFFER
 exception_t benchmark_arch_map_logBuffer(word_t frame_cptr)
 {
     lookupCapAndSlot_ret_t lu_ret;
@@ -2726,7 +2725,7 @@ exception_t benchmark_arch_map_logBuffer(word_t frame_cptr)
 
     return EXCEPTION_NONE;
 }
-#endif /* CONFIG_KERNEL_LOG_BUFFER */
+#endif /* CONFIG_ENABLE_KERNEL_LOG_BUFFER */
 
 #ifdef CONFIG_DEBUG_BUILD
 void kernelPrefetchAbort(word_t pc) VISIBLE;

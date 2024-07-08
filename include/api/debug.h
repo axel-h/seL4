@@ -9,11 +9,11 @@
 #ifdef CONFIG_DEBUG_BUILD
 #pragma once
 
-#include <benchmark/benchmark_track.h>
 #include <arch/api/syscall.h>
 #include <arch/kernel/vspace.h>
 #include <model/statedata.h>
 #include <kernel/thread.h>
+#include <benchmark/benchmark.h>
 
 #ifdef CONFIG_PRINTING
 

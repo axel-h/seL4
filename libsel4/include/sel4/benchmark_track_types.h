@@ -9,7 +9,7 @@
 #include <sel4/config.h>
 #include <stdint.h>
 
-#if (defined CONFIG_BENCHMARK_TRACK_KERNEL_ENTRIES || defined CONFIG_DEBUG_BUILD)
+#ifdef CONFIG_TRACE_KERNEL_ENTRIES
 
 /* the following code can be used at any point in the kernel
  * to determine detail about the kernel entry point */
@@ -51,9 +51,9 @@ typedef struct SEL4_PACKED kernel_entry {
     };
 } kernel_entry_t;
 
-#endif /* CONFIG_BENCHMARK_TRACK_KERNEL_ENTRIES || DEBUG */
+#endif /* CONFIG_TRACE_KERNEL_ENTRIES */
 
-#ifdef CONFIG_BENCHMARK_TRACK_KERNEL_ENTRIES
+#if defined(CONFIG_BENCHMARK_TRACK_KERNEL_ENTRIES) || defined(CONFIG_DEBUG_BUILD)
 
 typedef struct benchmark_syscall_log_entry {
     uint64_t  start_time;

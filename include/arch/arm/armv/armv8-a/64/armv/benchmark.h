@@ -7,6 +7,7 @@
 #pragma once
 
 #include <config.h>
+
 #ifdef CONFIG_ENABLE_BENCHMARKS
 
 #define CCNT "PMCCNTR_EL0"
@@ -31,4 +32,3 @@ static inline void armv_handleOverflowIRQ(void)
 }
 
 #endif /* CONFIG_ENABLE_BENCHMARKS */
-

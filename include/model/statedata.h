@@ -81,6 +81,10 @@ NODE_STATE_DECLARE(word_t, ksFPURestoresSinceSwitch);
 #ifdef CONFIG_DEBUG_BUILD
 NODE_STATE_DECLARE(tcb_t *, ksDebugTCBs);
 #endif /* CONFIG_DEBUG_BUILD */
+#ifdef CONFIG_TRACE_KERNEL_ENTRIES
+NODE_STATE_DECLARE(timestamp_t, trace_kernel_entry);
+#endif /* CONFIG_TRACE_KERNEL_ENTRIES */
+
 #ifdef CONFIG_BENCHMARK_TRACK_UTILISATION
 NODE_STATE_DECLARE(bool_t, benchmark_log_utilisation_enabled);
 NODE_STATE_DECLARE(timestamp_t, benchmark_start_time);
@@ -119,10 +123,6 @@ extern char ksIdleThreadTCB[CONFIG_MAX_NUM_NODES][BIT(seL4_TCBBits)];
 #ifdef CONFIG_KERNEL_MCS
 extern char ksIdleThreadSC[CONFIG_MAX_NUM_NODES][BIT(seL4_MinSchedContextBits)];
 #endif
-
-#ifdef CONFIG_KERNEL_LOG_BUFFER
-extern paddr_t ksUserLogBuffer;
-#endif /* CONFIG_KERNEL_LOG_BUFFER */
 
 #define SchedulerAction_ResumeCurrentThread ((tcb_t*)0)
 #define SchedulerAction_ChooseNewThread ((tcb_t*) 1)

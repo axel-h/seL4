@@ -14,9 +14,7 @@
 #include <util.h>
 #include <arch/machine/hardware.h>
 #include <machine/fpu.h>
-
-#include <benchmark/benchmark_track.h>
-#include <benchmark/benchmark_utilisation.h>
+#include <benchmark/benchmark.h>
 
 /** DONT_TRANSLATE */
 void VISIBLE NORETURN restore_user_context(void)
@@ -103,6 +101,10 @@ void VISIBLE NORETURN c_handle_interrupt(void)
 
     c_entry_hook();
 
+#ifdef ENABLE_TRACE_KERNEL_ENTRY_EXIT
+    trace_kernel_entry(Entry_Interrupt, getActiveIRQ());
+#endif
+
     handleInterruptEntry();
 
     restore_user_context();
@@ -114,6 +116,11 @@ void VISIBLE NORETURN c_handle_exception(void)
     NODE_LOCK_SYS;
 
     c_entry_hook();
+
+#ifdef ENABLE_TRACE_KERNEL_ENTRY_EXIT
+    trace_kernel_entry(Entry_VMFault,
+                       getRegister(NODE_STATE(ksCurThread), NextIP));
+#endif
 
     word_t scause = read_scause();
     switch (scause) {
@@ -174,10 +181,9 @@ void VISIBLE c_handle_fastpath_reply_recv(word_t cptr, word_t msgInfo)
     NODE_LOCK_SYS;
 
     c_entry_hook();
-#ifdef TRACK_KERNEL_ENTRIES
-    benchmark_debug_syscall_start(cptr, msgInfo, SysReplyRecv);
-    ksKernelEntry.is_fastpath = 1;
-#endif /* DEBUG */
+#ifdef ENABLE_TRACE_KERNEL_ENTRY_EXIT
+    trace_kernel_entry_syscall(SysReplyRecv, cptr, msgInfo, 1);
+#endif
 #ifdef CONFIG_KERNEL_MCS
     fastpath_reply_recv(cptr, msgInfo, reply);
 #else
@@ -192,10 +198,9 @@ void VISIBLE c_handle_fastpath_call(word_t cptr, word_t msgInfo)
     NODE_LOCK_SYS;
 
     c_entry_hook();
-#ifdef TRACK_KERNEL_ENTRIES
-    benchmark_debug_syscall_start(cptr, msgInfo, SysCall);
-    ksKernelEntry.is_fastpath = 1;
-#endif /* DEBUG */
+#ifdef ENABLE_TRACE_KERNEL_ENTRY_EXIT
+    trace_kernel_entry_syscall(SysCall, cptr, msgInfo, 1);
+#endif
 
     fastpath_call(cptr, msgInfo);
 
@@ -208,10 +213,9 @@ void VISIBLE NORETURN c_handle_syscall(word_t cptr, word_t msgInfo, syscall_t sy
     NODE_LOCK_SYS;
 
     c_entry_hook();
-#ifdef TRACK_KERNEL_ENTRIES
-    benchmark_debug_syscall_start(cptr, msgInfo, syscall);
-    ksKernelEntry.is_fastpath = 0;
-#endif /* DEBUG */
+#ifdef ENABLE_TRACE_KERNEL_ENTRY_EXIT
+    trace_kernel_entry_syscall(syscall, cptr, msgInfo, 0);
+#endif
     slowpath(syscall);
 
     UNREACHABLE();

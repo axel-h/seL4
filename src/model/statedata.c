@@ -12,7 +12,6 @@
 #include <model/smp.h>
 #include <object/structures.h>
 #include <object/tcb.h>
-#include <benchmark/benchmark_track.h>
 
 /* Collective cpu states, including both pre core architecture dependant and independent data */
 SMP_STATE_DEFINE(smpStatedata_t, ksSMP[CONFIG_MAX_NUM_NODES] ALIGN(L1_CACHE_LINE_SIZE));
@@ -62,6 +61,9 @@ UP_STATE_DEFINE(sched_context_t *, ksIdleSC);
 #ifdef CONFIG_DEBUG_BUILD
 UP_STATE_DEFINE(tcb_t *, ksDebugTCBs);
 #endif /* CONFIG_DEBUG_BUILD */
+#ifdef CONFIG_TRACE_KERNEL_ENTRIES
+UP_STATE_DEFINE(timestamp_t, trace_kernel_entry);
+#endif /* CONFIG_TRACE_KERNEL_ENTRIES */
 #ifdef CONFIG_BENCHMARK_TRACK_UTILISATION
 UP_STATE_DEFINE(bool_t, benchmark_log_utilisation_enabled);
 UP_STATE_DEFINE(timestamp_t, benchmark_start_time);
@@ -104,11 +106,3 @@ SECTION("._idle_thread") char ksIdleThreadTCB[CONFIG_MAX_NUM_NODES][BIT(seL4_TCB
 /* Idle thread Schedcontexts */
 char ksIdleThreadSC[CONFIG_MAX_NUM_NODES][BIT(seL4_MinSchedContextBits)] ALIGN(BIT(seL4_MinSchedContextBits));
 #endif
-
-#if (defined CONFIG_DEBUG_BUILD || defined CONFIG_BENCHMARK_TRACK_KERNEL_ENTRIES)
-kernel_entry_t ksKernelEntry;
-#endif /* DEBUG */
-
-#ifdef CONFIG_KERNEL_LOG_BUFFER
-paddr_t ksUserLogBuffer;
-#endif /* CONFIG_KERNEL_LOG_BUFFER */

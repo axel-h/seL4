@@ -13,7 +13,7 @@
 #include <arch/kernel/boot.h>
 #include <arch/kernel/boot_sys.h>
 #include <arch/api/invocation.h>
-#include <benchmark/benchmark_track.h>
+#include <benchmark/benchmark.h>
 #include <arch/kernel/tlb_bitmap.h>
 #include <mode/kernel/tlb.h>
 
@@ -217,7 +217,7 @@ BOOT_CODE bool_t map_kernel_window(
     phys = PADDR_BASE;
     idx = PPTR_BASE >> LARGE_PAGE_BITS;
 
-    /* PPTR_TOP differs whether CONFIG_KERNEL_LOG_BUFFER
+    /* PPTR_TOP differs whether CONFIG_ENABLE_KERNEL_LOG_BUFFER
      * is enabled or not.
      */
     while (idx < (PPTR_TOP >> LARGE_PAGE_BITS)) {
@@ -242,7 +242,7 @@ BOOT_CODE bool_t map_kernel_window(
     /* crosscheck whether we have mapped correctly so far */
     assert(phys == PADDR_TOP);
 
-#ifdef CONFIG_KERNEL_LOG_BUFFER
+#ifdef CONFIG_ENABLE_KERNEL_LOG_BUFFER
     /* Map global page table for the log buffer */
     pde = pde_pde_pt_new(
               kpptr_to_paddr(ia32KSGlobalLogPT), /* pt_base_address  */
@@ -259,7 +259,7 @@ BOOT_CODE bool_t map_kernel_window(
     phys += BIT(LARGE_PAGE_BITS);
     assert(idx == (KS_LOG_PPTR >> LARGE_PAGE_BITS));
     idx++;
-#endif /* CONFIG_KERNEL_LOG_BUFFER */
+#endif /* CONFIG_ENABLE_KERNEL_LOG_BUFFER */
 
 #ifdef ENABLE_SMP_SUPPORT
     /* initialize the TLB bitmap */
@@ -656,7 +656,7 @@ exception_t decodeX86ModeMapPage(word_t invLabel, vm_page_size_t page_size, cte_
     fail("Invalid Page type");
 }
 
-#ifdef CONFIG_KERNEL_LOG_BUFFER
+#ifdef CONFIG_ENABLE_KERNEL_LOG_BUFFER
 exception_t benchmark_arch_map_logBuffer(word_t frame_cptr)
 {
     lookupCapAndSlot_ret_t lu_ret;
@@ -717,4 +717,4 @@ exception_t benchmark_arch_map_logBuffer(word_t frame_cptr)
 
     return EXCEPTION_NONE;
 }
-#endif /* CONFIG_KERNEL_LOG_BUFFER */
+#endif /* CONFIG_ENABLE_KERNEL_LOG_BUFFER */

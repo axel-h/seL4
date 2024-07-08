@@ -18,7 +18,7 @@
 
 #include <arch/object/iospace.h>
 #include <plat/machine/intel-vtd.h>
-
+#include <benchmark/benchmark.h>
 
 bool_t Arch_isFrameType(word_t type)
 {
@@ -71,7 +71,7 @@ finaliseCap_ret_t Mode_finaliseCap(cap_t cap, bool_t final)
 #endif
             case X86_MappingVSpace:
 
-#ifdef CONFIG_KERNEL_LOG_BUFFER
+#ifdef CONFIG_ENABLE_KERNEL_LOG_BUFFER
                 /* If the last cap to the user-level log buffer frame is being revoked,
                  * reset the ksLog so that the kernel doesn't log anymore
                  */
@@ -80,7 +80,8 @@ finaliseCap_ret_t Mode_finaliseCap(cap_t cap, bool_t final)
                         ksUserLogBuffer = 0;
 
                         /* Invalidate log page table entries */
-                        clearMemory(ia32KSGlobalLogPT, BIT(seL4_PageTableBits));
+                        memzero(ia32KSGlobalLogPT, BIT(seL4_PageTableBits));
+                        /* cache flush is not necessary */
 
                         for (int idx = 0; idx < BIT(PT_INDEX_BITS); idx++) {
                             invalidateTLBEntry(KS_LOG_PPTR + (idx << seL4_PageBits), MASK(ksNumCPUs));
@@ -89,7 +90,7 @@ finaliseCap_ret_t Mode_finaliseCap(cap_t cap, bool_t final)
                         userError("Log buffer frame is invalidated, kernel can't benchmark anymore\n");
                     }
                 }
-#endif /* CONFIG_KERNEL_LOG_BUFFER */
+#endif /* CONFIG_ENABLE_KERNEL_LOG_BUFFER */
 
                 unmapPage(
                     cap_frame_cap_get_capFSize(cap),

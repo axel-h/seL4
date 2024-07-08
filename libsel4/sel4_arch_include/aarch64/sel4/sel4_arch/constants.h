@@ -219,11 +219,6 @@ SEL4_SIZE_SANITY(seL4_WordSizeBits, seL4_ASIDPoolIndexBits, seL4_ASIDPoolBits);
 SEL4_SIZE_SANITY(seL4_VSpaceEntryBits, seL4_VSpaceIndexBits, seL4_VSpaceBits);
 #endif
 
-#ifdef CONFIG_ENABLE_BENCHMARKS
-/* size of kernel log buffer in bytes */
-#define seL4_LogBufferSize (LIBSEL4_BIT(20))
-#endif /* CONFIG_ENABLE_BENCHMARKS */
-
 #define seL4_FastMessageRegisters 4
 
 /* IPC buffer is 1024 bytes, giving size bits of 10 */
