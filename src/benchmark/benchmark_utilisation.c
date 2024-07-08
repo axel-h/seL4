@@ -5,11 +5,11 @@
  */
 
 #include <config.h>
-#include <benchmark/benchmark_utilisation.h>
 
 #ifdef CONFIG_BENCHMARK_TRACK_UTILISATION
 
-timestamp_t ksEnter;
+#include <benchmark/benchmark.h>
+#include <benchmark/benchmark_utilisation.h>
 
 void benchmark_track_utilisation_dump(void)
 {
@@ -75,4 +75,5 @@ void benchmark_track_reset_utilisation(tcb_t *tcb)
     tcb->benchmark.kernel_utilisation = 0;
     tcb->benchmark.schedule_start_time = 0;
 }
+
 #endif /* CONFIG_BENCHMARK_TRACK_UTILISATION */

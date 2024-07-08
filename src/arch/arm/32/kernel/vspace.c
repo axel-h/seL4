@@ -1837,7 +1837,10 @@ static exception_t performPageTableInvocationUnmap(cap_t cap, cte_t *ctSlot)
             cap_page_table_cap_get_capPTMappedASID(cap),
             cap_page_table_cap_get_capPTMappedAddress(cap),
             pt);
-        clearMemory_PT((void *)pt, cap_get_capSizeBits(cap));
+        /* Cleaning memory and flush cache before page table walker access */
+        word_t len = BIT(cap_get_capSizeBits(cap));
+        memzero((void *)pt, len);
+        cleanCacheRange_PoU((word_t)pt, (word_t)pt + len - 1, addrFromPPtr(pt));
     }
     cap_page_table_cap_ptr_set_capPTIsMapped(&(ctSlot->cap), 0);
 

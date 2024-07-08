@@ -16,6 +16,7 @@
 #include <mode/kernel/tlb.h>
 #include <arch/kernel/tlb_bitmap.h>
 #include <object/structures.h>
+#include <benchmark/benchmark.h>
 
 /* When using the SKIM window to isolate the kernel from the user we also need to
  * not use global mappings as having global mappings and entries in the TLB is
@@ -233,12 +234,12 @@ BOOT_CODE bool_t map_kernel_window(
                                                   );
 #endif
 
-#if CONFIG_MAX_NUM_TRACE_POINTS > 0
+#ifdef ENABLE_KERNEL_TRACEPOINTS
     /* use the last PD entry as the benchmark log storage.
      * the actual backing physical memory will be filled
      * later by using alloc_region */
     ksLog = (ks_log_entry_t *)(KDEV_BASE + 0x200000 * (BIT(PD_INDEX_BITS) - 1));
-#endif
+#endif /* ENABLE_KERNEL_TRACEPOINTS */
 
     /* now map in the kernel devices */
     if (!map_kernel_window_devices(x64KSKernelPT, num_ioapic, ioapic_paddrs, num_drhu, drhu_list)) {
@@ -1112,7 +1113,8 @@ static exception_t performX64PageDirectoryInvocationUnmap(cap_t cap, cte_t *ctSl
             cap_page_directory_cap_get_capPDMappedAddress(cap),
             pd
         );
-        clearMemory((void *)pd, cap_get_capSizeBits(cap));
+        memzero((void *)pd, BIT(cap_get_capSizeBits(cap)));
+        /* cache flush is not necessary */
     }
 
     cap_page_directory_cap_ptr_set_capPDIsMapped(&(ctSlot->cap), 0);
@@ -1276,7 +1278,8 @@ static exception_t performX64PDPTInvocationUnmap(cap_t cap, cte_t *ctSlot)
         unmapPDPT(cap_pdpt_cap_get_capPDPTMappedASID(cap),
                   cap_pdpt_cap_get_capPDPTMappedAddress(cap),
                   pdpt);
-        clearMemory((void *)pdpt, cap_get_capSizeBits(cap));
+        memzero((void *)pdpt, BIT(cap_get_capSizeBits(cap)));
+        /* cache flush is not necessary */
     }
 
     cap_pdpt_cap_ptr_set_capPDPTIsMapped(&(ctSlot->cap), 0);
