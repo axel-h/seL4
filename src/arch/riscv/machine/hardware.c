@@ -210,10 +210,11 @@ static inline void ackInterrupt(irq_t irq)
     assert(IS_IRQ_VALID(irq));
     active_irq[CURRENT_CPU_INDEX()] = irqInvalid;
 
-    if (irq == KERNEL_TIMER_IRQ) {
-        /* Reprogramming the timer has cleared the interrupt. */
-        return;
-    }
+    /* For KERNEL_TIMER_IRQ there is nothing left to be done here, the generic
+     * interrupt handling code has invoked the timer driver already, which is
+     * supposed to ack the interrupt (if this is necessary).
+     */
+
 #ifdef ENABLE_SMP_SUPPORT
     if (irq == irq_reschedule_ipi || irq == irq_remote_call_ipi) {
         ipi_clear_irq(irq);
@@ -221,26 +222,6 @@ static inline void ackInterrupt(irq_t irq)
 #endif
 }
 
-#ifndef CONFIG_KERNEL_MCS
-void resetTimer(void)
-{
-    uint64_t target;
-    // repeatedly try and set the timer in a loop as otherwise there is a race and we
-    // may set a timeout in the past, resulting in it never getting triggered
-    do {
-        target = riscv_read_time() + RESET_CYCLES;
-        sbi_set_timer(target);
-    } while (riscv_read_time() > target);
-}
-
-/**
-   DONT_TRANSLATE
- */
-BOOT_CODE void initTimer(void)
-{
-    sbi_set_timer(riscv_read_time() + RESET_CYCLES);
-}
-#endif /* !CONFIG_KERNEL_MCS */
 
 BOOT_CODE void initLocalIRQController(void)
 {

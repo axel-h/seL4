@@ -61,7 +61,6 @@ if(KernelPlatformRocketchip)
         declare_default_headers(
             TIMER_FREQUENCY 10000000
             MAX_IRQ 0
-            INTERRUPT_CONTROLLER drivers/irq/riscv_plic_dummy.h
         )
     endif()
 else()

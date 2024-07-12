@@ -255,7 +255,6 @@ if(KernelPlatformQEMUArmVirt)
         TIMER_FREQUENCY 62500000
         MAX_IRQ 159
         NUM_PPI 32
-        TIMER drivers/timer/arm_generic.h
         INTERRUPT_CONTROLLER arch/machine/gic_v2.h
         CLK_MAGIC 4611686019llu
         CLK_SHIFT 58u
