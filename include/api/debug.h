@@ -9,6 +9,7 @@
 #ifdef CONFIG_DEBUG_BUILD
 #pragma once
 
+#include <string.h>
 #include <benchmark/benchmark_track.h>
 #include <arch/api/syscall.h>
 #include <arch/kernel/vspace.h>
@@ -65,12 +66,47 @@ static inline void debug_printKernelEntryReason(void)
     }
 }
 
+#if CONFIG_WORD_SIZE == 32
+#define SEL4_PRIx_reg "%08"SEL4_PRIx_word
+#define SEL4_PRI_reg_param(r)    (r)
+#elif CONFIG_WORD_SIZE == 64
+#define SEL4_PRIx_reg "%08"PRIx32"_%08"PRIx32
+#define SEL4_PRI_reg_param(r)    (uint32_t)((r) >> 32), (uint32_t)(r)
+#else
+#error "unsupported CONFIG_WORD_SIZE"
+#endif
+
+/* Prints the user context and stack trace of the current thread */
+static inline void debug_printThreadRegs(tcb_t *tcb)
+{
+    user_context_t *tcbCtx = &(tcb->tcbArch.tcbContext);
+    /* Dynamically adapt spaces to max register name len per column. */
+    unsigned int max_reg_name_len[2] = {0};
+    for (unsigned int i = 0; i < ARRAY_SIZE(tcbCtx->registers); i++) {
+        int col = i & 1;
+        unsigned int l = strnlen(register_names[i], 20);
+        if (max_reg_name_len[col] < l) {
+            max_reg_name_len[col] = l;
+        }
+    }
+    const unsigned int num_regs = ARRAY_SIZE(tcbCtx->registers);
+    for (unsigned int i = 0; i < num_regs; i++) {
+        int col = i & 1;
+        bool_t is_last = (num_regs == i + 1);
+        word_t reg = tcbCtx->registers[i];
+        printf("%*s: 0x"SEL4_PRIx_reg"%s",
+               max_reg_name_len[col] + 2, register_names[i],
+               SEL4_PRI_reg_param(reg), (col || is_last) ? "\n" : "");
+    }
+}
+
 /* Prints the user context and stack trace of the current thread */
 static inline void debug_printUserState(void)
 {
     tcb_t *tptr = NODE_STATE(ksCurThread);
     printf("Current thread: %s\n", TCB_PTR_DEBUG_PTR(tptr)->tcbName);
-    printf("Next instruction adress: %lx\n", getRestartPC(tptr));
+    //printf("Next instruction adress: %lx\n", getRestartPC(tptr));
+    debug_printThreadRegs(tptr);
     printf("Stack:\n");
     Arch_userStackTrace(tptr);
 }
@@ -131,6 +167,32 @@ static inline void debug_dumpScheduler(void)
         debug_printTCB(curr);
     }
 }
+
+
+static inline void debug_timer_interrupt(void)
+{
+    const word_t PRINT_CNT = 500;
+
+    static word_t dbg_cnt = 0;
+    static uint64_t cy_timer = 0;
+    static uint64_t cy_timer_1000 = 0;
+
+    uint64_t cy_now = riscv_read_cycle();
+    if (++dbg_cnt > PRINT_CNT) /* 2 ms timer */
+    {
+        dbg_cnt = 0;
+        printf("%"SEL4_PRIu_word" timer ticks: cy %"PRIu64" (%"PRIu64")\n",
+               PRINT_CNT,
+               cy_now - cy_timer,
+               (cy_now - cy_timer_1000) / PRINT_CNT);
+        cy_timer_1000 = cy_now;
+    }
+    cy_timer = cy_now;
+    // tcb_t *tptr = NODE_STATE(ksCurThread);
+    // debug_printTCB(tptr);
+    // debug_printThreadRegs(tptr);
+}
+
 #endif /* CONFIG_PRINTING */
 #endif /* CONFIG_DEBUG_BUILD */
 
