@@ -28,13 +28,9 @@
  *  - KDEV_BASE: The first virtual address used to map devices.
  */
 
-/* The offset from a physical address to a virtual address in the
- * physical memory window. */
-#define PPTR_BASE_OFFSET (PPTR_BASE - physBase())
-
 /* The last address in the physical memory region mapped into the
  * physical memory window */
-#define PADDR_TOP (PPTR_TOP - PPTR_BASE_OFFSET)
+#define PADDR_TOP (physBase() + (PPTR_TOP - PPTR_BASE))
 
 /* The kernel base offset is a way to translate the kernel image segment
  * from virtual to physical. This translation must be a single offset
