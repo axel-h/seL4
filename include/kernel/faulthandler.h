@@ -6,6 +6,8 @@
 
 #pragma once
 
+#include <config.h>
+#include <types.h>
 #include <object.h>
 
 static bool_t isValidFaultHandlerEp(cap_t cap)
