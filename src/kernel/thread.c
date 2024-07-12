@@ -182,7 +182,7 @@ void doReplyTransfer(tcb_t *sender, tcb_t *receiver, cte_t *slot, bool_t grant)
 
 #ifdef CONFIG_KERNEL_MCS
     if (receiver->tcbSchedContext && isRunnable(receiver)) {
-        if ((refill_ready(receiver->tcbSchedContext) && refill_sufficient(receiver->tcbSchedContext, 0))) {
+        if (refill_ready(receiver->tcbSchedContext) && refill_sufficient(receiver->tcbSchedContext, 0)) {
             possibleSwitchTo(receiver);
         } else if ((fault_type == seL4_Fault_Timeout) ||
                    !tryRaisingTimeoutFault(receiver, receiver->tcbSchedContext->scBadge)) {
