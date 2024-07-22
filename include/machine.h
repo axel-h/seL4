@@ -16,14 +16,14 @@
  * referred to a kernel virtual address. */
 static inline void *CONST ptrFromPAddr(paddr_t paddr)
 {
-    return (void *)(paddr + PPTR_BASE_OFFSET);
+    return (void *)(paddr + (PPTR_TOP - PPTR_BASE));
 }
 
 /* When obtaining a physical address from a reference to any object in
  * the physical mapping window, this function must be used. */
 static inline paddr_t CONST addrFromPPtr(const void *pptr)
 {
-    return (paddr_t)pptr - PPTR_BASE_OFFSET;
+    return (paddr_t)pptr - (PPTR_TOP - PPTR_BASE);
 }
 
 /* When obtaining a physical address from a reference to an address from

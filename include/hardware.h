@@ -12,7 +12,7 @@
  *
  *  - USER_TOP: The first address after the end of user memory
  *
- *  - PADDR_BASE: The first physical address mapped in the kernel's
+ *  - physBase(): The first physical address mapped in the kernel's
  *    physical memory window.
  *  - PPTR_BASE: The first virtual address of the kernel's physical
  *    memory window.
@@ -28,13 +28,9 @@
  *  - KDEV_BASE: The first virtual address used to map devices.
  */
 
-/* The offset from a physical address to a virtual address in the
- * physical memory window. */
-#define PPTR_BASE_OFFSET (PPTR_BASE - PADDR_BASE)
-
 /* The last address in the physical memory region mapped into the
  * physical memory window */
-#define PADDR_TOP (PPTR_TOP - PPTR_BASE_OFFSET)
+#define PADDR_TOP (physBase() + (PPTR_TOP - PPTR_BASE))
 
 /* The kernel base offset is a way to translate the kernel image segment
  * from virtual to physical. This translation must be a single offset
