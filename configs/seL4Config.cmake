@@ -35,9 +35,15 @@ macro(declare_seL4_arch)
     # must be created to be able iterate over it.
     set(_arch_list "${ARGV}")
     if(NOT KernelSel4Arch)
+        list(LENGTH _arch_list arch_cnt)
+        if(arch_cnt EQUAL 0)
+            message(FATAL_ERROR "no architecture(s) specified")
+        endif()
         # Use first architecture from list as default.
         list(GET _arch_list 0 _default_KernelSel4Arch)
-        print_message_multiple_options_helper("architectures" "${_default_KernelSel4Arch}")
+        if(arch_cnt GREATER 1)
+            print_message_multiple_options_helper("architectures" "${_default_KernelSel4Arch}")
+        endif()
         set(KernelSel4Arch "${_default_KernelSel4Arch}" CACHE STRING "" FORCE)
     elseif(NOT "${KernelSel4Arch}" IN_LIST _arch_list)
         message(FATAL_ERROR "KernelSel4Arch '${KernelSel4Arch}' not in '${_arch_list}'")
@@ -159,6 +165,8 @@ unset(KernelArmMach CACHE)
 unset(KernelArmMachFeatureModifiers CACHE)
 unset(KernelArmCPU CACHE)
 unset(KernelArmArmV CACHE)
+# RISC-V specific settings
+unset(KernelPlatformFirstHartID CACHE)
 
 # Blacklist platforms without MCS support
 set(KernelPlatformSupportsMCS ON)
@@ -166,70 +174,92 @@ set(KernelPlatformSupportsMCS ON)
 file(GLOB result ${KERNEL_ROOT_DIR}/src/plat/*/config.cmake)
 list(SORT result)
 
+# Include all platform configurations. Each supported platform must be
+# registered via declare_platform(), which will append it to the list stored
+# in the variable 'kernel_platforms'
 foreach(file ${result})
     include("${file}")
 endforeach()
-
-# Verify that, as a minimum any variables that are used
-# to find other build files are actually defined at this
-# point. This means at least: KernelArch KernelWordSize
-
-if("${KernelArch}" STREQUAL "")
-    message(FATAL_ERROR "Variable 'KernelArch' is not set.")
+if(NOT KernelPlatform)
+    message(FATAL_ERROR "No kernel platform selected, please set 'KernelPlatform'.")
 endif()
-
-if("${KernelWordSize}" STREQUAL "")
-    message(FATAL_ERROR "Variable 'KernelWordSize' is not set.")
-endif()
-
+# Check that a supported platform has been selected.
 config_choice(KernelPlatform PLAT "Select the platform" ${kernel_platforms})
-
-# Now enshrine all the common variables in the config
-config_set(KernelArmCortexA7 ARM_CORTEX_A7 "${KernelArmCortexA7}")
-config_set(KernelArmCortexA8 ARM_CORTEX_A8 "${KernelArmCortexA8}")
-config_set(KernelArmCortexA9 ARM_CORTEX_A9 "${KernelArmCortexA9}")
-config_set(KernelArmCortexA15 ARM_CORTEX_A15 "${KernelArmCortexA15}")
-config_set(KernelArmCortexA35 ARM_CORTEX_A35 "${KernelArmCortexA35}")
-config_set(KernelArmCortexA53 ARM_CORTEX_A53 "${KernelArmCortexA53}")
-config_set(KernelArmCortexA55 ARM_CORTEX_A55 "${KernelArmCortexA55}")
-config_set(KernelArmCortexA57 ARM_CORTEX_A57 "${KernelArmCortexA57}")
-config_set(KernelArmCortexA72 ARM_CORTEX_A72 "${KernelArmCortexA72}")
-config_set(KernelArchArmV7a ARCH_ARM_V7A "${KernelArchArmV7a}")
-config_set(KernelArchArmV7ve ARCH_ARM_V7VE "${KernelArchArmV7ve}")
-config_set(KernelArchArmV8a ARCH_ARM_V8A "${KernelArchArmV8a}")
-config_set(KernelAArch64SErrorIgnore AARCH64_SERROR_IGNORE "${KernelAArch64SErrorIgnore}")
-
-# Check for v7ve before v7a as v7ve is a superset and we want to set the
-# actual armv to that, but leave armv7a config enabled for anything that
-# checks directly against it
-if(KernelArchArmV7ve)
-    set(KernelArmArmV "armv7ve" CACHE INTERNAL "")
-elseif(KernelArchArmV7a)
-    set(KernelArmArmV "armv7-a" CACHE INTERNAL "")
-elseif(KernelArchArmV8a)
-    set(KernelArmArmV "armv8-a" CACHE INTERNAL "")
+# The varibale 'KernelPlatform' will be cleared if unsupported.
+if(NOT KernelPlatform)
+    message(FATAL_ERROR "Selected kernel platform not supported.")
 endif()
-if(KernelArmCortexA7)
-    set(KernelArmCPU "cortex-a7" CACHE INTERNAL "")
-elseif(KernelArmCortexA8)
-    set(KernelArmCPU "cortex-a8" CACHE INTERNAL "")
-elseif(KernelArmCortexA9)
-    set(KernelArmCPU "cortex-a9" CACHE INTERNAL "")
-elseif(KernelArmCortexA15)
-    set(KernelArmCPU "cortex-a15" CACHE INTERNAL "")
-elseif(KernelArmCortexA35)
-    set(KernelArmCPU "cortex-a35" CACHE INTERNAL "")
-elseif(KernelArmCortexA53)
-    set(KernelArmCPU "cortex-a53" CACHE INTERNAL "")
-elseif(KernelArmCortexA55)
-    set(KernelArmCPU "cortex-a55" CACHE INTERNAL "")
-elseif(KernelArmCortexA57)
-    set(KernelArmCPU "cortex-a57" CACHE INTERNAL "")
-elseif(KernelArmCortexA72)
-    set(KernelArmCPU "cortex-a72" CACHE INTERNAL "")
-endif()
+# Verify that a proper minimal configuration has been set up.
+foreach(var IN ITEMS KernelArch KernelSel4Arch KernelWordSize)
+    if(NOT ${var})
+        message(FATAL_ERROR "Variable '${var}' is not set.")
+    endif()
+endforeach()
+
 if(KernelArchARM)
+
+    if(NOT KernelARMPlatform)
+        config_set(KernelARMPlatform ARM_PLAT "${KernelPlatform}")
+    endif()
+
+    # Now enshrine all the common variables in the config
+    config_set(KernelArmCortexA7 ARM_CORTEX_A7 "${KernelArmCortexA7}")
+    config_set(KernelArmCortexA8 ARM_CORTEX_A8 "${KernelArmCortexA8}")
+    config_set(KernelArmCortexA9 ARM_CORTEX_A9 "${KernelArmCortexA9}")
+    config_set(KernelArmCortexA15 ARM_CORTEX_A15 "${KernelArmCortexA15}")
+    config_set(KernelArmCortexA35 ARM_CORTEX_A35 "${KernelArmCortexA35}")
+    config_set(KernelArmCortexA53 ARM_CORTEX_A53 "${KernelArmCortexA53}")
+    config_set(KernelArmCortexA55 ARM_CORTEX_A55 "${KernelArmCortexA55}")
+    config_set(KernelArmCortexA57 ARM_CORTEX_A57 "${KernelArmCortexA57}")
+    config_set(KernelArmCortexA72 ARM_CORTEX_A72 "${KernelArmCortexA72}")
+    config_set(KernelArchArmV7a ARCH_ARM_V7A "${KernelArchArmV7a}")
+    config_set(KernelArchArmV7ve ARCH_ARM_V7VE "${KernelArchArmV7ve}")
+    config_set(KernelArchArmV8a ARCH_ARM_V8A "${KernelArchArmV8a}")
+    config_set(KernelAArch64SErrorIgnore AARCH64_SERROR_IGNORE "${KernelAArch64SErrorIgnore}")
+
+    # Check for v7ve before v7a as v7ve is a superset and we want to set the
+    # actual armv to that, but leave armv7a config enabled for anything that
+    # checks directly against it
+    if(KernelArchArmV7ve)
+        set(KernelArmArmV "armv7ve" CACHE INTERNAL "")
+    elseif(KernelArchArmV7a)
+        set(KernelArmArmV "armv7-a" CACHE INTERNAL "")
+    elseif(KernelArchArmV8a)
+        set(KernelArmArmV "armv8-a" CACHE INTERNAL "")
+    endif()
+    if(KernelArmCortexA7)
+        set(KernelArmCPU "cortex-a7" CACHE INTERNAL "")
+    elseif(KernelArmCortexA8)
+        set(KernelArmCPU "cortex-a8" CACHE INTERNAL "")
+    elseif(KernelArmCortexA9)
+        set(KernelArmCPU "cortex-a9" CACHE INTERNAL "")
+    elseif(KernelArmCortexA15)
+        set(KernelArmCPU "cortex-a15" CACHE INTERNAL "")
+    elseif(KernelArmCortexA35)
+        set(KernelArmCPU "cortex-a35" CACHE INTERNAL "")
+    elseif(KernelArmCortexA53)
+        set(KernelArmCPU "cortex-a53" CACHE INTERNAL "")
+    elseif(KernelArmCortexA55)
+        set(KernelArmCPU "cortex-a55" CACHE INTERNAL "")
+    elseif(KernelArmCortexA57)
+        set(KernelArmCPU "cortex-a57" CACHE INTERNAL "")
+    elseif(KernelArmCortexA72)
+        set(KernelArmCPU "cortex-a72" CACHE INTERNAL "")
+    endif()
+
     config_set(KernelArmMach ARM_MACH "${KernelArmMach}")
+
+elseif(KernelArchRiscV)
+
+    if(NOT KernelRiscVPlatform)
+        config_set(KernelRiscVPlatform RISCV_PLAT "${KernelPlatform}")
+    endif()
+
+    # nothing here
+elseif(KernelArchX86)
+    # nothing here
+else()
+    message(FATAL_ERROR "unsupported KernelArch: '${KernelArch}'")
 endif()
 
 if("${TRIPLE}" STREQUAL "")

@@ -14,7 +14,6 @@ if(KernelPlatformQuartz64)
     set(KernelArmCortexA55 ON)
     set(KernelArchArmV8a ON)
     set(KernelArmGicV3 ON)
-    config_set(KernelARMPlatform ARM_PLAT "quartz64")
     list(APPEND KernelDTSList "tools/dts/quartz64.dts")
     list(APPEND KernelDTSList "src/plat/quartz64/overlay-quartz64.dts")
     declare_default_headers(
