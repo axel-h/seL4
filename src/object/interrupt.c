@@ -188,6 +188,8 @@ void deletedIRQHandler(irq_t irq)
 
 void handleInterrupt(irq_t irq)
 {
+    assert(!IS_IRQT_NONE(irq));
+
     if (unlikely(IRQT_TO_IRQ(irq) > maxIRQ)) {
         /* The interrupt number is out of range. Pretend it did not happen by
          * handling it like an inactive interrupt (mask and ack). We assume this

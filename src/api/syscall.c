@@ -39,8 +39,6 @@
 
 exception_t handleInterruptEntry(void)
 {
-    irq_t irq;
-
 #ifdef CONFIG_KERNEL_MCS
     if (SMP_TERNARY(clh_is_self_in_queue(), 1)) {
         updateTimestamp();
@@ -48,8 +46,8 @@ exception_t handleInterruptEntry(void)
     }
 #endif
 
-    irq = getActiveIRQ();
-    if (IRQT_TO_IRQ(irq) != IRQT_TO_IRQ(irqInvalid)) {
+    irq_t irq = getActiveIRQ();
+    if (!IS_IRQT_NONE(irq)) {
         handleInterrupt(irq);
     } else {
 #ifdef CONFIG_IRQ_REPORTING
