@@ -4,7 +4,53 @@
 # SPDX-License-Identifier: GPL-2.0-only
 #
 
-cmake_minimum_required(VERSION 3.8.2)
+cmake_minimum_required(VERSION 3.9)
+
+# map format: "key:value"
+#
+#    find_in_map(
+#        RESULT_VAR some_ret_var
+#        KEY_VAR MyKey
+#        DEFAULT "default"  # otherwise raises a FATAL_ERROR
+#        MAP
+#            "key1:value1"
+#            "key2:value2"
+#            "key3:value2"
+#    )
+#
+function(find_in_map)
+    cmake_parse_arguments(
+        PARSE_ARGV
+        0
+        param
+        "" # flags
+        "KEY_VAR;RESULT_VAR;DEFAULT" # key/value
+        "MAP" # key and multiple values
+    )
+    if(param_UNPARSED_ARGUMENTS)
+        message(FATAL_ERROR "Unknown arguments: ${param_UNPARSED_ARGUMENTS}")
+    endif()
+    foreach(p IN ITEMS "RESULT_VAR" "KEY_VAR" "MAP")
+        if(NOT param_${p})
+            message(FATAL_ERROR "missing parameter ${p}")
+        endif()
+    endforeach()
+
+    # It is explicitly allowed for param_KEY_VAR to be undefine or empty,
+    # because the map could also contain an entry with an empty key. This can
+    # be used a sa convenient way to select a default then.
+
+    if(";${param_MAP};" MATCHES ";${${param_KEY_VAR}}:([^;]*);")
+        set(ret "${CMAKE_MATCH_1}")
+    elseif(param_DEFAULT)
+        set(ret "${param_DEFAULT}")
+    else()
+        message(FATAL_ERROR "unknown ${param_KEY_VAR}: '${${param_KEY_VAR}}'")
+    endif()
+
+    set(${param_RESULT_VAR} "${ret}" PARENT_SCOPE)
+
+endfunction()
 
 # Wrapper function around find_file that generates a fatal error if it isn't found
 # Is equivalent to find_file except that it adds CMAKE_CURRENT_SOURCE_DIR as a path and sets
@@ -433,7 +479,7 @@ function(config_choice optionname configname doc)
     # valid default
     set(found_current OFF)
     foreach(i RANGE 3 ${limit})
-        set(option "${ARGV${i}}")
+        string(REPLACE "," ";" option "${ARGV${i}}")
         # Extract the constant parts of the choice information and just leave any
         # conditional information
         list(GET option 0 option_value)
@@ -524,6 +570,7 @@ function(config_choice optionname configname doc)
     # We create a new variable because cmake doesn't support arbitrary properties on cache variables.
     set(${optionname}_all_strings ${all_strings} CACHE INTERNAL "" FORCE)
     set(configure_string "${local_config_string}" PARENT_SCOPE)
+    message("config_choice: ${local_config_string}")
 endfunction(config_choice)
 
 # Defines a target for a 'configuration' library, which generates a header based

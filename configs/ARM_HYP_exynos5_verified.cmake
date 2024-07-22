@@ -9,8 +9,7 @@
 include(${CMAKE_CURRENT_LIST_DIR}/../tools/helpers.cmake)
 cmake_script_build_kernel()
 
-set(KernelPlatform "exynos5" CACHE STRING "")
-set(KernelARMPlatform "exynos5422" CACHE STRING "")
+set(KernelPlatform "exynos5422" CACHE STRING "")
 set(KernelSel4Arch "arm_hyp" CACHE STRING "")
 set(KernelAArch32FPUEnableContextSwitch OFF CACHE BOOL "")
 set(KernelVerificationBuild ON CACHE BOOL "")

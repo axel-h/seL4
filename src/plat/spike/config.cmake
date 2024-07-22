@@ -8,24 +8,34 @@
 
 cmake_minimum_required(VERSION 3.7.2)
 
-declare_platform(spike KernelPlatformSpike PLAT_SPIKE KernelArchRiscV)
+declare_platform(
+    "spike"
+    ARCH "riscv64" "riscv32" # default is first (riscv64)
+    NO_DEFAULT_DTS # can't use tools/dts/<board-name>.dts in RV32 mode
+    CAMKE_VAR "KernelPlatformSpike"
+    # C_DEFINE defaults to CONFIG_PLAT_SPIKE
+    # FLAGS: none
+    # SOURCES: none
+    # BOARDS: there is just one board, it defaults to the platform name
+)
 
 if(KernelPlatformSpike)
-    declare_seL4_arch(riscv64 riscv32)
-    config_set(KernelRiscVPlatform RISCV_PLAT "spike")
+
     config_set(KernelPlatformFirstHartID FIRST_HART_ID 0)
     config_set(KernelOpenSBIPlatform OPENSBI_PLATFORM "generic")
     if(KernelSel4ArchRiscV32)
-        list(APPEND KernelDTSList "tools/dts/spike32.dts")
+        add_platform_dts("tools/dts/${KernelPlatform}32.dts")
+    elseif(KernelSel4ArchRiscV64)
+        add_platform_dts("tools/dts/${KernelPlatform}.dts")
     else()
-        list(APPEND KernelDTSList "tools/dts/spike.dts")
+        message(FATAL_ERROR "invalid architecture")
     endif()
-    list(APPEND KernelDTSList "src/plat/spike/overlay-spike.dts")
+    add_platform_dts("${CMAKE_CURRENT_LIST_DIR}/overlay-${KernelPlatform}.dts")
+
     declare_default_headers(
         TIMER_FREQUENCY 10000000
         MAX_IRQ 0
         INTERRUPT_CONTROLLER drivers/irq/riscv_plic_dummy.h
     )
-else()
-    unset(KernelPlatformFirstHartID CACHE)
+
 endif()
