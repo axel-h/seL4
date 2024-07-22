@@ -5,24 +5,24 @@
 # SPDX-License-Identifier: GPL-2.0-only
 #
 
+import collections
 import argparse
 import logging
 import yaml
-
 import hardware
-from hardware.config import Config
-from hardware.fdt import FdtParser
+
 from hardware.outputs import c_header, compat_strings, yaml as yaml_out, json as json_out, elfloader
-from hardware.utils.rule import HardwareYaml
 
 
-OUTPUTS = {
+# Create an sorted dict. With Python 3.7, dicts are guaranteed to preserve the
+# order, older version require using OrderedDict explicitly.
+OUTPUTS = collections.OrderedDict(sorted({
     'c_header': c_header,
     'compat_strings': compat_strings,
     'elfloader': elfloader,
     'yaml': yaml_out,
     'json': json_out,
-}
+}.items()))
 
 
 def validate_rules(rules, schema):
@@ -36,30 +36,20 @@ def validate_rules(rules, schema):
         return True
 
 
-def add_task_args(outputs: dict, parser: argparse.ArgumentParser):
-    ''' Add arguments for each output type. '''
-    for t in sorted(outputs.keys()):
-        task = outputs[t]
-        name = t.replace('_', '-')
-        group = parser.add_argument_group('{} pass'.format(name))
-        group.add_argument('--' + name, help=task.__doc__.strip(), action='store_true')
-        task.add_args(group)
-
-
 def main(args: argparse.Namespace):
     ''' Parse the DT and hardware config YAML and run each
     selected output method. '''
     cfg = hardware.config.get_arch_config(args.sel4arch, args.addrspace_max)
-    parsed_dt = FdtParser(args.dtb)
+    parsed_dt = hardware.fdt.FdtParser(args.dtb)
     rules = yaml.load(args.hardware_config, Loader=yaml.FullLoader)
     schema = yaml.load(args.hardware_schema, Loader=yaml.FullLoader)
     validate_rules(rules, schema)
-    hw_yaml = HardwareYaml(rules, cfg)
+    hw_yaml = hardware.utils.rule.HardwareYaml(rules, cfg)
 
     arg_dict = vars(args)
-    for t in sorted(OUTPUTS.keys()):
-        if arg_dict[t]:
-            OUTPUTS[t].run(parsed_dt, hw_yaml, cfg, args)
+    for key, task in OUTPUTS.items():
+        if arg_dict[key]:
+            task.run(parsed_dt, hw_yaml, cfg, args)
 
 
 if __name__ == '__main__':
@@ -77,11 +67,14 @@ if __name__ == '__main__':
                         required=True)
     parser.add_argument('--addrspace-max',
                         help='maximum address that is available as device untyped', type=int, default=32)
+    parser.add_argument('--enable-profiling', help='enable profiling', action='store_true')
 
-    parser.add_argument('--enable-profiling', help='enable profiling',
-                        action='store_const', const=True, default=False)
-
-    add_task_args(OUTPUTS, parser)
+    ''' Add arguments for each output type. '''
+    for key, task in OUTPUTS.items():
+        name = key.replace('_', '-')
+        group = parser.add_argument_group(f'{name} pass')
+        group.add_argument(f'--{name}', help=task.__doc__.strip(), action='store_true')
+        task.add_args(group)
 
     args = parser.parse_args()
 
