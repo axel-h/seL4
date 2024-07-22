@@ -5,25 +5,24 @@
 #
 
 from collections import OrderedDict
-from typing import Any, Dict, Generator, List, Tuple, cast
-
+from typing import Dict, Generator, List, Tuple, cast
+from collections.abc import Callable
 import logging
 import pyfdt.pyfdt
 
 from hardware.memory import Region
+from hardware.fdt import FdtParser
 
 
 class WrappedNode:
     ''' A wrapper around an underlying pyfdt node '''
 
-    # TODO: Python 3.7 with 'from __future__ import annotations' will remove the need
-    # to put 'WrappedNode' in a string.
-    def __init__(self, node: pyfdt.pyfdt.FdtNode, parent: 'WrappedNode', path: str):
+    def __init__(self, node: pyfdt.pyfdt.FdtNode, parent: WrappedNode, path: str):
         self.node = node
         self.parent = parent
         self.depth = 0
         self.path = path
-        self.children: Dict[str, 'WrappedNode'] = OrderedDict()
+        self.children: Dict[str, WrappedNode] = OrderedDict()
         self.props: Dict[str, pyfdt.pyfdt.FdtProperty] = {}
         for prop in node:
             if not isinstance(prop, pyfdt.pyfdt.FdtProperty):
@@ -38,7 +37,7 @@ class WrappedNode:
         else:
             self.is_cpu_addressable = True  # root node is always cpu addressable
 
-    def add_child(self, child: 'WrappedNode'):
+    def add_child(self, child: WrappedNode):
         ''' Add a child to this node '''
         self.children[child.node.get_name()] = child
 
@@ -113,7 +112,7 @@ class WrappedNode:
         size = self.parent.get_addr_cells()
         return Utils.make_number(size, array)
 
-    def get_interrupts(self, tree: 'FdtParser') -> List[int]:
+    def get_interrupts(self, tree: FdtParser) -> List[int]:
         irqs = []
         if 'interrupts-extended' in self.props:
             data = list(self.props['interrupts-extended'].words)
@@ -133,16 +132,13 @@ class WrappedNode:
             return []
         return list(self.get_prop('interrupt-affinity').words)
 
-    def visit(self, visitor: Any):
+    def visit(self, visitor: Callable[[WrappedNode], None]):
         ''' Visit this node and all its children '''
-        ret = [visitor(self)]
-        if ret[0] is None:
-            ret = []
+        visitor(self)
         for child in self.children.values():
-            ret += child.visit(visitor)
-        return ret
+            child.visit(visitor)
 
-    def __iter__(self) -> Generator['WrappedNode', None, None]:
+    def __iter__(self) -> Generator[WrappedNode, None, None]:
         ''' Iterate over all immediate children of this node '''
         for child in self.children.values():
             yield child
@@ -165,10 +161,10 @@ class WrappedNode:
         addr = Utils.translate_address(self, addr)
         return self.parent._translate_child_address(addr)
 
-    def __hash__(self):
+    def __hash__(self) -> int:
         return hash(self.path)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return 'WrappedNode(path={})'.format(self.path)
 
 
