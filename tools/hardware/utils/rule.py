@@ -4,9 +4,9 @@
 # SPDX-License-Identifier: GPL-2.0-only
 #
 
+from __future__ import annotations
 from collections import defaultdict
 from functools import lru_cache
-from typing import Dict, List
 
 import logging
 
@@ -16,7 +16,7 @@ from hardware.fdt import FdtParser
 from hardware.memory import Region
 
 
-def get_macro_str(macro: str) -> str:
+def get_macro_str(macro: str | None) -> str:
     ''' Helper function that returns the appropriate C preprocessor line for a given macro '''
     if macro is None:
         return ''
@@ -26,7 +26,7 @@ def get_macro_str(macro: str) -> str:
     return '#ifdef ' + macro
 
 
-def get_endif(macro: str) -> str:
+def get_endif(macro: str | None) -> str:
     ''' Helper function that returns the appropriate endif line for a given macro '''
     if macro is None:
         return ''
@@ -37,7 +37,9 @@ def get_endif(macro: str) -> str:
 class KernelRegionGroup:
     ''' wraps a contiguous region of memory that is mapped into the kernel. '''
 
-    def __init__(self, region: Region, kernel_name: str, page_bits: int, max_size: int, condition_macro: str = None, user_ok: bool = False):
+    def __init__(self, region: Region, kernel_name: str, page_bits: int,
+                 max_size: int, condition_macro: str | None = None,
+                 user_ok: bool = False):
         self.macro = condition_macro
         self.desc = region.owner.path if region.owner else 'dynamically generated region'
         self.kernel_offset = -1
@@ -56,7 +58,7 @@ class KernelRegionGroup:
         ''' True if this group has a macro '''
         return self.macro is not None
 
-    def take_labels(self, other_group: 'KernelRegionGroup'):
+    def take_labels(self, other_group: KernelRegionGroup):
         ''' Take another group's labels and add them to our own '''
         if self != other_group:
             raise ValueError('need to have equal size and base to take labels')
@@ -64,47 +66,54 @@ class KernelRegionGroup:
             self.labels[k] = v
         self.desc += ', ' + other_group.desc
 
-    def get_macro(self):
+    def get_macro(self) -> str:
         ''' Get the #ifdef line for this region group '''
         return get_macro_str(self.macro)
 
-    def get_endif(self):
+    def get_endif(self) -> str:
         ''' Get the #endif line for this region group '''
         return get_endif(self.macro)
 
-    def set_kernel_offset(self, offset):
+    def set_kernel_offset(self, offset: int) -> int:
         ''' Set the base offset that this region is mapped at in the kernel.
             Returns the next free address in the kernel (i.e. base offset + region size) '''
         self.kernel_offset = offset
         return offset + self.size
 
-    def get_labelled_addresses(self) -> Dict:
+    def get_labelled_addresses(self) -> dict[int, str]:
         ''' Get a dict of address -> label for the kernel '''
-        ret = {}
+        ret: dict[int, str] = {}
         for (k, v) in self.labels.items():
             ret[v + self.kernel_offset] = k
         return ret
 
-    def get_map_offset(self, reg):
+    def get_map_offset(self, reg) -> int:
         ''' Get the offset that the given region is mapped at. '''
         index = self.regions.index(reg)
         return self.kernel_offset + (index * (1 << self.page_bits))
 
-    def get_desc(self):
+    def get_desc(self) -> str:
         ''' Get this region group's description '''
         return self.desc
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return 'KernelRegion(reg={},labels={})'.format(self.regions, self.labels)
 
-    def __eq__(self, other):
-        return other.base == self.base and other.size == self.size
+    def __eq__(self, other: object) -> bool:
+        if isinstance(other, type(self)):
+            return other.base == self.base and other.size == self.size
+        else:
+            # duck typing is not supported
+            return NotImplemented
 
 
 class KernelInterrupt:
     ''' Represents an interrupt that is used by the kernel. '''
 
-    def __init__(self, label: str, irq: int, prio: int = 0, sel_macro: str = None, false_irq: int = -1, enable_macro: str = None, desc: str = None):
+    def __init__(self, label: str, irq: int, prio: int = 0,
+                 sel_macro: str | None = None, false_irq: int = -1,
+                 enable_macro: str | None = None,
+                 desc: str | None = None):
         self.label = label
         self.irq = irq
         self.prio = prio
@@ -113,31 +122,31 @@ class KernelInterrupt:
         self.enable_macro = enable_macro
         self.desc = desc
 
-    def get_enable_macro_str(self):
+    def get_enable_macro_str(self) -> str:
         ''' Get the enable macro #ifdef line '''
         return get_macro_str(self.enable_macro)
 
-    def has_enable(self):
+    def has_enable(self) -> bool:
         ''' True if this interrupt has an enable macro '''
         return self.enable_macro is not None
 
-    def get_enable_endif(self):
+    def get_enable_endif(self) -> str:
         ''' Get the enable macro #endif line '''
         return get_endif(self.enable_macro)
 
-    def get_sel_macro_str(self):
+    def get_sel_macro_str(self) -> str:
         ''' Get the select macro #ifdef line '''
         return get_macro_str(self.sel_macro)
 
-    def has_sel(self):
+    def has_sel(self) -> bool:
         ''' True if this interrupt has a select macro '''
         return self.sel_macro is not None
 
-    def get_sel_endif(self):
+    def get_sel_endif(self) -> str:
         ''' Get the select macro #endif line '''
         return get_endif(self.sel_macro)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return 'KernelInterrupt(label={},irq={},sel_macro={},false_irq={})'.format(self.label, self.irq, self.sel_macro, self.false_irq)
 
 
@@ -146,7 +155,7 @@ class DeviceRule:
 
     def __init__(self, rule: dict, config: Config):
         self.rule = rule
-        self.regions: Dict[int, Dict] = {}
+        self.regions: dict[int, dict] = {}
         self.interrupts = rule.get('interrupts', {})
         self.config = config
 
@@ -154,7 +163,7 @@ class DeviceRule:
             self.regions[reg['index']] = reg
 
     @lru_cache()
-    def get_regions(self, node: WrappedNode) -> List[KernelRegionGroup]:
+    def get_regions(self, node: WrappedNode) -> list[KernelRegionGroup]:
         ''' Returns a list of KernelRegionGroups that this rule specifies should be mapped into the kernel for this device. '''
         ret = []
         regions = node.get_regions()
@@ -180,9 +189,9 @@ class DeviceRule:
         return ret
 
     @lru_cache()
-    def get_interrupts(self, tree: FdtParser, node: WrappedNode) -> List[KernelInterrupt]:
+    def get_interrupts(self, tree: FdtParser, node: WrappedNode) -> list[KernelInterrupt]:
         ''' Returns a list of KernelInterrupts that this rule says are used by the kernel for this device. '''
-        ret = []
+        ret: list[KernelInterrupt] = []
         interrupts = node.get_interrupts(tree)
 
         for name, rule in self.interrupts.items():
@@ -235,7 +244,7 @@ class HardwareYaml:
         raise ValueError('Failed to match compatibles "{}" for node {}!'.format(
             ', '.join(device.get_prop('compatible').strings), device.path))
 
-    def get_matched_compatible(self, device: WrappedNode) -> str:
+    def get_matched_compatible(self, device: WrappedNode) -> str | None:
         ''' Returns the best matching compatible string for this device '''
         if not device.has_prop('compatible'):
             raise ValueError(
