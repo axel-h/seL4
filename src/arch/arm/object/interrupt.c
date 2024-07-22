@@ -34,7 +34,7 @@ exception_t Arch_decodeIRQControlInvocation(word_t invLabel, word_t length,
         }
 
         word_t irq_w = getSyscallArg(0, buffer);
-        irq_t irq = (irq_t) CORE_IRQ_TO_IRQT(0, irq_w);
+        irq_t irq = CORE_IRQ_TO_IRQT(0, irq_w);
         bool_t trigger = !!getSyscallArg(1, buffer);
         word_t index = getSyscallArg(2, buffer);
         word_t depth = getSyscallArg(3, buffer);
