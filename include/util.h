@@ -148,10 +148,9 @@ long PURE str_to_long(const char *str);
  * the implementation choices for the sizes of `unsigned int`. Instead, it
  * appears that `si` always signifies a 32-bit argument and `di` always
  * signifies a 64-bit argument. Tests with __builtin_clzl() on RISC-V have shown
- * that if 'unsigned long' is 32 bits __builtin_clzl() uses __clzsi2() and if
- * the type is 64 bits __builtin_clzl() uses __clzdi2(). Thus using the types
- * uint32_t and uint64_t from stdint.h in the signatures below is considered the
- * semantically correct way.
+ * than __clzsi2() is used if 'unsigned long' is 32 bits, and __clzdi2() if it
+ * is 64 bits.. Thus, using the types uint32_t and uint64_t from stdint.h in the
+ * signatures below is considered the semantically correct way.
  * Note that we only emit actual function implementations for these functions if
  * CONFIG_CLZ_32 etc. are set. Otherwise, the compiler's internal implementation
  * may get used or compilation fails if there is no machine instruction.
