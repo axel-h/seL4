@@ -6,6 +6,8 @@
 
 #pragma once
 
-/* Compile-time configuration parameters. Might be set by the build system. */
+/* Kernel configuration */
+#include <kernel/gen_config.h>
 
-#include <autoconf.h>
+/* Libsel4 configuration */
+#include <sel4/gen_config.h>
