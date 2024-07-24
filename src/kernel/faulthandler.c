@@ -62,41 +62,41 @@ void handleFault(tcb_t *tptr)
 
 exception_t sendFaultIPC(tcb_t *tptr)
 {
-    cptr_t handlerCPtr;
-    cap_t  handlerCap;
-    lookupCap_ret_t lu_ret;
-    lookup_fault_t original_lookup_fault;
-
-    original_lookup_fault = current_lookup_fault;
-
-    handlerCPtr = tptr->tcbFaultHandler;
-    lu_ret = lookupCap(tptr, handlerCPtr);
+    cptr_t handlerCPtr = tptr->tcbFaultHandler;
+    lookupCap_ret_t lu_ret = lookupCap(tptr, handlerCPtr);
     if (lu_ret.status != EXCEPTION_NONE) {
+        /* lookup failed */
+        // ToDo: Seems we are setting this just for the error printing, as
+        //       nobody else cares about this practically?
+        //       Also, why don't we set current_lookup_fault here also?
         current_fault = seL4_Fault_CapFault_new(handlerCPtr, false);
         return EXCEPTION_FAULT;
     }
-    handlerCap = lu_ret.cap;
 
-    if (isValidFaultHandlerEp(handlerCap)) {
-        tptr->tcbFault = current_fault;
-        if (seL4_Fault_get_seL4_FaultType(current_fault) == seL4_Fault_CapFault) {
-            tptr->tcbLookupFailure = original_lookup_fault;
-        }
-        sendIPC(true, /* blocking */
-                true, /* do a call */
-                cap_endpoint_cap_get_capEPBadge(handlerCap),
-                cap_endpoint_cap_get_capCanGrant(handlerCap),
-                true, /* can grant reply */
-                tptr,
-                EP_PTR(cap_endpoint_cap_get_capEPPtr(handlerCap)));
-
-        return EXCEPTION_NONE;
-    } else {
+    cap_t handlerCap = lu_ret.cap;
+    if (!isValidFaultHandlerEp(handlerCap)) {
+        /* not and endpoint or invalid endpoint rights */
+        // ToDo: Seems we are setting this just for the error printing, as
+        //       nobody else cares about this practically?
         current_fault = seL4_Fault_CapFault_new(handlerCPtr, false);
         current_lookup_fault = lookup_fault_missing_capability_new(0);
-
         return EXCEPTION_FAULT;
     }
+
+    tptr->tcbFault = current_fault;
+    if (seL4_Fault_get_seL4_FaultType(current_fault) == seL4_Fault_CapFault) {
+        tptr->tcbLookupFailure = current_lookup_fault;
+    }
+
+    sendIPC(true, /* blocking */
+            true, /* do a call */
+            cap_endpoint_cap_get_capEPBadge(handlerCap),
+            cap_endpoint_cap_get_capCanGrant(handlerCap),
+            true, /* can grant reply */
+            tptr,
+            EP_PTR(cap_endpoint_cap_get_capEPPtr(handlerCap)));
+
+    return EXCEPTION_NONE;
 }
 #endif
 
