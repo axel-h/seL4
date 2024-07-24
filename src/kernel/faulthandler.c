@@ -71,68 +71,29 @@ static void printFaultHandlerError(tcb_t *tptr, seL4_Fault_t fault)
 #endif /* CONFIG_PRINTING */
 
 #ifdef CONFIG_KERNEL_MCS
-void handleTimeout(tcb_t *tptr)
+static void sendFaultIPC(cap_t handlerCap, tcb_t *tptr, bool_t can_donate)
 {
-    assert(validTimeoutHandler(tptr));
-    tptr->tcbFault = current_fault;
-    sendFaultIPC(tptr, TCB_PTR_CTE_PTR(tptr, tcbTimeoutHandler)->cap, false);
-}
-
-bool_t sendFaultIPC(tcb_t *tptr, cap_t handlerCap, bool_t can_donate)
-{
-    if (cap_get_capType(handlerCap) == cap_endpoint_cap) {
-        assert(isValidFaultHandlerEp(handlerCap));
-        sendIPC(true, /* blocking */
-                false, /* don't do a call */
-                cap_endpoint_cap_get_capEPBadge(handlerCap),
-                cap_endpoint_cap_get_capCanGrant(handlerCap),
-                cap_endpoint_cap_get_capCanGrantReply(handlerCap),
-                can_donate,
-                tptr,
-                EP_PTR(cap_endpoint_cap_get_capEPPtr(handlerCap)));
-
-        return true;
-    } else {
-        assert(cap_get_capType(handlerCap) == cap_null_cap);
-        return false;
-    }
-}
-#else
-
-exception_t sendFaultIPC(tcb_t *tptr)
-{
-    cptr_t handlerCPtr = tptr->tcbFaultHandler;
-    lookupCap_ret_t lu_ret = lookupCap(tptr, handlerCPtr);
-    if (lu_ret.status != EXCEPTION_NONE) {
-        /* lookup failed */
-        // ToDo: Seems we are setting this just for the error printing, as
-        //       nobody else cares about this practically?
-        //       Also, why don't we set current_lookup_fault here also?
-        current_fault = seL4_Fault_CapFault_new(handlerCPtr, false);
-        return EXCEPTION_FAULT;
-    }
-
-    cap_t handlerCap = lu_ret.cap;
-    if (!isValidFaultHandlerEp(handlerCap)) {
-        /* not and endpoint or invalid endpoint rights */
-        // ToDo: Seems we are setting this just for the error printing, as
-        //       nobody else cares about this practically?
-        current_fault = seL4_Fault_CapFault_new(handlerCPtr, false);
-        current_lookup_fault = lookup_fault_missing_capability_new(0);
-        return EXCEPTION_FAULT;
-    }
-
     sendIPC(true, /* blocking */
-            true, /* do a call */
+            false, /* don't do a call */
             cap_endpoint_cap_get_capEPBadge(handlerCap),
             cap_endpoint_cap_get_capCanGrant(handlerCap),
-            true, /* can grant reply */
+            cap_endpoint_cap_get_capCanGrantReply(handlerCap),
+            can_donate,
             tptr,
             EP_PTR(cap_endpoint_cap_get_capEPPtr(handlerCap)));
-
-    return EXCEPTION_NONE;
 }
-#endif
+
+void handleTimeout(tcb_t *tptr)
+{
+    /* we can only arrive here, if the handler is a valid endpoint */
+    assert(validTimeoutHandler(tptr));
+
+    cap_t handlerCap = TCB_PTR_CTE_PTR(tptr, tcbTimeoutHandler)->cap;
+    bool_t canDonate = false;
+    tptr->tcbFault = current_fault;
+    sendFaultIPC(handlerCap, tptr, canDonate);
+}
+#endif /* CONFIG_KERNEL_MCS */
 
 void handleFault(tcb_t *tptr)
 {
@@ -142,17 +103,37 @@ void handleFault(tcb_t *tptr)
         tptr->tcbLookupFailure = current_lookup_fault;
     }
 
-    bool_t dispatchOk;
+    /* get fault hanlder */
+    cap_t handlerCap;
 #ifdef CONFIG_KERNEL_MCS
-    dispatchOk = sendFaultIPC(tptr,
-                              TCB_PTR_CTE_PTR(tptr, tcbFaultHandler)->cap,
-                              tptr->tcbSchedContext != NULL);
+    handlerCap = TCB_PTR_CTE_PTR(tptr, tcbFaultHandler)->cap;
 #else
-    dispatchOk = (EXCEPTION_NONE == sendFaultIPC(tptr));
+    lookupCap_ret_t lu_ret = lookupCap(tptr, tptr->tcbFaultHandler);
+    if (lu_ret.status == EXCEPTION_NONE) {
+        handlerCap = lu_ret.cap
+    } else {
+        /* lookup failed */
+        handlerCap = cap_null_cap_new();
+        // ToDo: Seems we are setting this just for the error printing, as
+        //       nobody else cares about this practically?
+        //       Also, why don't we set current_lookup_fault here also?
+        current_fault = seL4_Fault_CapFault_new(handlerCPtr, false);
+    }
 #endif
 
-    if (dispatchOk) {
-        /* The fault handler will hande the thread's fault */
+    if (isValidFaultHandlerEp(handlerCap)) {
+#ifdef CONFIG_KERNEL_MCS
+        bool_t canDonate = (tptr->tcbSchedContext != NULL);
+        sendFaultIPC(handlerCap, tptr, canDonate);
+#else
+        sendIPC(true, /* blocking */
+                true, /* do a call */
+                cap_endpoint_cap_get_capEPBadge(handlerCap),
+                cap_endpoint_cap_get_capCanGrant(handlerCap),
+                true, /* can grant reply */
+                tptr,
+                EP_PTR(cap_endpoint_cap_get_capEPPtr(handlerCap)));
+#endif
         return;
     }
 
@@ -160,6 +141,16 @@ void handleFault(tcb_t *tptr)
      * There is no fault handler that could be notified about the fault, log
      * some fault details and suspend the faulting thread.
      */
+
+    // ToDo: seeing anything besides a null cap here seems a user error?
+    assert(cap_get_capType(handlerCap) == cap_null_cap);
+#ifndef CONFIG_KERNEL_MCS
+    // ToDo: Seems we are setting this just for the error printing, as nobody
+    //       else cares about this practically?
+    current_fault = seL4_Fault_CapFault_new(handlerCPtr, false);
+    current_lookup_fault = lookup_fault_missing_capability_new(0);
+#endif
+
 #ifdef CONFIG_PRINTING
     printFaultHandlerError(tptr, fault);
 #endif

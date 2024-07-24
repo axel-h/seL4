@@ -30,9 +30,6 @@ static inline bool_t validTimeoutHandler(tcb_t *tptr)
 }
 
 void handleTimeout(tcb_t *tptr);
-bool_t sendFaultIPC(tcb_t *tptr, cap_t handlerCap, bool_t can_donate);
-#else
-exception_t sendFaultIPC(tcb_t *tptr);
 #endif
 void handleFault(tcb_t *tptr);
 
