@@ -83,15 +83,22 @@ static void sendFaultIPC(cap_t handlerCap, tcb_t *tptr, bool_t can_donate)
             EP_PTR(cap_endpoint_cap_get_capEPPtr(handlerCap)));
 }
 
-void handleTimeout(tcb_t *tptr)
+bool_t tryRaisingTimeoutFault(tcb_t *tptr, word_t scBadge)
 {
-    /* we can only arrive here, if the handler is a valid endpoint */
-    assert(validTimeoutHandler(tptr));
+    seL4_Fault_t fault = seL4_Fault_Timeout_new(scBadge);
+    current_fault = fault; // ToDo: do we really need this any longer?
+    tptr->tcbFault = fault;
 
     cap_t handlerCap = TCB_PTR_CTE_PTR(tptr, tcbTimeoutHandler)->cap;
-    bool_t canDonate = false;
-    tptr->tcbFault = current_fault;
-    sendFaultIPC(handlerCap, tptr, canDonate);
+    if (!isValidFaultHandlerEp(handlerCap))
+    {
+        assert(cap_get_capType(handlerCap) == cap_null_cap);
+        return false;
+    }
+
+    bool_t canDoneate = false;
+    sendFaultIPC(tptr, handlerCap, canDoneate);
+    return true;
 }
 #endif /* CONFIG_KERNEL_MCS */
 

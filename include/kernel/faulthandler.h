@@ -23,13 +23,7 @@ static bool_t isValidFaultHandlerEpOrNull(cap_t cap)
     return ((cap_get_capType(cap) == cap_null_cap) || isValidFaultHandlerEp(cap));
 }
 
-static inline bool_t validTimeoutHandler(tcb_t *tptr)
-{
-    cap_t handlerCap = TCB_PTR_CTE_PTR(tptr, tcbTimeoutHandler)->cap;
-    return isValidFaultHandlerEp(handlerCap);
-}
-
-void handleTimeout(tcb_t *tptr);
+bool_t tryRaisingTimeoutFault(tcb_t *tptr, word_t scBadge);
 #endif
 void handleFault(tcb_t *tptr);
 
