@@ -71,21 +71,6 @@ static void printFaultHandlerError(tcb_t *tptr, seL4_Fault_t fault)
 #endif /* CONFIG_PRINTING */
 
 #ifdef CONFIG_KERNEL_MCS
-void handleFault(tcb_t *tptr)
-{
-    seL4_Fault_t fault = current_fault;
-    tptr->tcbFault = fault;
-    if (seL4_Fault_get_seL4_FaultType(fault) == seL4_Fault_CapFault) {
-        tptr->tcbLookupFailure = current_lookup_fault;
-    }
-
-    bool_t hasFaultHandler = sendFaultIPC(tptr, TCB_PTR_CTE_PTR(tptr, tcbFaultHandler)->cap,
-                                          tptr->tcbSchedContext != NULL);
-    if (!hasFaultHandler) {
-        handleNoFaultHandler(tptr);
-    }
-}
-
 void handleTimeout(tcb_t *tptr)
 {
     assert(validTimeoutHandler(tptr));
@@ -113,20 +98,6 @@ bool_t sendFaultIPC(tcb_t *tptr, cap_t handlerCap, bool_t can_donate)
     }
 }
 #else
-
-void handleFault(tcb_t *tptr)
-{
-    seL4_Fault_t fault = current_fault;
-    tptr->tcbFault = fault;
-    if (seL4_Fault_get_seL4_FaultType(fault) == seL4_Fault_CapFault) {
-        tptr->tcbLookupFailure = current_lookup_fault;
-    }
-
-    exception_t status = sendFaultIPC(tptr);
-    if (status != EXCEPTION_NONE) {
-        handleDoubleFault(tptr, fault);
-    }
-}
 
 exception_t sendFaultIPC(tcb_t *tptr)
 {
@@ -163,15 +134,34 @@ exception_t sendFaultIPC(tcb_t *tptr)
 }
 #endif
 
-#ifdef CONFIG_KERNEL_MCS
-void handleNoFaultHandler(tcb_t *tptr)
-#else
-/* The second fault is stored in the global current_fault.  */
-void handleDoubleFault(tcb_t *tptr, seL4_Fault_t ex1)
-#endif
+void handleFault(tcb_t *tptr)
 {
+    seL4_Fault_t fault = current_fault;
+    tptr->tcbFault = fault;
+    if (seL4_Fault_get_seL4_FaultType(fault) == seL4_Fault_CapFault) {
+        tptr->tcbLookupFailure = current_lookup_fault;
+    }
+
+    bool_t dispatchOk;
+#ifdef CONFIG_KERNEL_MCS
+    dispatchOk = sendFaultIPC(tptr,
+                              TCB_PTR_CTE_PTR(tptr, tcbFaultHandler)->cap,
+                              tptr->tcbSchedContext != NULL);
+#else
+    dispatchOk = (EXCEPTION_NONE == sendFaultIPC(tptr));
+#endif
+
+    if (dispatchOk) {
+        /* The fault handler will hande the thread's fault */
+        return;
+    }
+
+    /*
+     * There is no fault handler that could be notified about the fault, log
+     * some fault details and suspend the faulting thread.
+     */
 #ifdef CONFIG_PRINTING
-    printFaultHandlerError(tptr, config_ternary(CONFIG_KERNEL_MCS, current_fault, ex1));
+    printFaultHandlerError(tptr, fault);
 #endif
 
     setThreadState(tptr, ThreadState_Inactive);
