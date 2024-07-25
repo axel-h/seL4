@@ -73,6 +73,12 @@ static void printFaultHandlerError(tcb_t *tptr, seL4_Fault_t fault)
 #ifdef CONFIG_KERNEL_MCS
 void handleFault(tcb_t *tptr)
 {
+    seL4_Fault_t fault = current_fault;
+    tptr->tcbFault = fault;
+    if (seL4_Fault_get_seL4_FaultType(fault) == seL4_Fault_CapFault) {
+        tptr->tcbLookupFailure = current_lookup_fault;
+    }
+
     bool_t hasFaultHandler = sendFaultIPC(tptr, TCB_PTR_CTE_PTR(tptr, tcbFaultHandler)->cap,
                                           tptr->tcbSchedContext != NULL);
     if (!hasFaultHandler) {
@@ -83,6 +89,7 @@ void handleFault(tcb_t *tptr)
 void handleTimeout(tcb_t *tptr)
 {
     assert(validTimeoutHandler(tptr));
+    tptr->tcbFault = current_fault;
     sendFaultIPC(tptr, TCB_PTR_CTE_PTR(tptr, tcbTimeoutHandler)->cap, false);
 }
 
@@ -90,7 +97,6 @@ bool_t sendFaultIPC(tcb_t *tptr, cap_t handlerCap, bool_t can_donate)
 {
     if (cap_get_capType(handlerCap) == cap_endpoint_cap) {
         assert(isValidFaultHandlerEp(handlerCap));
-        tptr->tcbFault = current_fault;
         sendIPC(true, /* blocking */
                 false, /* don't do a call */
                 cap_endpoint_cap_get_capEPBadge(handlerCap),
@@ -110,10 +116,13 @@ bool_t sendFaultIPC(tcb_t *tptr, cap_t handlerCap, bool_t can_donate)
 
 void handleFault(tcb_t *tptr)
 {
-    exception_t status;
     seL4_Fault_t fault = current_fault;
+    tptr->tcbFault = fault;
+    if (seL4_Fault_get_seL4_FaultType(fault) == seL4_Fault_CapFault) {
+        tptr->tcbLookupFailure = current_lookup_fault;
+    }
 
-    status = sendFaultIPC(tptr);
+    exception_t status = sendFaultIPC(tptr);
     if (status != EXCEPTION_NONE) {
         handleDoubleFault(tptr, fault);
     }
@@ -140,11 +149,6 @@ exception_t sendFaultIPC(tcb_t *tptr)
         current_fault = seL4_Fault_CapFault_new(handlerCPtr, false);
         current_lookup_fault = lookup_fault_missing_capability_new(0);
         return EXCEPTION_FAULT;
-    }
-
-    tptr->tcbFault = current_fault;
-    if (seL4_Fault_get_seL4_FaultType(current_fault) == seL4_Fault_CapFault) {
-        tptr->tcbLookupFailure = current_lookup_fault;
     }
 
     sendIPC(true, /* blocking */
