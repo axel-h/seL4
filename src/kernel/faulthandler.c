@@ -11,6 +11,65 @@
 #include <machine/io.h>
 #include <arch/machine.h>
 
+#ifdef CONFIG_PRINTING
+
+static void print_fault(seL4_Fault_t f)
+{
+    switch (seL4_Fault_get_seL4_FaultType(f)) {
+    case seL4_Fault_NullFault:
+        printf("null fault");
+        break;
+    case seL4_Fault_CapFault:
+        printf("cap fault in %s phase at address %p",
+               seL4_Fault_CapFault_get_inReceivePhase(f) ? "receive" : "send",
+               (void *)seL4_Fault_CapFault_get_address(f));
+        break;
+    case seL4_Fault_VMFault:
+        printf("vm fault on %s at address %p with status %p",
+               seL4_Fault_VMFault_get_instructionFault(f) ? "code" : "data",
+               (void *)seL4_Fault_VMFault_get_address(f),
+               (void *)seL4_Fault_VMFault_get_FSR(f));
+        break;
+    case seL4_Fault_UnknownSyscall:
+        printf("unknown syscall %p",
+               (void *)seL4_Fault_UnknownSyscall_get_syscallNumber(f));
+        break;
+    case seL4_Fault_UserException:
+        printf("user exception %p code %p",
+               (void *)seL4_Fault_UserException_get_number(f),
+               (void *)seL4_Fault_UserException_get_code(f));
+        break;
+#ifdef CONFIG_KERNEL_MCS
+    case seL4_Fault_Timeout:
+        printf("Timeout fault for 0x%x\n", (unsigned int) seL4_Fault_Timeout_get_badge(f));
+        break;
+#endif
+    default:
+        printf("unknown fault");
+        break;
+    }
+}
+
+static void printFaultHandlerError(tcb_t *tptr, seL4_Fault_t fault)
+{
+#ifdef CONFIG_KERNEL_MCS
+    printf("Found thread has no fault handler while trying to handle:\n");
+#else // not CONFIG_KERNEL_MCS
+    printf("Caught ");
+    print_fault(current_fault);
+    printf("\nwhile trying to handle:\n");
+#endif
+#ifdef CONFIG_DEBUG_BUILD
+    print_fault(fault);
+    printf("\nin thread %p \"%s\" ", tptr, TCB_PTR_DEBUG_PTR(tptr)->tcbName);
+#endif
+    printf("at address %p\n", (void *)getRestartPC(tptr));
+    printf("With stack:\n");
+    Arch_userStackTrace(tptr);
+}
+
+#endif /* CONFIG_PRINTING */
+
 #ifdef CONFIG_KERNEL_MCS
 void handleFault(tcb_t *tptr)
 {
@@ -100,70 +159,15 @@ exception_t sendFaultIPC(tcb_t *tptr)
 }
 #endif
 
-#ifdef CONFIG_PRINTING
-static void print_fault(seL4_Fault_t f)
-{
-    switch (seL4_Fault_get_seL4_FaultType(f)) {
-    case seL4_Fault_NullFault:
-        printf("null fault");
-        break;
-    case seL4_Fault_CapFault:
-        printf("cap fault in %s phase at address %p",
-               seL4_Fault_CapFault_get_inReceivePhase(f) ? "receive" : "send",
-               (void *)seL4_Fault_CapFault_get_address(f));
-        break;
-    case seL4_Fault_VMFault:
-        printf("vm fault on %s at address %p with status %p",
-               seL4_Fault_VMFault_get_instructionFault(f) ? "code" : "data",
-               (void *)seL4_Fault_VMFault_get_address(f),
-               (void *)seL4_Fault_VMFault_get_FSR(f));
-        break;
-    case seL4_Fault_UnknownSyscall:
-        printf("unknown syscall %p",
-               (void *)seL4_Fault_UnknownSyscall_get_syscallNumber(f));
-        break;
-    case seL4_Fault_UserException:
-        printf("user exception %p code %p",
-               (void *)seL4_Fault_UserException_get_number(f),
-               (void *)seL4_Fault_UserException_get_code(f));
-        break;
-#ifdef CONFIG_KERNEL_MCS
-    case seL4_Fault_Timeout:
-        printf("Timeout fault for 0x%x\n", (unsigned int) seL4_Fault_Timeout_get_badge(f));
-        break;
-#endif
-    default:
-        printf("unknown fault");
-        break;
-    }
-}
-#endif
-
 #ifdef CONFIG_KERNEL_MCS
 void handleNoFaultHandler(tcb_t *tptr)
 #else
-/* The second fault, ex2, is stored in the global current_fault */
+/* The second fault is stored in the global current_fault.  */
 void handleDoubleFault(tcb_t *tptr, seL4_Fault_t ex1)
 #endif
 {
 #ifdef CONFIG_PRINTING
-#ifdef CONFIG_KERNEL_MCS
-    printf("Found thread has no fault handler while trying to handle:\n");
-    print_fault(current_fault);
-#else
-    seL4_Fault_t ex2 = current_fault;
-    printf("Caught ");
-    print_fault(ex2);
-    printf("\nwhile trying to handle:\n");
-    print_fault(ex1);
-#endif
-#ifdef CONFIG_DEBUG_BUILD
-    printf("\nin thread %p \"%s\" ", tptr, TCB_PTR_DEBUG_PTR(tptr)->tcbName);
-#endif /* CONFIG_DEBUG_BUILD */
-
-    printf("at address %p\n", (void *)getRestartPC(tptr));
-    printf("With stack:\n");
-    Arch_userStackTrace(tptr);
+    printFaultHandlerError(tptr, config_ternary(CONFIG_KERNEL_MCS, current_fault, ex1));
 #endif
 
     setThreadState(tptr, ThreadState_Inactive);
