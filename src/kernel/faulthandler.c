@@ -32,11 +32,13 @@ bool_t sendFaultIPC(tcb_t *tptr, cap_t handlerCap, bool_t can_donate)
     if (cap_get_capType(handlerCap) == cap_endpoint_cap) {
         assert(isValidFaultHandlerEp(handlerCap));
         tptr->tcbFault = current_fault;
-        sendIPC(true, false,
+        sendIPC(true, /* blocking */
+                false, /* don't do a call */
                 cap_endpoint_cap_get_capEPBadge(handlerCap),
                 cap_endpoint_cap_get_capCanGrant(handlerCap),
                 cap_endpoint_cap_get_capCanGrantReply(handlerCap),
-                can_donate, tptr,
+                can_donate,
+                tptr,
                 EP_PTR(cap_endpoint_cap_get_capEPPtr(handlerCap)));
 
         return true;
@@ -80,9 +82,12 @@ exception_t sendFaultIPC(tcb_t *tptr)
         if (seL4_Fault_get_seL4_FaultType(current_fault) == seL4_Fault_CapFault) {
             tptr->tcbLookupFailure = original_lookup_fault;
         }
-        sendIPC(true, true,
+        sendIPC(true, /* blocking */
+                true, /* do a call */
                 cap_endpoint_cap_get_capEPBadge(handlerCap),
-                cap_endpoint_cap_get_capCanGrant(handlerCap), true, tptr,
+                cap_endpoint_cap_get_capCanGrant(handlerCap),
+                true, /* can grant reply */
+                tptr,
                 EP_PTR(cap_endpoint_cap_get_capEPPtr(handlerCap)));
 
         return EXCEPTION_NONE;
