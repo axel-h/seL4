@@ -13,6 +13,7 @@
 #include <kernel/thread.h>
 #include <kernel/vspace.h>
 #ifdef CONFIG_KERNEL_MCS
+#include <kernel/faulthandler.h>
 #include <object/schedcontext.h>
 #endif
 #include <model/statedata.h>
@@ -180,19 +181,32 @@ void doReplyTransfer(tcb_t *sender, tcb_t *receiver, cte_t *slot, bool_t grant)
     }
 
 #ifdef CONFIG_KERNEL_MCS
-    if (receiver->tcbSchedContext && isRunnable(receiver)) {
-        if ((refill_ready(receiver->tcbSchedContext) && refill_sufficient(receiver->tcbSchedContext, 0))) {
-            possibleSwitchTo(receiver);
-        } else {
-            if (validTimeoutHandler(receiver) && fault_type != seL4_Fault_Timeout) {
-                current_fault = seL4_Fault_Timeout_new(receiver->tcbSchedContext->scBadge);
-                handleTimeout(receiver);
-            } else {
-                postpone(receiver->tcbSchedContext);
-            }
+
+    sched_context_t *sc = receiver->tcbSchedContext;
+    if (!sc || !isRunnable(receiver)) {
+        return;
+    }
+
+    if (refill_ready(sc) && refill_sufficient(sc, 0)) {
+        possibleSwitchTo(receiver);
+        return;
+    }
+
+    if (fault_type != seL4_Fault_Timeout) {
+        /*
+         * The receiver has no time left to handle the fault. Try to raise a
+         * time fault, so the receiver eventually gets a chance to handle the
+         * actual fault.
+         */
+        if (tryRaisingTimeoutFault(receiver, sc->scBadge)) {
+            return;
         }
     }
-#endif
+
+    /* postpone until ready */
+    postpone(sc);
+
+#endif /* CONFIG_KERNEL_MCS */
 }
 
 void doNormalTransfer(tcb_t *sender, word_t *sendBuffer, endpoint_t *endpoint,
@@ -623,18 +637,27 @@ void chargeBudget(ticks_t consumed, bool_t canTimeoutFault)
 
 void endTimeslice(bool_t can_timeout_fault)
 {
-    if (can_timeout_fault && !isRoundRobin(NODE_STATE(ksCurSC)) && validTimeoutHandler(NODE_STATE(ksCurThread))) {
-        current_fault = seL4_Fault_Timeout_new(NODE_STATE(ksCurSC)->scBadge);
-        handleTimeout(NODE_STATE(ksCurThread));
-    } else if (refill_ready(NODE_STATE(ksCurSC)) && refill_sufficient(NODE_STATE(ksCurSC), 0)) {
-        /* apply round robin */
-        assert(!thread_state_get_tcbQueued(NODE_STATE(ksCurThread)->tcbState));
-        SCHED_APPEND_CURRENT_TCB;
-    } else {
-        /* postpone until ready */
-        postpone(NODE_STATE(ksCurSC));
+    tcb_t *thread = NODE_STATE(ksCurThread);
+    sched_context_t *sc = NODE_STATE(ksCurSC);
+
+    if (can_timeout_fault && !isRoundRobin(sc)) {
+        if (tryRaisingTimeoutFault(thread, sc->scBadge)) {
+            return;
+        }
+        /* Seems there is no hander for these faults, so fall through */
     }
+
+    if (refill_ready(sc) && refill_sufficient(sc, 0)) {
+        /* apply round robin */
+        assert(!thread_state_get_tcbQueued(thread->tcbState));
+        tcbSchedAppend(thread);
+        return;
+    }
+
+    /* postpone until ready */
+    postpone(sc);
 }
+
 #else
 
 void timerTick(void)

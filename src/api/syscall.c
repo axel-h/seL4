@@ -6,6 +6,7 @@
 
 #include <config.h>
 #include <types.h>
+#include <object.h>
 #include <benchmark/benchmark.h>
 #include <arch/benchmark.h>
 #include <benchmark/benchmark_track.h>
@@ -104,7 +105,28 @@ exception_t handleUnknownSyscall(word_t w)
         setRegister(NODE_STATE(ksCurThread), capRegister, cap_type);
         return EXCEPTION_NONE;
     }
+    if (w == SysDebugCapPaddr) {
+        word_t cptr = getRegister(NODE_STATE(ksCurThread), capRegister);
+        lookupCapAndSlot_ret_t lu_ret = lookupCapAndSlot(NODE_STATE(ksCurThread), cptr);
 
+        word_t cap_paddr = 0;
+        if (cap_get_capIsPhysical(lu_ret.cap)) {
+            cap_paddr = addrFromPPtr(cap_get_capPtr(lu_ret.cap));
+        } 
+
+        setRegister(NODE_STATE(ksCurThread), capRegister, cap_paddr);
+        return EXCEPTION_NONE;
+    }
+    if (w == SysDebugCapIsLastCopy)
+    {
+        word_t cptr = getRegister(NODE_STATE(ksCurThread), capRegister);
+        lookupCapAndSlot_ret_t lu_ret = lookupCapAndSlot(NODE_STATE(ksCurThread), cptr);
+
+        bool_t result = isFinalCapability(lu_ret.slot);
+
+        setRegister(NODE_STATE(ksCurThread), capRegister, result);
+        return EXCEPTION_NONE;
+    }
     if (w == SysDebugNameThread) {
         /* This is a syscall meant to aid debugging, so if anything goes wrong
          * then assume the system is completely misconfigured and halt */
@@ -220,8 +242,9 @@ exception_t handleUnknownSyscall(word_t w)
             return Arch_setTLSRegister(tls_base);
         }
 #endif
-        current_fault = seL4_Fault_UnknownSyscall_new(w);
-        handleFault(NODE_STATE(ksCurThread));
+        handleFault(NODE_STATE(ksCurThread),
+                    seL4_Fault_UnknownSyscall_new(w),
+                    NO_LOOKUP_FAULT);
     })
 
     schedule();
@@ -233,8 +256,9 @@ exception_t handleUnknownSyscall(word_t w)
 exception_t handleUserLevelFault(word_t w_a, word_t w_b)
 {
     MCS_DO_IF_BUDGET({
-        current_fault = seL4_Fault_UserException_new(w_a, w_b);
-        handleFault(NODE_STATE(ksCurThread));
+        handleFault(NODE_STATE(ksCurThread),
+                    seL4_Fault_UserException_new(w_a, w_b),
+                    NO_LOOKUP_FAULT);
     })
     schedule();
     activateThread();
@@ -249,7 +273,9 @@ exception_t handleVMFaultEvent(vm_fault_type_t vm_faultType)
         exception_t status = handleVMFault(NODE_STATE(ksCurThread), vm_faultType);
         if (status != EXCEPTION_NONE)
         {
-            handleFault(NODE_STATE(ksCurThread));
+            handleFault(NODE_STATE(ksCurThread),
+                        current_fault,
+                        current_lookup_fault);
         }
     })
 
@@ -284,10 +310,10 @@ static exception_t handleInvocation(bool_t isCall, bool_t isBlocking)
 
     if (unlikely(lu_ret.status != EXCEPTION_NONE)) {
         userError("Invocation of invalid cap #%lu.", cptr);
-        current_fault = seL4_Fault_CapFault_new(cptr, false);
-
         if (isBlocking) {
-            handleFault(thread);
+            handleFault(thread,
+                        seL4_Fault_CapFault_new(cptr, false),
+                        NO_LOOKUP_FAULT);
         }
 
         return EXCEPTION_NONE;
@@ -300,7 +326,7 @@ static exception_t handleInvocation(bool_t isCall, bool_t isBlocking)
     if (unlikely(status != EXCEPTION_NONE)) {
         userError("Lookup of extra caps failed.");
         if (isBlocking) {
-            handleFault(thread);
+            handleFault(thread, current_fault, current_lookup_fault);
         }
         return EXCEPTION_NONE;
     }
@@ -350,15 +376,17 @@ static inline lookupCap_ret_t lookupReply(void)
     lookupCap_ret_t lu_ret = lookupCap(NODE_STATE(ksCurThread), replyCPtr);
     if (unlikely(lu_ret.status != EXCEPTION_NONE)) {
         userError("Reply cap lookup failed");
-        current_fault = seL4_Fault_CapFault_new(replyCPtr, true);
-        handleFault(NODE_STATE(ksCurThread));
+        handleFault(NODE_STATE(ksCurThread),
+                    seL4_Fault_CapFault_new(replyCPtr, true),
+                    NO_LOOKUP_FAULT);
         return lu_ret;
     }
 
     if (unlikely(cap_get_capType(lu_ret.cap) != cap_reply_cap)) {
         userError("Cap in reply slot is not a reply");
-        current_fault = seL4_Fault_CapFault_new(replyCPtr, true);
-        handleFault(NODE_STATE(ksCurThread));
+        handleFault(NODE_STATE(ksCurThread),
+                    seL4_Fault_CapFault_new(replyCPtr, true),
+                    NO_LOOKUP_FAULT);
         lu_ret.status = EXCEPTION_FAULT;
         return lu_ret;
     }
@@ -417,17 +445,18 @@ static void handleRecv(bool_t isBlocking)
 
     if (unlikely(lu_ret.status != EXCEPTION_NONE)) {
         /* current_lookup_fault has been set by lookupCap */
-        current_fault = seL4_Fault_CapFault_new(epCPtr, true);
-        handleFault(NODE_STATE(ksCurThread));
+        handleFault(NODE_STATE(ksCurThread),
+                    seL4_Fault_CapFault_new(epCPtr, true),
+                    NO_LOOKUP_FAULT);
         return;
     }
 
     switch (cap_get_capType(lu_ret.cap)) {
     case cap_endpoint_cap:
         if (unlikely(!cap_endpoint_cap_get_capCanReceive(lu_ret.cap))) {
-            current_lookup_fault = lookup_fault_missing_capability_new(0);
-            current_fault = seL4_Fault_CapFault_new(epCPtr, true);
-            handleFault(NODE_STATE(ksCurThread));
+            handleFault(NODE_STATE(ksCurThread),
+                        seL4_Fault_CapFault_new(epCPtr, true),
+                        lookup_fault_missing_capability_new(0));
             break;
         }
 
@@ -456,9 +485,9 @@ static void handleRecv(bool_t isBlocking)
         boundTCB = (tcb_t *)notification_ptr_get_ntfnBoundTCB(ntfnPtr);
         if (unlikely(!cap_notification_cap_get_capNtfnCanReceive(lu_ret.cap)
                      || (boundTCB && boundTCB != NODE_STATE(ksCurThread)))) {
-            current_lookup_fault = lookup_fault_missing_capability_new(0);
-            current_fault = seL4_Fault_CapFault_new(epCPtr, true);
-            handleFault(NODE_STATE(ksCurThread));
+            handleFault(NODE_STATE(ksCurThread),
+                        seL4_Fault_CapFault_new(epCPtr, true),
+                        lookup_fault_missing_capability_new(0));
             break;
         }
 
@@ -466,9 +495,9 @@ static void handleRecv(bool_t isBlocking)
         break;
     }
     default:
-        current_lookup_fault = lookup_fault_missing_capability_new(0);
-        current_fault = seL4_Fault_CapFault_new(epCPtr, true);
-        handleFault(NODE_STATE(ksCurThread));
+        handleFault(NODE_STATE(ksCurThread),
+                    seL4_Fault_CapFault_new(epCPtr, true),
+                    lookup_fault_missing_capability_new(0));
         break;
     }
 }
