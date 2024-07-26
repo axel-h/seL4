@@ -7,10 +7,10 @@
 #include <config.h>
 #include <util.h>
 #include <api/failures.h>
+#include <api/debug.h>
 #include <kernel/cspace.h>
 #include <kernel/faulthandler.h>
 #include <kernel/thread.h>
-#include <machine/io.h>
 #include <arch/machine.h>
 
 #ifdef CONFIG_PRINTING
