@@ -4,8 +4,6 @@
  * SPDX-License-Identifier: GPL-2.0-only
  */
 
-#ifdef CONFIG_ENABLE_BENCHMARK
+#include <config.h>
 
-#endif /* CONFIG_ENABLE_BENCHMARK */
-
-
+/* Nothing here */

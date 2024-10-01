@@ -146,12 +146,6 @@ static inline void hwASIDFlush(asid_t asid)
 word_t PURE getRestartPC(tcb_t *thread);
 void setNextPC(tcb_t *thread, word_t v);
 
-/* Cleaning memory before user-level access */
-static inline void clearMemory(void *ptr, unsigned int bits)
-{
-    memzero(ptr, BIT(bits));
-}
-
 static inline void write_satp(word_t value)
 {
     asm volatile("csrw satp, %0" :: "rK"(value));

@@ -6,8 +6,9 @@
 
 #pragma once
 
-#ifdef CONFIG_ENABLE_BENCHMARKS
 #include <config.h>
+
+#ifdef CONFIG_ENABLE_BENCHMARKS
 
 #define PMCR "p15, 0, %0, c9, c12, 0"
 #define PMCNTENSET "p15, 0, %0, c9, c12, 1"
@@ -30,4 +31,3 @@ static inline void armv_handleOverflowIRQ(void)
     MCR(PMOVSR, val);
 }
 #endif /* CONFIG_ENABLE_BENCHMARKS */
-

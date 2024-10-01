@@ -311,7 +311,7 @@ create_domain_cap(cap_t root_cnode_cap)
 
 BOOT_CODE cap_t create_ipcbuf_frame_cap(cap_t root_cnode_cap, cap_t pd_cap, vptr_t vptr)
 {
-    clearMemory((void *)rootserver.ipc_buf, PAGE_BITS);
+    memzero((void *)rootserver.ipc_buf, BIT(PAGE_BITS));
 
     /* create a cap of it and write it into the root CNode */
     cap_t cap = create_mapped_it_frame_cap(pd_cap, rootserver.ipc_buf, vptr, IT_ASID, false, false);
@@ -348,10 +348,10 @@ BOOT_CODE void populate_bi_frame(node_id_t node_id, word_t num_nodes,
                                  vptr_t ipcbuf_vptr, word_t extra_bi_size)
 {
     /* clear boot info memory */
-    clearMemory((void *)rootserver.boot_info, seL4_BootInfoFrameBits);
+    memzero((void *)rootserver.boot_info, BIT(seL4_BootInfoFrameBits));
     if (extra_bi_size) {
-        clearMemory((void *)rootserver.extra_bi,
-                    calculate_extra_bi_size_bits(extra_bi_size));
+        memzero((void *)rootserver.extra_bi,
+                BIT(calculate_extra_bi_size_bits(extra_bi_size)));
     }
 
     /* initialise bootinfo-related global state */

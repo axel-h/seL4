@@ -1186,7 +1186,10 @@ static exception_t performPageTableInvocationUnmap(cap_t cap, cte_t *ctSlot)
         pte_t *pt = PT_PTR(cap_page_table_cap_get_capPTBasePtr(cap));
         unmapPageTable(cap_page_table_cap_get_capPTMappedASID(cap),
                        cap_page_table_cap_get_capPTMappedAddress(cap), pt);
-        clearMemory_PT((void *)pt, cap_get_capSizeBits(cap));
+        /* Cleaning memory and flush cache before page table walker access */
+        word_t len = BIT(cap_get_capSizeBits(cap));
+        memzero((void *)pt, len);
+        cleanCacheRange_PoU((word_t)pt, (word_t)pt + len - 1, addrFromPPtr(pt));
     }
 
     cap_page_table_cap_ptr_set_capPTIsMapped(&(ctSlot->cap), 0);
@@ -1980,7 +1983,7 @@ exception_t benchmark_arch_map_logBuffer(word_t frame_cptr)
 
     ksUserLogBuffer = pptr_to_paddr((void *) frame_pptr);
 
-    *armKSGlobalLogPTE = pte_pte_page_new(
+    pte_t pte = pte_pte_page_new(
 #ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
                              0, // XN
 #else
@@ -1993,8 +1996,22 @@ exception_t benchmark_arch_map_logBuffer(word_t frame_cptr)
                              0,                         /* VMKernelOnly */
                              NORMAL_WT);
 
-    cleanByVA_PoU((vptr_t)armKSGlobalLogPTE, addrFromKPPtr(armKSGlobalLogPTE));
+    compile_assert(
+        log_pte_lvl1_is_correct_preallocated,
+        GET_KPT_INDEX(KS_LOG_PPTR, KLVL_FRM_ARM_PT_LVL(1)) == BIT(PT_INDEX_BITS) - 1);
+
+    compile_assert(
+        log_pte_lvl2_is_correct_preallocated,
+        GET_KPT_INDEX(KS_LOG_PPTR, KLVL_FRM_ARM_PT_LVL(2)) == BIT(PT_INDEX_BITS) - 2);
+
+    pte_t *slot = &armKSGlobalKernelPDs[BIT(PT_INDEX_BITS) - 1][BIT(PT_INDEX_BITS) - 2]
+
+    /* update page table entry */
+    *slot = pte;
+    /* ensure the update propagates */
+    cleanByVA_PoU((vptr_t)slot, addrFromKPPtr(slot));
     invalidateTranslationSingle(KS_LOG_PPTR);
+
     return EXCEPTION_NONE;
 }
 #endif /* CONFIG_KERNEL_LOG_BUFFER */
