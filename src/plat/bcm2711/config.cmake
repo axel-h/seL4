@@ -7,17 +7,30 @@
 
 cmake_minimum_required(VERSION 3.7.2)
 
-declare_platform(bcm2711 KernelPlatformRpi4 PLAT_BCM2711 KernelArchARM)
+declare_platform(
+    "bcm2711"
+    ARCH "aarch64" "aarch32" # default is first
+    # use default board specific DTS at tools/dts/<board-name>.dts
+    # CAMKE_VAR defaults to KernelPlatform_BCM2711
+    # C_DEFINE defaults to CONFIG_PLAT_BCM2711
+    SOURCES
+        "src/arch/arm/machine/gic_v2.c"
+        "src/arch/arm/machine/l2c_nop.c"
+    FLAGS
+        "KernelArmCortexA72"
+        "KernelArchArmV8a"
+    BOARDS
+        "rpi4,KernelPlatformRpi4" # creates PLAT_BCM2711
+)
 
 if(KernelPlatformRpi4)
-    declare_seL4_arch(aarch64 aarch32)
-    set(KernelArmCortexA72 ON)
-    set(KernelArchArmV8a ON)
-    config_set(KernelARMPlatform ARM_PLAT rpi4)
     set(KernelArmMachFeatureModifiers "+crc" CACHE INTERNAL "")
-    list(APPEND KernelDTSList "tools/dts/rpi4.dts")
-    list(APPEND KernelDTSList "src/plat/bcm2711/overlay-rpi4.dts")
-    list(APPEND KernelDTSList "src/plat/bcm2711/overlay-rpi4-address-mapping.dts")
+    list(
+        APPEND
+        KernelDTSList
+            "${CMAKE_CURRENT_LIST_DIR}/overlay-${KernelBoard}.dts"
+            "${CMAKE_CURRENT_LIST_DIR}/overlay-${KernelBoard}-address-mapping.dts"
+    )
 
     if(NOT DEFINED RPI4_MEMORY)
         # By default we assume an RPi4B model with 8GB of RAM
@@ -25,13 +38,13 @@ if(KernelPlatformRpi4)
     endif()
 
     if("${RPI4_MEMORY}" STREQUAL "1024")
-        list(APPEND KernelDTSList "src/plat/bcm2711/overlay-rpi4-1gb.dts")
+        list(APPEND KernelDTSList "${CMAKE_CURRENT_LIST_DIR}/overlay-${KernelBoard}-1gb.dts")
     elseif("${RPI4_MEMORY}" STREQUAL "2048")
-        list(APPEND KernelDTSList "src/plat/bcm2711/overlay-rpi4-2gb.dts")
+        list(APPEND KernelDTSList "${CMAKE_CURRENT_LIST_DIR}/overlay-${KernelBoard}-2gb.dts")
     elseif("${RPI4_MEMORY}" STREQUAL "4096")
-        list(APPEND KernelDTSList "src/plat/bcm2711/overlay-rpi4-4gb.dts")
+        list(APPEND KernelDTSList "${CMAKE_CURRENT_LIST_DIR}/overlay-${KernelBoard}-4gb.dts")
     elseif("${RPI4_MEMORY}" STREQUAL "8192")
-        list(APPEND KernelDTSList "src/plat/bcm2711/overlay-rpi4-8gb.dts")
+        list(APPEND KernelDTSList "${CMAKE_CURRENT_LIST_DIR}/overlay-${KernelBoard}-8gb.dts")
     else()
         message(FATAL_ERROR "Unsupported memory size given ${RPI4_MEMORY},
                             supported memory sizes (in megabytes) are 1024,
@@ -56,9 +69,6 @@ if(KernelPlatformRpi4)
         CLK_MAGIC 5337599559llu
         CLK_SHIFT 58u
     )
+elseif(KernelPlatform_BCM2711)
+    message(FATAL_ERROR "cannot build target 'bcm2711', use 'rpi4'")
 endif()
-
-add_sources(
-    DEP "KernelPlatformRpi4"
-    CFILES src/arch/arm/machine/gic_v2.c src/arch/arm/machine/l2c_nop.c
-)
