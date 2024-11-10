@@ -13,10 +13,6 @@
 #include <arch/machine.h>
 #include <arch/smp/ipi.h>
 
-#ifndef CONFIG_KERNEL_MCS
-#define RESET_CYCLES ((TIMER_CLOCK_HZ / MS_IN_S) * CONFIG_TIMER_TICK_MS)
-#endif /* !CONFIG_KERNEL_MCS */
-
 #define IS_IRQ_VALID(X) (((X)) <= maxIRQ && (X) != irqInvalid)
 
 word_t PURE getRestartPC(tcb_t *thread)
@@ -224,13 +220,24 @@ static inline void ackInterrupt(irq_t irq)
 #ifndef CONFIG_KERNEL_MCS
 void resetTimer(void)
 {
-    uint64_t target;
-    // repeatedly try and set the timer in a loop as otherwise there is a race and we
-    // may set a timeout in the past, resulting in it never getting triggered
-    do {
-        target = riscv_read_time() + RESET_CYCLES;
-        sbi_set_timer(target);
-    } while (riscv_read_time() > target);
+    /* timer must be > 1 kHz */
+    SEL4_COMPILE_ASSERT(timer_clock_1mhz, TIMER_CLOCK_HZ > 1000);
+    const uint64_t ticks_per_ms = TIMER_CLOCK_HZ / MS_IN_S;
+    const uint64_t delta = ticks_per_ms * CONFIG_TIMER_TICK_MS;
+    uint64_t target = riscv_read_time() + delta;
+    sbi_set_timer(target);
+#if defined(CONFIG_PLAT_QEMU_RISCV_VIRT) || defined(CONFIG_PLAT_SPIKE)
+    /* Perform a sanity check that the margin is big enough that we end up
+     * with a timestamp in the future. Seems it happened in QEMU that the
+     * simulation was too slow.
+     */
+    uint64_t now = riscv_read_time();
+    if (likely(now >= target)) {
+        printf("Timer reset failed, %"PRIu64" (now) >= %"PRIu64"\n", now, target);
+        fail("Timer reset failed");
+        UNREACHABLE();
+    }
+#endif
 }
 
 /**
@@ -238,7 +245,7 @@ void resetTimer(void)
  */
 BOOT_CODE void initTimer(void)
 {
-    sbi_set_timer(riscv_read_time() + RESET_CYCLES);
+    resetTimer();
 }
 #endif /* !CONFIG_KERNEL_MCS */
 
