@@ -29,20 +29,33 @@
 #define seL4_TCBBits            10
 #endif
 
-/* Sv39/Sv48 pages/ptes sizes */
+/* In the RISC-V architecture (Sv39/Sv48/Sv57) a page is 4 KiB and each page
+ * table uses exactly one page. A VSpace is simply the root page table. Since
+ * each page table entry has 2^3 = 8 byte = 64 bit per entry, a page table has
+ * 512 entries. Each page table level can cover 2^9 (=512) times the size of one
+ * single entry, which gives 2 MiB (2^21) "megapages", 1 GiB (2^30)
+ * "gigapages", 512 GiB (2^39) "terapages" and 256 TiB (2^48) "petapages"
+ */
+#define seL4_PageBits           12
+#define seL4_PageTableBits      seL4_PageBits
+#define seL4_VSpaceBits         seL4_PageTableBits
+
 #define seL4_PageTableEntryBits 3
-#define seL4_PageTableIndexBits 9
+#define seL4_PageTableIndexBits (seL4_PageTableBits - seL4_PageTableEntryBits)
 
-#define seL4_PageBits          12
-#define seL4_LargePageBits     21
-#define seL4_HugePageBits      30
-#define seL4_TeraPageBits      39
-#define seL4_PageTableBits     12
-#define seL4_VSpaceBits        seL4_PageTableBits
+/* "megapages" are LargePages and "gigapages" are HugePages in the seL4
+ * terminology. This names come from the ARM port and kept here for consistency
+ * in the generic code.
+ */
+#define seL4_LargePageBits     (seL4_PageBits + seL4_PageTableIndexBits)
+#define seL4_HugePageBits      (seL4_LargePageBits + seL4_PageTableIndexBits)
+#define seL4_TeraPageBits      (seL4_HugePageBits + seL4_PageTableIndexBits)
+#define seL4_PetaPageBits      (seL4_TeraPageBits + seL4_PageTableIndexBits)
 
+/* The ASID pool uses one page */
+#define seL4_ASIDPoolBits       seL4_PageBits
 #define seL4_NumASIDPoolsBits   7
 #define seL4_ASIDPoolIndexBits  9
-#define seL4_ASIDPoolBits       12
 
 /* Untyped size limits */
 #define seL4_MinUntypedBits     4

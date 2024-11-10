@@ -52,11 +52,11 @@ static void riscv_cap_pt_print_slots(pte_t *upperPtSlot, word_t ptIndex, int lev
     }
     level -= 1;
 
-    word_t ptBitsLeft = PT_INDEX_BITS * level + seL4_PageBits;
+    word_t ptBitsLeft = seL4_PageTableIndexBits * level + seL4_PageBits;
 
     /* - 1 to avoid overflowing */
-    for (word_t i = 0; i < BIT(ptBitsLeft + PT_INDEX_BITS) - 1; i += (1 << (ptBitsLeft))) {
-        word_t ptSlotIndex = ((i >> ptBitsLeft) & MASK(PT_INDEX_BITS));
+    for (word_t i = 0; i < BIT(ptBitsLeft + seL4_PageTableIndexBits) - 1; i += (1 << (ptBitsLeft))) {
+        word_t ptSlotIndex = ((i >> ptBitsLeft) & MASK(seL4_PageTableIndexBits));
         pte_t *ptSlot = pt + ptSlotIndex;
         if (pte_ptr_get_valid(ptSlot)) {
             if (level) { /* pt */
@@ -69,8 +69,8 @@ static void riscv_cap_pt_print_slots(pte_t *upperPtSlot, word_t ptIndex, int lev
     }
     printf("}\n"); /* lvl1pt/pt */
 
-    for (word_t i = 0; i < BIT(ptBitsLeft + PT_INDEX_BITS) - 1; i += (1 << (ptBitsLeft))) {
-        word_t ptSlotIndex = ((i >> ptBitsLeft) & MASK(PT_INDEX_BITS));
+    for (word_t i = 0; i < BIT(ptBitsLeft + seL4_PageTableIndexBits) - 1; i += (1 << (ptBitsLeft))) {
+        word_t ptSlotIndex = ((i >> ptBitsLeft) & MASK(seL4_PageTableIndexBits));
         pte_t *ptSlot = pt + ptSlotIndex;
         if (pte_ptr_get_valid(ptSlot)) {
             if (level) { /* pt */
@@ -115,7 +115,7 @@ static void cap_frame_print_attrs_vptr(word_t vptr, pte_t *lvl1pt)
 {
     lookupPTSlot_ret_t lu_ret = lookupPTSlot(lvl1pt, vptr);
     assert(lu_ret.ptBitsLeft == seL4_PageBits);
-    word_t slot = ((vptr >> lu_ret.ptBitsLeft) & MASK(PT_INDEX_BITS));
+    word_t slot = ((vptr >> lu_ret.ptBitsLeft) & MASK(seL4_PageTableIndexBits));
 
     printf("frame_%p_%04lu ", lu_ret.ptSlot, slot);
     cap_frame_print_attrs_pt(lu_ret.ptSlot);
@@ -129,8 +129,8 @@ void print_cap_arch(cap_t cap)
         findVSpaceForASID_ret_t find_ret = findVSpaceForASID(asid);
         vptr_t vptr = cap_page_table_cap_get_capPTMappedAddress(cap);
 
-        word_t ptBitsLeft = PT_INDEX_BITS * CONFIG_PT_LEVELS + seL4_PageBits;
-        word_t slot = ((vptr >> ptBitsLeft) & MASK(PT_INDEX_BITS));
+        word_t ptBitsLeft = seL4_PageTableIndexBits * CONFIG_PT_LEVELS + seL4_PageBits;
+        word_t slot = ((vptr >> ptBitsLeft) & MASK(seL4_PageTableIndexBits));
         if (asid) {
             printf("pt_%p_%04lu (asid: %lu)\n",
                    lookupPTSlot(find_ret.vspace_root, vptr).ptSlot, slot, (long unsigned int)asid);
@@ -195,10 +195,10 @@ void print_object_arch(cap_t cap)
 
 static void riscv_obj_pt_print_slots(pte_t *lvl1pt, pte_t *pt, int level)
 {
-    word_t ptBitsLeft = PT_INDEX_BITS * level + seL4_PageBits;
+    word_t ptBitsLeft = seL4_PageTableIndexBits * level + seL4_PageBits;
 
-    for (word_t i = 0; i < BIT(ptBitsLeft + PT_INDEX_BITS); i += (1 << (ptBitsLeft))) {
-        word_t ptIndex = ((i >> ptBitsLeft) & MASK(PT_INDEX_BITS));
+    for (word_t i = 0; i < BIT(ptBitsLeft + seL4_PageTableIndexBits); i += (1 << (ptBitsLeft))) {
+        word_t ptIndex = ((i >> ptBitsLeft) & MASK(seL4_PageTableIndexBits));
         pte_t *ptSlot = pt + ptIndex;
         if (pte_ptr_get_valid(ptSlot)) {
             if (level) { /* pt */

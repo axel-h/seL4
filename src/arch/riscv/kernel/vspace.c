@@ -348,7 +348,7 @@ void copyGlobalMappings(pte_t *newLvl1pt)
     unsigned long i;
     pte_t *global_kernel_vspace = kernel_root_pageTable;
 
-    for (i = RISCV_GET_PT_INDEX(PPTR_BASE, 0); i < BIT(PT_INDEX_BITS); i++) {
+    for (i = RISCV_GET_PT_INDEX(PPTR_BASE, 0); i < BIT(seL4_PageTableIndexBits); i++) {
         newLvl1pt[i] = global_kernel_vspace[i];
     }
 }
@@ -399,14 +399,14 @@ lookupPTSlot_ret_t lookupPTSlot(pte_t *lvl1pt, vptr_t vptr)
      * final value of this after the walk is the size of the frame that can be inserted,
      * or already exists, in ret.ptSlot. The following formulation is an invariant of
      * the loop: */
-    ret.ptBitsLeft = PT_INDEX_BITS * level + seL4_PageBits;
-    ret.ptSlot = pt + ((vptr >> ret.ptBitsLeft) & MASK(PT_INDEX_BITS));
+    ret.ptBitsLeft = seL4_PageTableIndexBits * level + seL4_PageBits;
+    ret.ptSlot = pt + ((vptr >> ret.ptBitsLeft) & MASK(seL4_PageTableIndexBits));
 
     while (isPTEPageTable(ret.ptSlot) && likely(0 < level)) {
         level--;
-        ret.ptBitsLeft -= PT_INDEX_BITS;
+        ret.ptBitsLeft -= seL4_PageTableIndexBits;
         pt = getPPtrFromHWPTE(ret.ptSlot);
-        ret.ptSlot = pt + ((vptr >> ret.ptBitsLeft) & MASK(PT_INDEX_BITS));
+        ret.ptSlot = pt + ((vptr >> ret.ptBitsLeft) & MASK(seL4_PageTableIndexBits));
     }
 
     return ret;
@@ -1224,7 +1224,7 @@ exception_t benchmark_arch_map_logBuffer(word_t frame_cptr)
 
 #if __riscv_xlen == 32
     paddr_t physical_address = ksUserLogBuffer;
-    for (word_t i = 0; i < BIT(PT_INDEX_BITS); i += 1) {
+    for (word_t i = 0; i < BIT(seL4_PageTableIndexBits); i += 1) {
         kernel_image_level2_log_buffer_pt[i] = pte_next(physical_address, true);
         physical_address += BIT(PAGE_BITS);
     }
