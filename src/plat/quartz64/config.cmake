@@ -20,8 +20,6 @@ if(KernelPlatformQuartz64)
     declare_default_headers(
         TIMER_FREQUENCY 24000000
         MAX_IRQ 231
-        NUM_PPI 32
-        KERNEL_WCET 10u
         TIMER drivers/timer/arm_generic.h
         INTERRUPT_CONTROLLER arch/machine/gic_v3.h
     )

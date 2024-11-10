@@ -68,11 +68,9 @@ if(KernelPlatImx6)
         TIMER_FREQUENCY 498000000
         MAX_IRQ 159
         INTERRUPT_CONTROLLER arch/machine/gic_v2.h
-        NUM_PPI 32
         TIMER ${timer_file}
         CLK_SHIFT 41llu
         CLK_MAGIC 4415709349llu
-        KERNEL_WCET 10llu
         TIMER_PRECISION 2u
     )
 endif()
