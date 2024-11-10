@@ -57,51 +57,23 @@ static inline bool_t FORCE_INLINE clh_is_ipi_pending(word_t cpu)
     return big_kernel_lock.node_owners[cpu].ipi == 1;
 }
 
-static inline void *sel4_atomic_exchange(void *ptr, bool_t
-                                         irqPath, word_t cpu, int memorder)
-{
-    clh_qnode_t *prev;
-
-    if (memorder == __ATOMIC_RELEASE || memorder == __ATOMIC_ACQ_REL) {
-        __atomic_thread_fence(__ATOMIC_RELEASE);
-    } else if (memorder == __ATOMIC_SEQ_CST) {
-        __atomic_thread_fence(__ATOMIC_SEQ_CST);
-    }
-
-    while (!try_arch_atomic_exchange_rlx(&big_kernel_lock.head,
-                                         (void *) big_kernel_lock.node_owners[cpu].node,
-                                         (void **) &prev)) {
-        if (clh_is_ipi_pending(cpu)) {
-            /* we only handle irq_remote_call_ipi here as other type of IPIs
-             * are async and could be delayed. 'handleIPI' may not return
-             * based on value of the 'irqPath'. */
-            handleIPI(CORE_IRQ_TO_IRQT(cpu, irq_remote_call_ipi), irqPath);
-        }
-
-        arch_pause();
-    }
-
-    if (memorder == __ATOMIC_ACQUIRE || memorder == __ATOMIC_ACQ_REL) {
-        __atomic_thread_fence(__ATOMIC_ACQUIRE);
-    } else if (memorder == __ATOMIC_SEQ_CST) {
-        __atomic_thread_fence(__ATOMIC_SEQ_CST);
-    }
-
-    return prev;
-}
-
 static inline void FORCE_INLINE clh_lock_acquire(word_t cpu, bool_t irqPath)
 {
-    clh_qnode_t *prev;
-    big_kernel_lock.node_owners[cpu].node->value = CLHState_Pending;
+    clh_qnode_p_t volatile *node_owner = &big_kernel_lock.node_owners[cpu];
+    node_owner->node->value = CLHState_Pending;
 
-    prev = sel4_atomic_exchange(&big_kernel_lock.head, irqPath, cpu, __ATOMIC_ACQ_REL);
-
-    big_kernel_lock.node_owners[cpu].next = prev;
+#ifdef CONFIG_BKL_SWAP_MANUAL
+    node_owner->next = arch_atomic_exchange(&big_kernel_lock.head,
+                                            node_owner->node);
+#else
+    node_owner->next = __atomic_exchange_n(&big_kernel_lock.head,
+                                           node_owner->node,
+                                           __ATOMIC_ACQ_REL);
+#endif
 
     /* We do not have an __atomic_thread_fence here as this is already handled by the
      * atomic_exchange just above */
-    while (big_kernel_lock.node_owners[cpu].next->value != CLHState_Granted) {
+    while (node_owner->next->value != CLHState_Granted) {
         /* As we are in a loop we need to ensure that any loads of future iterations of the
          * loop are performed after this one */
         __atomic_thread_fence(__ATOMIC_ACQUIRE);
