@@ -166,10 +166,6 @@
 /* last accessible virtual address in user space */
 #define USER_TOP seL4_UserTop
 
-/* The first physical address to map into the kernel's physical memory
- * window */
-#define PADDR_BASE UL_CONST(0x0)
-
 /* The base address in virtual memory to use for the 1:1 physical memory
  * mapping */
 #ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
@@ -191,9 +187,9 @@
 #define KERNEL_ELF_PADDR_BASE_RAW PHYS_BASE_RAW
 
 /* The base address in virtual memory to use for the kernel ELF mapping */
-#define KERNEL_ELF_BASE (PPTR_BASE_OFFSET + KERNEL_ELF_PADDR_BASE)
+#define KERNEL_ELF_BASE (KERNEL_ELF_PADDR_BASE + (PPTR_TOP - PPTR_BASE))
 /* For use by the linker (only integer constants allowed) */
-#define KERNEL_ELF_BASE_RAW (PPTR_BASE_OFFSET + KERNEL_ELF_PADDR_BASE_RAW)
+#define KERNEL_ELF_BASE_RAW (KERNEL_ELF_PADDR_BASE_RAW + (PPTR_TOP - PPTR_BASE))
 
 /* This is a page table mapping at the end of the virtual address space
  * to map objects with 4KiB pages rather than 4MiB large pages. */
