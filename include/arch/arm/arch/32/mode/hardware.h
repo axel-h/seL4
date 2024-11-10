@@ -8,10 +8,9 @@
 
 #include <config.h>
 #include <util.h>
-#ifndef __ASSEMBLER__
 #include <arch/machine/hardware.h>
-#include <sel4/plat/api/constants.h>
-#endif
+#include <plat/machine/devices_gen.h> /* physBase */
+#include <sel4/plat/api/constants.h> /* seL4_UserTop */
 
 /*
  * 0xffe00000 asid id slot (arm/arch/kernel/vspace.h)

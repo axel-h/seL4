@@ -5,9 +5,10 @@
  */
 
 #pragma once
+
+/* includes by convention, regardless of a dependency */
 #include <config.h>
 #include <types.h>
-#include <basic_types.h>
 #include <linker.h>
 #include <machine/io.h>
-
+/* includes due to an actual dependency: none */

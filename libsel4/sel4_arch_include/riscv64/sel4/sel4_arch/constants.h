@@ -10,10 +10,6 @@
 #include <sel4/config.h>
 #include <sel4/macros.h>
 
-#define seL4_WordBits           64
-/* log 2 bits in a word */
-#define seL4_WordSizeBits       3
-
 #define seL4_SlotBits           5
 #ifdef CONFIG_KERNEL_MCS
 #define seL4_NotificationBits   6
