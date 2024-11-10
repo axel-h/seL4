@@ -69,11 +69,6 @@ MESSAGE_REGISTERS_FOR_ARCH = {
     "riscv64": 4,
 }
 
-WORD_CONST_SUFFIX_BITS = {
-    32: "ul",
-    64: "ull",
-}
-
 # Maximum number of words that will be in a message.
 MAX_MESSAGE_LENGTH = 64
 
@@ -81,13 +76,6 @@ MAX_MESSAGE_LENGTH = 64
 INCLUDES = [
     'sel4/config.h', 'sel4/types.h', 'sel4/sel4_arch/constants.h'
 ]
-
-TYPES = {
-    8:  "seL4_Uint8",
-    16: "seL4_Uint16",
-    32: "seL4_Uint32",
-    64: "seL4_Uint64"
-}
 
 
 class Type(object):
@@ -127,7 +115,7 @@ class Type(object):
         Return a string of C code that would be used in a function
         parameter declaration.
         """
-        return "%s %s" % (self.name, name)
+        return f"{self.name} {name}"
 
     def pointer(self):
         """
@@ -141,18 +129,19 @@ class Type(object):
         Return code for a C expression that gets word 'word_num'
         of this type.
         """
-        assert word_num == 0
-        return "%s" % var_name
+        if word_num == 0:
+            return f"{var_name}"
+        else:
+            raise AssertionError(f"invalid: word_num={word_num}")
 
     def double_word_expression(self, var_name, word_num, word_size):
-
-        assert word_num == 0 or word_num == 1
-
+        expr = f"(seL4_Uint{self.size_bits}) {var_name}"
         if word_num == 0:
-            return "({0}) {1}".format(TYPES[self.size_bits], var_name)
+            return expr
         elif word_num == 1:
-            return "({0}) ({1} >> {2})".format(TYPES[self.size_bits], var_name,
-                                               word_size)
+            return f"({expr} >> {word_size})"
+        else:
+            raise AssertionError(f"invalid: word_num={word_num}")
 
 
 class PointerType(Type):
@@ -165,11 +154,13 @@ class PointerType(Type):
         self.base_type = base_type
 
     def render_parameter_name(self, name):
-        return "%s *%s" % (self.name, name)
+        return f"{self.name} *{name}"
 
     def c_expression(self, var_name, word_num=0):
-        assert word_num == 0
-        return "*%s" % var_name
+        if word_num == 0:
+            return f"*{var_name}"
+        else:
+            raise AssertionError(f"invalid: word_num={word_num}")
 
     def pointer(self):
         raise NotImplementedError()
@@ -197,7 +188,7 @@ class StructType(Type):
 
         # Multiword structure.
         assert self.pass_by_reference()
-        return "%s->%s" % (var_name, member_name[word_num])
+        return f"{var_name}->{member_name[word_num]}"
 
 
 class BitFieldType(Type):
@@ -210,7 +201,7 @@ class BitFieldType(Type):
 
     def c_expression(self, var_name, word_num=0):
 
-        return "%s.words[%d]" % (var_name, word_num)
+        return f"{var_name}.words[{word_num}]"
 
 
 class Parameter(object):
@@ -478,10 +469,11 @@ def generate_marshal_expressions(params, num_mrs, structs, wordsize):
         # Part of a word?
         if num_bits < wordsize:
             expr = param.type.c_expression(param.name)
-            expr = "(%s & %#x%s)" % (expr, (1 << num_bits) - 1,
-                                     WORD_CONST_SUFFIX_BITS[wordsize])
+            mask = (1 << num_bits) - 1
+            expr = f"({expr} & LIBSEL4_WORD_CONST({mask:#x}))"
+
             if target_offset:
-                expr = "(%s << %d)" % (expr, target_offset)
+                expr = f"({expr} << {target_offset})"
             word_array[target_word].append(expr)
             return
 
@@ -526,18 +518,19 @@ def generate_unmarshal_expressions(params, wordsize):
         if num_bits > wordsize:
             result = []
             for x in range(num_bits // wordsize):
-                result.append("%%(w%d)s" % (x + first_word))
+                val = x + first_word
+                result.append(f"%(w{val})s")
             return result
 
         # Otherwise, bit packed.
         if num_bits == wordsize:
-            return ["%%(w%d)s" % first_word]
+            return [f"%(w{first_word})s"]
         elif bit_offset == 0:
-            return ["(%%(w%d)s & %#x)" % (
-                first_word, (1 << num_bits) - 1)]
+            mask = (1 << num_bits) - 1
+            return [f"(%(w{first_word})s & {mask:#x})"]
         else:
-            return ["(%%(w%d)s >> %d) & %#x" % (
-                first_word, bit_offset, (1 << num_bits) - 1)]
+            mask = (1 << num_bits) - 1
+            return [f"(%(w{first_word})s >> {bit_offset}) & {mask:#x}"]
 
     # Get their marshalling positions
     positions = get_parameter_positions(params, wordsize)
@@ -757,8 +750,8 @@ def generate_stub(arch, wordsize, interface_name, method_name, method_id, input_
             else:
                 if param.type.double_word:
                     result.append("\tresult.%s = ((%s)%s + ((%s)%s << 32));" %
-                                  (param.name, TYPES[64], words[0] % source_words,
-                                   TYPES[64], words[1] % source_words))
+                                  (param.name, 'seL4_Uint64', words[0] % source_words,
+                                   'seL4_Uint64', words[1] % source_words))
                 else:
                     for word in words:
                         result.append("\tresult.%s = %s;" % (param.name, word % source_words))
