@@ -575,40 +575,6 @@ macro(get_generated_files output target)
     get_property(${output} TARGET ${target} PROPERTY GENERATED_FILES)
 endmacro(get_generated_files)
 
-# This rule tries to emulate an 'autoconf' header. autoconf generated headers
-# were previously used as configuration, so this rule provides a way for previous
-# applications and libraries to build without modification. The config_list
-# is a list of 'prefix' values that have been passed to add_config_library
-# This generates a library with ${targetname} that when linked against
-# will allow code to simply #include <autoconf.h>
-function(generate_autoconf targetname config_list)
-    set(link_list "")
-    set(gen_list "")
-    set(config_header_contents "\n#pragma once\n\n")
-    foreach(config IN LISTS config_list)
-        list(APPEND link_list "${config}_Config")
-        get_generated_files(gens ${config}_Gen)
-        list(APPEND gen_list ${gens})
-        string(APPEND config_header_contents "#include <${config}/gen_config.h>\n")
-    endforeach()
-    set(config_dir "${CMAKE_CURRENT_BINARY_DIR}/autoconf")
-    set(config_file "${config_dir}/autoconf.h")
-
-    file(GENERATE OUTPUT "${config_file}" CONTENT "${config_header_contents}")
-    add_custom_target(${targetname}_Gen DEPENDS "${config_file}" ${gen_list})
-    add_library(${targetname} INTERFACE)
-    target_link_libraries(${targetname} INTERFACE ${link_list})
-    target_include_directories(${targetname} INTERFACE "${config_dir}")
-    add_dependencies(${targetname} ${targetname}_Gen ${config_file} ${gen_list})
-    # Set our GENERATED_FILES property to include the GENERATED_FILES of all of our input
-    # configurations, as well as the files we generated
-    set_property(
-        TARGET ${targetname}_Gen
-        APPEND
-        PROPERTY GENERATED_FILES "${config_file}" ${gen_list}
-    )
-endfunction(generate_autoconf)
-
 # Macro that allows for appending to a specified list only if all the supplied conditions are true
 macro(list_append_if list dep)
     set(list_append_local_list ${${list}})

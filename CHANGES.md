@@ -26,6 +26,7 @@ description indicates whether it is SOURCE-COMPATIBLE, BINARY-COMPATIBLE, or BRE
 ### Changes
 
 * Added `zynqmp` and `rpi4` to the set of verified AArch64 configs.
+* Removed autoconf.h for kernel and libsel4.
 
 ### Upgrade Notes
 

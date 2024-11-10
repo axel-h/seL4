@@ -351,30 +351,16 @@ include_directories(
 #
 
 include_directories($<TARGET_PROPERTY:kernel_Config,INTERFACE_INCLUDE_DIRECTORIES>)
-# The kernel expects to be able to include an 'autoconf.h' file at the moment.
-# So lets generate one for it to use
-# TODO: use the kernel_Config directly
-generate_autoconf(kernel_autoconf "kernel")
-include_directories($<TARGET_PROPERTY:kernel_autoconf,INTERFACE_INCLUDE_DIRECTORIES>)
 
-# Target for the config / autoconf headers. This is what all the other generated headers
+# Target for the config headers. This is what all the other generated headers
 # can depend upon
-add_custom_target(
-    kernel_config_headers
-    DEPENDS
-        kernel_autoconf_Gen
-        kernel_autoconf
-        kernel_Config
-        kernel_Gen
-)
+add_custom_target(kernel_config_headers DEPENDS kernel_Config kernel_Gen)
 
-# Target for all generated headers. We start with just all the config / autoconf headers
+# Target for all generated headers. We start with just all the config headers
 add_custom_target(kernel_headers DEPENDS kernel_config_headers)
 
 # Build up a list of generated files. needed for dependencies in custom commands
-get_generated_files(gen_files_list kernel_autoconf_Gen)
-get_generated_files(gen_files2 kernel_Gen)
-list(APPEND gen_files_list "${gen_files2}")
+get_generated_files(gen_files_list kernel_Gen)
 
 #
 # C source generation
@@ -705,7 +691,7 @@ add_executable(kernel.elf EXCLUDE_FROM_ALL ${asm_sources} kernel_all.c)
 target_include_directories(kernel.elf PRIVATE ${config_dir})
 target_include_directories(kernel.elf PRIVATE include)
 target_include_directories(kernel.elf PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/generated")
-target_link_libraries(kernel.elf PRIVATE kernel_Config kernel_autoconf)
+target_link_libraries(kernel.elf PRIVATE kernel_Config)
 set_property(TARGET kernel.elf APPEND_STRING PROPERTY LINK_FLAGS " -Wl,-T ${linker_lds_path} ")
 set_target_properties(kernel.elf PROPERTIES LINK_DEPENDS "${linker_lds_path}")
 add_dependencies(kernel.elf circular_includes)
@@ -743,10 +729,9 @@ if("${CMAKE_SOURCE_DIR}" STREQUAL "${CMAKE_CURRENT_SOURCE_DIR}")
             "${CMAKE_CURRENT_BINARY_DIR}/libsel4/include/"
             "${CMAKE_CURRENT_BINARY_DIR}/libsel4/arch_include/${KernelArch}/"
             "${CMAKE_CURRENT_BINARY_DIR}/libsel4/sel4_arch_include/${KernelSel4Arch}/"
-            # The following directories install the autoconf headers
+            # The following directories install the configuration headers
             "${CMAKE_CURRENT_BINARY_DIR}/gen_config/"
             "${CMAKE_CURRENT_BINARY_DIR}/libsel4/gen_config/"
-            "${CMAKE_CURRENT_BINARY_DIR}/libsel4/autoconf/"
         DESTINATION libsel4/include
         FILES_MATCHING
         PATTERN "*.h"
