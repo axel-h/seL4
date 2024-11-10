@@ -7,11 +7,16 @@
 
 cmake_minimum_required(VERSION 3.7.2)
 
-declare_platform(qemu-riscv-virt KernelPlatformQEMURiscVVirt PLAT_QEMU_RISCV_VIRT KernelArchRiscV)
+declare_platform(
+    "qemu-riscv-virt"
+    ARCH "riscv64" "riscv32"
+    NO_DEFAULT_DTS # there is no tools/dts/qemu-riscv-virt.dts
+    CAMKE_VAR "KernelPlatformQEMURiscVVirt"
+    # C_DEFINE defaults to CONFIG_PLAT_QEMU_RISCV_VIRT
+)
 
 if(KernelPlatformQEMURiscVVirt)
 
-    declare_seL4_arch(riscv64 riscv32)
     config_set(KernelOpenSBIPlatform OPENSBI_PLATFORM "generic")
     config_set(KernelPlatformFirstHartID FIRST_HART_ID 0)
 
@@ -79,7 +84,12 @@ if(KernelPlatformQEMURiscVVirt)
             endif()
 
             if(NOT DEFINED QEMU_CPU)
-                set(QEMU_CPU "rv${KernelWordSize}")
+                if(KernelSel4ArchRiscV32 OR KernelSel4ArchRiscV64)
+                    set(QEMU_CPU "rv${KernelWordSize}")
+                else()
+                    message(FATAL_ERROR "unsupported seL4 architecture: '${KernelSel4Arch}'")
+                endif()
+                message(STATUS "QEMU_CPU not set, defaulting to ${QEMU_CPU}")
             endif()
 
             if(NOT DEFINED QEMU_MEMORY)
@@ -90,11 +100,13 @@ if(KernelPlatformQEMURiscVVirt)
                     # the 32-bit version of seL4 can access physical addresses
                     # in the 32-bit range only.
                     set(QEMU_MEMORY "2048")
-                else()
+                elseif(KernelSel4ArchRiscV64)
                     # Having 3 GiB of memory as default seems a good trade-off.
                     # It's sufficient for test/demo systems, but still something
                     # the host can provide without running short on resources.
                     set(QEMU_MEMORY "3072")
+                else()
+                    message(FATAL_ERROR "unsupported seL4 architecture: '${KernelSel4Arch}'")
                 endif()
             endif()
 
@@ -184,10 +196,10 @@ if(KernelPlatformQEMURiscVVirt)
 
     endif()
 
-    list(APPEND KernelDTSList "${QEMU_DTS}" "${CMAKE_CURRENT_LIST_DIR}/overlay-qemu-riscv-virt.dts")
+    add_platform_dts("${QEMU_DTS}" "${CMAKE_CURRENT_LIST_DIR}/overlay-qemu-riscv-virt.dts")
 
     if(KernelSel4ArchRiscV32)
-        list(APPEND KernelDTSList "${CMAKE_CURRENT_LIST_DIR}/overlay-qemu-riscv-virt32.dts")
+        add_platform_dts("${CMAKE_CURRENT_LIST_DIR}/overlay-qemu-riscv-virt32.dts")
     endif()
 
     # QEMU emulates a SiFive PLIC/CLINT with 127 interrupt sources by default.

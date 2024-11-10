@@ -7,5 +7,4 @@
 
 include(${CMAKE_CURRENT_LIST_DIR}/include/ARM_HYP_verified_include.cmake)
 
-set(KernelPlatform "exynos5" CACHE STRING "")
-set(KernelARMPlatform "exynos5422" CACHE STRING "")
+set(KernelPlatform "exynos5422" CACHE STRING "")
