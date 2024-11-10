@@ -139,6 +139,13 @@ elseif(KernelArchRiscV)
 
     string(APPEND common_flags " -march=${_riscv_march} -mabi=${_riscv_mabi}")
 
+elseif(KernelArchACME)
+    if(KernelSel4ArchACME64)
+        # nothing to do
+    else()
+        message(FATAL_ERROR "unknown ACME KernelSel4Arch '${KernelSel4Arch}'")
+    endif()
+
 else()
     message(FATAL_ERROR "unknown KernelArch '${KernelArch}'")
 endif()
@@ -305,8 +312,11 @@ elseif(KernelArchRiscV)
     #
     KernelCommonFlags(-mcmodel=medany -msmall-data-limit=1024)
 
+elseif(KernelArchACME)
+    # nothing to do
+
 else()
-    message(FATAL_ERROR "unknown KernelArch '${KernelArch}'")
+    message(FATAL_ERROR "unsupported KernelArch '${KernelArch}'")
 endif()
 
 # Sort the C sources to ensure a stable layout of the final C file
@@ -665,10 +675,8 @@ cppfile(
 # Explain to cmake that our object file is actually a C input file
 set_property(SOURCE kernel_all.i PROPERTY LANGUAGE C)
 
-if(KernelArchARM)
-    set(linker_source "src/arch/arm/common_arm.lds")
-elseif(KernelArchRiscV)
-    set(linker_source "src/arch/riscv/common_riscv.lds")
+if(KernelArchARM OR KernelArchRiscV OR KernelArchACME)
+    set(linker_source "src/arch/${KernelArch}/common_${KernelArch}.lds")
 else()
     set(linker_source "src/plat/${KernelPlatform}/linker.lds")
 endif()

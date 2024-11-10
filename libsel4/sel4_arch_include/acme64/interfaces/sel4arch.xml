@@ -1,0 +1,12 @@
+<?xml version="1.0" ?>
+<!--
+     Copyright 2022, Axel Heider <axelheider@gmx.de>
+
+     SPDX-License-Identifier: BSD-2-Clause
+-->
+
+<api>
+
+<!-- nothing special in the 64-bit ACME architecture -->
+
+</api>

@@ -45,7 +45,7 @@ class Config:
         pass
 
 
-class ARMConfig(Config):
+class Config_ARM(Config):
     ''' Config class for ARM '''
     arch = 'arm'
 
@@ -72,19 +72,16 @@ class ARMConfig(Config):
         return ret, extra_reserved, physBase
 
 
-class RISCVConfig(Config):
-    ''' Config class for RISCV '''
+class Config_RISCV(Config):
+    ''' Abstract config class for RISC-V architecture'''
     arch = 'riscv'
-    MEGAPAGE_BITS_RV32 = 22  # 2^22 = 4 MiByte
-    MEGAPAGE_BITS_RV64 = 21  # 2^21 = 2 MiByte
-    MEGA_PAGE_SIZE_RV64 = 2**MEGAPAGE_BITS_RV64
 
     def get_bootloader_reserve(self) -> int:
         ''' OpenSBI reserved the first 2 MiByte of physical memory on rv64,
         which is exactly a megapage. For rv32 we use the same value for now, as
         this seems to work nicely - even if this is just half of the 4 MiByte
         magepages that exist there. '''
-        return self.MEGA_PAGE_SIZE_RV64
+        return 2**21
 
     def align_memory(self, regions: Set[Region]) -> List[Region]:
         ''' Currently the RISC-V port expects physBase to be the address that the
@@ -101,22 +98,50 @@ class RISCVConfig(Config):
 
         return ret, extra_reserved, physBase
 
+
+class Config_RISCV32(Config_RISCV):
+    ''' Config class for RISC-V 32-bit '''
+    MEGAPAGE_BITS = 22  # 2^22 = 4 MiByte
+
     def get_device_page_bits(self) -> int:
-        ''' Get page size in bits for mapping devices for this arch '''
-        if (self.sel4arch == 'riscv32'):
-            # 4MiB device pages
-            return self.MEGAPAGE_BITS_RV32
-        elif (self.sel4arch == 'riscv64'):
-            # 2MiB device pages for sv39 and sv48
-            return self.MEGAPAGE_BITS_RV64
-        raise ValueError('Unsupported sel4arch "{}" specified.'.format(self.sel4arch))
+        ''' kernel devices are mapped into megapages '''
+        return self.MEGAPAGE_BITS
+
+
+class Config_RISCV64(Config_RISCV):
+    ''' Config class for RISC-V 64-bit '''
+    MEGAPAGE_BITS = 21  # 2^21 = 2 MiByte
+
+    def get_device_page_bits(self) -> int:
+        ''' kernel devices are mapped into megapages '''
+        return self.MEGAPAGE_BITS
+
+
+class Config_ACME(Config):
+    ''' Config class for ACME '''
+    arch = 'acme'
+
+    def align_memory(self, regions: Set[Region]) -> List[Region]:
+        ''' Arm wants physBase to be the physical load address of the kernel. '''
+        ret = sorted(regions)
+        extra_reserved = set()
+        new = ret[0].align_base(self.get_kernel_phys_align())
+        resv = Region(ret[0].base, new.base - ret[0].base)
+        extra_reserved.add(resv)
+        ret[0] = new
+        physBase = ret[0].base
+        return ret, extra_reserved, physBase
 
 
 def get_arch_config(sel4arch: str, addrspace_max: int) -> Config:
     ''' Return an appropriate Config object for the given architecture '''
-    if sel4arch in ['aarch32', 'aarch64', 'arm_hyp']:
-        return ARMConfig(sel4arch, addrspace_max)
-    elif sel4arch in ['riscv32', 'riscv64']:
-        return RISCVConfig(sel4arch, addrspace_max)
-    else:
-        raise ValueError('Unsupported sel4arch "{}" specified.'.format(sel4arch))
+    for (ctor, arch_list) in [
+        (Config_ARM,     ['aarch32', 'aarch64', 'arm_hyp']),
+        (Config_RISCV32, ['riscv32']),
+        (Config_RISCV64, ['riscv64']),
+        (Config_ACME,    ['acme64']),
+    ]:
+        if sel4arch in arch_list:
+            return ctor(sel4arch, addrspace_max)
+
+    raise ValueError('Unsupported sel4arch "{}" specified.'.format(sel4arch))
