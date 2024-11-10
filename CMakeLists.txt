@@ -184,6 +184,9 @@ add_compile_options(
     -Wundef
     -Wpointer-arith
     -Wno-nonnull
+    -Wshadow
+    -Wconversion
+    -Wformat
     #-----------------------------------
     # Configure compiler settings.
     #-----------------------------------
