@@ -5,6 +5,7 @@
  */
 
 #include <assert.h>
+#include <types.h>
 #include <kernel/boot.h>
 #include <kernel/thread.h>
 #include <machine/io.h>
