@@ -234,49 +234,12 @@ extern volatile struct gic_rdist_map *gic_rdist_map[CONFIG_MAX_NUM_NODES];
 extern volatile struct gic_rdist_sgi_ppi_map *gic_rdist_sgi_ppi_map[CONFIG_MAX_NUM_NODES];
 
 /* Helpers */
-static inline void gic_enable_clr(word_t irq)
+
+static inline word_t get_gic_pending_interrupt(void)
 {
-    int word = IRQ_REG(irq);
-    int bit = IRQ_BIT(irq);
-    /* Using |= here is detrimental to your health */
-    if (irq < SPI_START) {
-        gic_rdist_sgi_ppi_map[CURRENT_CPU_INDEX()]->icenabler0 = BIT(bit);
-    } else {
-        gic_dist->icenablern[word] = BIT(bit);
-    }
-
-}
-
-static inline void gic_enable_set(word_t irq)
-{
-    int word = IRQ_REG(irq);
-    int bit = IRQ_BIT(irq);
-
-    if (irq < SPI_START) {
-        gic_rdist_sgi_ppi_map[CURRENT_CPU_INDEX()]->isenabler0 = BIT(bit);
-    } else {
-        gic_dist->isenablern[word] = BIT(bit);
-    }
-
-}
-
-static inline irq_t getActiveIRQ(void)
-{
-    irq_t irq;
-
-    if (!IS_IRQ_VALID(active_irq[CURRENT_CPU_INDEX()])) {
-        uint32_t val = 0;
-        SYSTEM_READ_WORD(ICC_IAR1_EL1, val);
-        active_irq[CURRENT_CPU_INDEX()] = val;
-    }
-
-    if (IS_IRQ_VALID(active_irq[CURRENT_CPU_INDEX()])) {
-        irq = CORE_IRQ_TO_IRQT(CURRENT_CPU_INDEX(), active_irq[CURRENT_CPU_INDEX()] & IRQ_MASK);
-    } else {
-        irq = irqInvalid;
-    }
-
-    return irq;
+    uint32_t val = 0;
+    SYSTEM_READ_WORD(ICC_IAR1_EL1, val);
+    return val;
 }
 
 /*
@@ -300,22 +263,34 @@ static inline void maskInterrupt(bool_t disable, irq_t irq)
     assert(!(IRQ_IS_PPI(irq)) || (IRQT_TO_CORE(irq) == getCurrentCPUIndex()));
 #endif
 
-    if (disable) {
-        gic_enable_clr(IRQT_TO_IRQ(irq));
-    } else {
-        gic_enable_set(IRQT_TO_IRQ(irq));
+    word_t hw_irq = IRQT_TO_IRQ(irq);
+    uint32_t val = BIT(hw_irq % 32);
+
+    if (hw_irq < SPI_START) { /* PPI */
+        int num = getCurrentCPUIndex();
+        if (num >= ARRAY_SIZE(gic_rdist_sgi_ppi_map)) {
+            printf("WARNING: invalid PPI IRQ %d\n", hw_irq);
+        } else if (disable) {
+            gic_rdist_sgi_ppi_map[num]->icenabler0 = val;
+        } else {
+            gic_rdist_sgi_ppi_map[num]->isenabler0 = val;
+        }
+    } else { /* SPI */
+        int num = hw_irq / 32;
+        if (num >= 32) {
+            printf("WARNING: invalid SPI IRQ %d\n", hw_irq);
+        } else if (disable) {
+            gic_dist->icenablern[num] = val;
+        } else {
+            gic_dist->isenablern[num] = val;
+        }
     }
 }
 
-static inline void ackInterrupt(irq_t irq)
+static inline void gic_ack_interrupt(word_t hw_irq)
 {
-    assert(IS_IRQ_VALID(active_irq[CURRENT_CPU_INDEX()])
-           && (active_irq[CURRENT_CPU_INDEX()] & IRQ_MASK) == IRQT_TO_IRQ(irq));
-
     /* Set End of Interrupt for active IRQ: ICC_EOIR1_EL1 */
-    SYSTEM_WRITE_WORD(ICC_EOIR1_EL1, active_irq[CURRENT_CPU_INDEX()]);
-    active_irq[CURRENT_CPU_INDEX()] = IRQ_NONE;
-
+    SYSTEM_WRITE_WORD(ICC_EOIR1_EL1, hw_irq);
 }
 
 #ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
