@@ -18,7 +18,7 @@
 SMP_STATE_DEFINE(smpStatedata_t, ksSMP[CONFIG_MAX_NUM_NODES] ALIGN(L1_CACHE_LINE_SIZE));
 
 /* Global count of how many cpus there are */
-word_t ksNumCPUs;
+volatile word_t ksNumCPUs;
 
 /* Pointer to the head of the scheduler queue for each priority */
 UP_STATE_DEFINE(tcb_queue_t, ksReadyQueues[NUM_READY_QUEUES]);

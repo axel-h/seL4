@@ -13,24 +13,20 @@
 
 #ifdef ENABLE_SMP_SUPPORT
 
-/* Index of next AP to boot, BSP has index zero */
-BOOT_DATA VISIBLE
-volatile word_t smp_aps_index = 1;
-
 #ifdef CONFIG_USE_LOGICAL_IDS
 BOOT_CODE static void update_logical_id_mappings(void)
 {
-    cpu_mapping.index_to_logical_id[getCurrentCPUIndex()] = apic_get_logical_id();
+    cpu_id_t idx = getCurrentCPUIndex();
+    logical_id_t id = apic_get_logical_id();
 
-    for (int i = 0; i < smp_aps_index; i++) {
-        if (apic_get_cluster(cpu_mapping.index_to_logical_id[getCurrentCPUIndex()]) ==
-            apic_get_cluster(cpu_mapping.index_to_logical_id[i])) {
+    cpu_mapping.index_to_logical_id[idx] = id;
 
-            cpu_mapping.other_indexes_in_cluster[getCurrentCPUIndex()] |= BIT(i);
-            cpu_mapping.other_indexes_in_cluster[i] |= BIT(getCurrentCPUIndex());
+    for (int i = 0; i < ksNumCPUs; i++) {
+        if (id == apic_get_cluster(cpu_mapping.index_to_logical_id[i])) {
+            cpu_mapping.other_indexes_in_cluster[idx] |= BIT(i);
+            cpu_mapping.other_indexes_in_cluster[i] |= BIT(idx);
         }
-    }
-}
+    }}
 #endif /* CONFIG_USE_LOGICAL_IDS */
 
 BOOT_CODE static void start_cpu(cpu_id_t cpu_id, paddr_t boot_fun_paddr)
@@ -52,26 +48,30 @@ BOOT_CODE void start_boot_aps(void)
 #endif /* CONFIG_USE_LOGICAL_IDS */
 
     /* startup APs one at a time as we use shared kernel boot stack */
-    while (smp_aps_index < boot_state.num_cpus) {
-        word_t current_ap_index = smp_aps_index;
+    while (ksNumCPUs < boot_state.num_cpus) {
+        word_t current_ap_index = ksNumCPUs;
+        cpu_id_t id = boot_state.cpus[current_ap_index]
 
         printf("Starting node #%lu with APIC ID %lu \n",
-               current_ap_index, boot_state.cpus[current_ap_index]);
+               current_ap_index, id);
 
         /* update cpu mapping for APs, store APIC ID of the next booting AP
          * as APIC ID are not continoius e.g. 0,2,1,3 for 4 cores with hyperthreading
          * we need to store a mapping to translate the index to real APIC ID */
-        cpu_mapping.index_to_cpu_id[current_ap_index] = boot_state.cpus[current_ap_index];
-        start_cpu(boot_state.cpus[current_ap_index], BOOT_NODE_PADDR);
+        cpu_mapping.index_to_cpu_id[current_ap_index] = id;
+        SMP_CLOCK_SYNC_TEST_UPDATE_TIME();
+        start_cpu(id, BOOT_NODE_PADDR);
 
         /* wait for current AP to boot up */
         while (smp_aps_index == current_ap_index) {
-#ifdef ENABLE_SMP_CLOCK_SYNC_TEST_ON_BOOT
-            NODE_STATE(ksCurTime) = getCurrentTime();
-            __atomic_thread_fence(__ATOMIC_ACQ_REL);
-#endif
+            SMP_CLOCK_SYNC_TEST_UPDATE_TIME();
         }
     }
+
+#ifdef ENABLE_SMP_CLOCK_SYNC_TEST_ON_BOOT
+    clock_sync_test_evaluation();
+#endif
+
 }
 
 BOOT_CODE bool_t copy_boot_code_aps(uint32_t mem_lower)
@@ -105,7 +105,7 @@ static BOOT_CODE bool_t try_boot_node(void)
     setCurrentVSpaceRoot(kpptr_to_paddr(X86_KERNEL_VSPACE_ROOT), 0);
     /* Sync up the compilers view of the world here to force the PD to actually
      * be set *right now* instead of delayed */
-    asm volatile("" ::: "memory");
+    x86_mfence();
 
     /* initialise the CPU, make sure legacy interrupts are disabled */
     if (!init_cpu(1)) {
@@ -123,25 +123,21 @@ static BOOT_CODE bool_t try_boot_node(void)
  * node #0 to possibly reallocate this memory */
 VISIBLE void boot_node(void)
 {
-    bool_t result;
+    mode_init_tls(ksNumCPUs);
 
-    mode_init_tls(smp_aps_index);
-    result = try_boot_node();
-
-    if (!result) {
+    if (!try_boot_node()) {
         fail("boot_node failed for some reason :(\n");
     }
 
     clock_sync_test();
-    smp_aps_index++;
+
+    ksNumCPUs++;
+    __atomic_thread_fence(__ATOMIC_RELEASE);
 
     /* grab BKL before leaving the kernel */
     NODE_LOCK_SYS;
 
     init_core_state(SchedulerAction_ChooseNewThread);
-    ARCH_NODE_STATE(x86KScurInterrupt) = int_invalid;
-    ARCH_NODE_STATE(x86KSPendingInterrupt) = int_invalid;
-
     schedule();
     activateThread();
 }
