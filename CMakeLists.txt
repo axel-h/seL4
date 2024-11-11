@@ -251,10 +251,13 @@ endif()
 
 if(KernelFWholeProgram)
     # KernelFWholeProgram is still an experimental feature and disabled by
-    # default. Clarify if the linker step via GCC actually cares about this
-    # parameter. There are also the options -flto and -fuse-linker-plugin that
-    # might be a more modern approach.
-    KernelCommonFlags(-fwhole-program)
+    # default. The option is supported by GCC only, not by Clang. Clarify if the
+    # linker step via GCC actually cares about this parameter. There are also
+    # the options -flto and -fuse-linker-plugin that might be a more modern
+    # approach.
+    if(CMAKE_C_COMPILER_ID STREQUAL "GNU")
+        KernelCommonFlags(-fwhole-program)
+    endif()
 endif()
 
 if(KernelDebugBuild)
