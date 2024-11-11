@@ -14,7 +14,6 @@ if(KernelPlatformRockpro64)
     set(KernelArmCortexA53 ON)
     set(KernelArchArmV8a ON)
     set(KernelArmGicV3 ON)
-    config_set(KernelARMPlatform ARM_PLAT "rockpro64")
     list(APPEND KernelDTSList "tools/dts/rockpro64.dts")
     list(APPEND KernelDTSList "src/plat/rockpro64/overlay-rockpro64.dts")
     declare_default_headers(

@@ -11,7 +11,6 @@ declare_platform(ariane KernelPlatformAriane PLAT_ARIANE KernelArchRiscV)
 
 if(KernelPlatformAriane)
     declare_seL4_arch(riscv64)
-    config_set(KernelRiscVPlatform RISCV_PLAT "ariane")
     config_set(KernelPlatformFirstHartID FIRST_HART_ID 0)
     config_set(KernelOpenSBIPlatform OPENSBI_PLATFORM "fpga/ariane")
     list(APPEND KernelDTSList "tools/dts/ariane.dts")
@@ -21,6 +20,4 @@ if(KernelPlatformAriane)
         TIMER_FREQUENCY 25000000
         INTERRUPT_CONTROLLER drivers/irq/riscv_plic0.h
     )
-else()
-    unset(KernelPlatformFirstHartID CACHE)
 endif()
