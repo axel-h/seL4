@@ -43,11 +43,9 @@ config_string(
     UNQUOTE
 )
 
-if(LibSel4StubsUseIPCBufferOnly)
-    set(buffer "--buffer")
-endif()
 
 RequireFile(SYSCALL_STUB_GEN_PATH syscall_stub_gen.py PATHS tools)
+RequireFile(SYSCALL_STUB_RS_GEN_PATH syscall_stub_gen_rs.py PATHS tools)
 
 add_config_library(sel4 "${configure_string}")
 
@@ -119,15 +117,10 @@ genbf(
     "${CMAKE_CURRENT_BINARY_DIR}/sel4_arch_include/${KernelSel4Arch}/sel4/sel4_arch/types_gen.h"
 )
 
-if(KernelIsMCS)
-    set(mcs --mcs)
-endif()
-if(KernelX86_64VTX64BitGuests)
-    set(64bitguests --x86-vtx-64-bit-guests)
-endif()
+set(SYSCALL_ID_GEN "include/sel4/syscall.h")
 add_custom_command(
-    OUTPUT include/sel4/syscall.h
-    COMMAND rm -f include/sel4/syscall.h
+    OUTPUT "${SYSCALL_ID_GEN}"
+    COMMAND rm -f "${SYSCALL_ID_GEN}"
     COMMAND
         "${XMLLINT_PATH}"
         --noout
@@ -136,12 +129,13 @@ add_custom_command(
             "${CMAKE_CURRENT_SOURCE_DIR}/include/api/syscall.xml"
     COMMAND
         ${PYTHON3} "${SYSCALL_ID_GEN_PATH}"
+        $<$<BOOL:${KernelIsMCS}>:--mcs>
         --xml "${CMAKE_CURRENT_SOURCE_DIR}/include/api/syscall.xml"
-        --libsel4_header include/sel4/syscall.h ${mcs}
+        --libsel4_header "${SYSCALL_ID_GEN}"
     DEPENDS
         "${SYSCALL_ID_GEN_PATH}" "${CMAKE_CURRENT_SOURCE_DIR}/include/api/syscall.xsd"
         "${CMAKE_CURRENT_SOURCE_DIR}/include/api/syscall.xml"
-    COMMENT "Generate syscall.h"
+    COMMENT "Generate ${SYSCALL_ID_GEN}"
     VERBATIM
 )
 
@@ -152,22 +146,42 @@ set(
     "${CMAKE_CURRENT_SOURCE_DIR}/include/interfaces/object-api.xml"
 )
 
+set(SYSCALL_STUB_GEN "include/interfaces/sel4_client.h")
 add_custom_command(
-    OUTPUT include/interfaces/sel4_client.h
-    COMMAND rm -f include/interfaces/sel4_client.h
+    OUTPUT "${SYSCALL_STUB_GEN}"
+    COMMAND rm -f "${SYSCALL_STUB_GEN}"
     COMMAND
-        "${PYTHON3}" "${SYSCALL_STUB_GEN_PATH}" ${buffer} ${64bitguests} ${mcs} -a
-        "${KernelSel4Arch}" -o include/interfaces/sel4_client.h ${interface_xmls}
+        "${PYTHON3}" "${SYSCALL_STUB_GEN_PATH}"
+        $<$<BOOL:${LibSel4StubsUseIPCBufferOnly}>:--buffer>
+        $<$<BOOL:${KernelX86_64VTX64BitGuests}>:--x86-vtx-64-bit-guests>
+        $<$<BOOL:${KernelIsMCS}>:--mcs>
+        -a "${KernelSel4Arch}" -o "${SYSCALL_STUB_GEN}" ${interface_xmls}
     DEPENDS "${SYSCALL_STUB_GEN_PATH}" ${interface_xmls}
-    COMMENT "Generate sel4_client.h"
+    COMMENT "Generate ${SYSCALL_STUB_GEN}"
+    VERBATIM
+)
+
+set(SYSCALL_STUB_RS_GEN "include/interfaces/sel4_client.rs")
+add_custom_command(
+    OUTPUT "${SYSCALL_STUB_RS_GEN}"
+    COMMAND rm -f "${SYSCALL_STUB_RS_GEN}"
+    COMMAND
+        "${PYTHON3}" "${SYSCALL_STUB_RS_GEN_PATH}"
+        $<$<BOOL:${LibSel4StubsUseIPCBufferOnly}>:--buffer>
+        $<$<BOOL:${KernelX86_64VTX64BitGuests}>:--x86-vtx-64-bit-guests>
+        $<$<BOOL:${KernelIsMCS}>:--mcs>
+        -a "${KernelSel4Arch}" -o "${SYSCALL_STUB_RS_GEN}" ${interface_xmls}
+    DEPENDS "${SYSCALL_STUB_RS_GEN_PATH}" ${interface_xmls}
+    COMMENT "Generate ${SYSCALL_STUB_RS_GEN}"
     VERBATIM
 )
 
 add_custom_target(
     sel4_generated
     DEPENDS
-        include/interfaces/sel4_client.h
-        include/sel4/syscall.h
+        "${SYSCALL_STUB_GEN}"
+        "${SYSCALL_STUB_RS_GEN}"
+        "${SYSCALL_ID_GEN}"
         include/sel4/invocation.h
         arch_include/${KernelArch}/sel4/arch/invocation.h
         include/sel4/shared_types_gen.h
