@@ -430,14 +430,12 @@ BOOT_CODE word_t arch_get_n_paging(v_region_t it_v_reg)
 
 /* Create an address space for the initial thread.
  * This includes page directory and page tables */
-BOOT_CODE cap_t create_it_address_space(cap_t root_cnode_cap, v_region_t it_v_reg)
+BOOT_CODE cap_t create_it_address_space(cap_t root_cnode_cap, seL4_BootInfo *bi,
+                                        v_region_t it_v_reg)
 {
     cap_t      vspace_cap;
     vptr_t     vptr;
-    seL4_SlotPos slot_pos_before;
-    seL4_SlotPos slot_pos_after;
 
-    slot_pos_before = ndks_boot.slot_pos_cur;
     copyGlobalMappings((vspace_root_t *)rootserver.vspace);
     cap_t pd_cap = create_it_page_directory_cap(cap_null_cap_new(), rootserver.vspace, 0, IT_ASID);
     write_slot(SLOT_PTR(pptr_of_cap(root_cnode_cap), seL4_CapInitThreadVSpace), pd_cap);
@@ -449,16 +447,12 @@ BOOT_CODE cap_t create_it_address_space(cap_t root_cnode_cap, v_region_t it_v_re
          vptr < it_v_reg.end;
          vptr += BIT(PT_INDEX_BITS + PAGE_BITS)) {
         if (!provide_cap(root_cnode_cap,
-                         create_it_page_table_cap(vspace_cap, it_alloc_paging(), vptr, IT_ASID))
+                         create_it_page_table_cap(vspace_cap, it_alloc_paging(), vptr, IT_ASID),
+                         &bi->userImagePaging)
            ) {
             return cap_null_cap_new();
         }
     }
-
-    slot_pos_after = ndks_boot.slot_pos_cur;
-    ndks_boot.bi_frame->userImagePaging = (seL4_SlotRegion) {
-        slot_pos_before, slot_pos_after
-    };
 
     return vspace_cap;
 }

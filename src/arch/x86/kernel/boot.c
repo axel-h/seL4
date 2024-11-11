@@ -107,8 +107,6 @@ BOOT_CODE bool_t init_sys_state(
     word_t        extra_bi_size = sizeof(seL4_BootInfoHeader);
     pptr_t        extra_bi_offset = 0;
     uint32_t      tsc_freq;
-    create_frames_of_region_ret_t create_frames_ret;
-    create_frames_of_region_ret_t extra_bi_ret;
 
     /* convert from physical addresses to kernel pptrs */
     region_t ui_reg             = paddr_to_pptr_reg(ui_info.p_reg);
@@ -173,7 +171,8 @@ BOOT_CODE bool_t init_sys_state(
     tsc_freq = tsc_init();
 
     /* populate the bootinfo frame */
-    populate_bi_frame(0, ksNumCPUs, ipcbuf_vptr, extra_bi_size);
+    seL4_BootInfo *bi = populate_bi_frame(0, ksNumCPUs, ipcbuf_vptr,
+                                          extra_bi_size);
     region_t extra_bi_region = {
         .start = rootserver.extra_bi,
         .end = rootserver.extra_bi + BIT(extra_bi_size_bits)
@@ -234,12 +233,12 @@ BOOT_CODE bool_t init_sys_state(
 
 #ifdef CONFIG_KERNEL_MCS
     /* set up sched control for each core */
-    init_sched_control(root_cnode_cap, CONFIG_MAX_NUM_NODES);
+    init_sched_control(root_cnode_cap, bi, CONFIG_MAX_NUM_NODES);
 #endif
 
     /* Construct an initial address space with enough virtual addresses
      * to cover the user image + ipc buffer and bootinfo frames */
-    it_vspace_cap = create_it_address_space(root_cnode_cap, it_v_reg);
+    it_vspace_cap = create_it_address_space(root_cnode_cap, bi, it_v_reg);
     if (cap_get_capType(it_vspace_cap) == cap_null_cap) {
         return false;
     }
@@ -252,18 +251,15 @@ BOOT_CODE bool_t init_sys_state(
     );
 
     /* create and map extra bootinfo region */
-    extra_bi_ret =
-        create_frames_of_region(
+    if (!create_frames_of_region(
             root_cnode_cap,
+            &bi->extraBIPages,
             it_vspace_cap,
             extra_bi_region,
             true,
-            pptr_to_paddr((void *)(extra_bi_region.start - extra_bi_frame_vptr))
-        );
-    if (!extra_bi_ret.success) {
+            pptr_to_paddr((void *)(extra_bi_region.start - extra_bi_frame_vptr)))) {
         return false;
     }
-    ndks_boot.bi_frame->extraBIPages = extra_bi_ret.region;
 
     /* create the initial thread's IPC buffer */
     ipcbuf_cap = create_ipcbuf_frame_cap(root_cnode_cap, it_vspace_cap, ipcbuf_vptr);
@@ -272,18 +268,11 @@ BOOT_CODE bool_t init_sys_state(
     }
 
     /* create all userland image frames */
-    create_frames_ret =
-        create_frames_of_region(
-            root_cnode_cap,
-            it_vspace_cap,
-            ui_reg,
-            true,
-            ui_info.pv_offset
-        );
-    if (!create_frames_ret.success) {
+    if (!create_frames_of_region(root_cnode_cap, &bi->userImageFrames,
+                                 it_vspace_cap, ui_reg, true,
+                                 ui_info.pv_offset)) {
         return false;
     }
-    ndks_boot.bi_frame->userImageFrames = create_frames_ret.region;
 
     /* create the initial thread's ASID pool */
     it_ap_cap = create_it_asid_pool(root_cnode_cap);
@@ -318,21 +307,21 @@ BOOT_CODE bool_t init_sys_state(
     }
 
     /* write number of IOMMU PT levels into bootinfo */
-    ndks_boot.bi_frame->numIOPTLevels = x86KSnumIOPTLevels;
+    bi->numIOPTLevels = x86KSnumIOPTLevels;
 
     /* write IOSpace master cap */
     write_slot(SLOT_PTR(pptr_of_cap(root_cnode_cap), seL4_CapIOSpace), master_iospace_cap());
 #else
-    ndks_boot.bi_frame->numIOPTLevels = -1;
+    bi->numIOPTLevels = -1;
 #endif
 
     /* create all of the untypeds. Both devices and kernel window memory */
-    if (!create_untypeds(root_cnode_cap)) {
+    if (!create_untypeds(root_cnode_cap, bi)) {
         return false;
     }
 
     /* finalise the bootinfo frame */
-    bi_finalise();
+    bi_finalise(bi);
 
     return true;
 }
