@@ -17,34 +17,36 @@
 #include <kernel/sporadic.h>
 #endif
 
-#define SEEN_SZ 256
-
-/* seen list - check this array before we print cnode and vspace */
-/* TBD: This is to avoid traversing the same cnode. It should be applied to object
+/* seen list - check this array before we print cnode and vspace.
+ * TBD: This is to avoid traversing the same cnode. It should be applied to object
  * as well since the extractor might comes across multiple caps to the same object.
  */
-cap_t seen_list[SEEN_SZ];
-int watermark = 0;
+static struct {
+    cap_t list[256];
+    unsigned int watermark;
+} seen_caps = {}; /* init with zeros */
 
 void add_to_seen(cap_t c)
 {
-    /* Won't work well if there're more than SEEN_SZ cnode */
-    if (watermark <= SEEN_SZ) {
-        seen_list[watermark] = c;
-        watermark++;
+    if (seen_caps.watermark > ARRAY_SIZE(seen_caps.list)) {
+        printf("can't add cap to seen list, no more slots left\n");
+        return;
     }
+
+    seen_caps.list[seen_caps.watermark] = c;
+    seen_caps.watermark++;
 }
 
 void reset_seen_list(void)
 {
-    memset(seen_list, 0, SEEN_SZ * sizeof(seen_list[0]));
-    watermark = 0;
+    memset(seen_caps.list, 0, sizeof(seen_caps.list));
+    seen_caps.watermark = 0;
 }
 
 bool_t seen(cap_t c)
 {
-    for (int i = 0; i < watermark; i++) {
-        if (same_cap(seen_list[i], c)) {
+    for (int i = 0; i < seen_caps.watermark; i++) {
+        if (same_cap(seen_caps.list[i], c)) {
             return true;
         }
     }
@@ -175,17 +177,22 @@ void obj_tcb_print_cnodes(cap_t cnode, tcb_t *tcb)
     obj_cnode_print_attrs(cnode);
     word_t radix = cap_cnode_cap_get_capCNodeRadix(cnode);
 
-    for (uint32_t i = 0; i < (1 << radix); i++) {
+    for (word_t i = 0; i < (1 << radix); i++) {
         lookupCapAndSlot_ret_t c = lookupCapAndSlot(tcb, i);
-        if (cap_get_capType(c.cap) == cap_untyped_cap) {
+        switch (cap_get_capType(c.cap)) {
+        case cap_untyped_cap:
             /* we need `cte_t *` to print out the slots of an untyped object */
             obj_ut_print_attrs(c.slot, tcb);
-
-        } else if (cap_get_capType(c.cap) == cap_cnode_cap) {
+            break;
+        case cap_cnode_cap:
             /* TBD: deal with nested cnodes */
-
-        } else if (cap_get_capType(c.cap) != cap_null_cap) {
+            break;
+        case cap_null_cap:
+            /* nothing to be done */
+            break;
+        default:
             print_object(c.cap);
+            break;
         }
     }
 }
@@ -324,20 +331,14 @@ void obj_irq_print_maps(void)
 {
     printf("irq maps {\n");
 
-    for (seL4_Word target = 0; target < CONFIG_MAX_NUM_NODES; target++) {
-        for (unsigned i = 0; i <= maxIRQ; i++) {
+    for (int target = 0; target < CONFIG_MAX_NUM_NODES; target++) {
+        for (int i = 0; i <= maxIRQ; i++) {
             irq_t irq = CORE_IRQ_TO_IRQT(target, i);
             if (isIRQActive(irq)) {
                 cap_t cap = intStateIRQNode[IRQT_TO_IDX(irq)].cap;
                 if (cap_get_capType(cap) != cap_null_cap) {
-                    printf("%d: 0x%lx_%lu_irq\n",
-                           i,
-#if defined(ENABLE_SMP_SUPPORT) && defined(CONFIG_ARCH_ARM)
-                           (long unsigned int)irq.irq,
-#else
-                           (long unsigned int)irq,
-#endif
-                           (long unsigned int)target);
+                    printf("%d: 0x%"SEL4_PRIx_word"_%d_irq\n",
+                           i, (word_t)IRQT_TO_IDX(irq), target);
                 }
             }
         }
@@ -349,13 +350,8 @@ void obj_irq_print_slots(cap_t irq_cap)
 {
     irq_t irq = IDX_TO_IRQT(cap_irq_handler_cap_get_capIRQ(irq_cap));
     if (isIRQActive(irq)) {
-        printf("0x%lx_%lu_irq {\n",
-#if defined(ENABLE_SMP_SUPPORT) && defined(CONFIG_ARCH_ARM)
-               (long unsigned int)irq.irq,
-#else
-               (long unsigned int)irq,
-#endif
-               (long unsigned int)IRQT_TO_CORE(irq));
+        printf("0x%"SEL4_PRIx_word"_%"SEL4_PRIu_word"_irq {\n",
+               (word_t)IRQT_TO_IDX(irq), (word_t)IRQT_TO_CORE(irq));
         cap_t ntfn_cap = intStateIRQNode[IRQT_TO_IDX(irq)].cap;
         if (cap_get_capType(ntfn_cap) != cap_null_cap) {
             printf("0x0: ");
@@ -367,6 +363,8 @@ void obj_irq_print_slots(cap_t irq_cap)
 
 void print_objects(void)
 {
+    printf("objects {\n");
+
     for (tcb_t *curr = NODE_STATE(ksDebugTCBs); curr != NULL; curr = TCB_PTR_DEBUG_PTR(curr)->tcbDebugNext) {
         if (root_or_idle_tcb(curr)) {
             continue;
@@ -389,10 +387,14 @@ void print_objects(void)
             obj_tcb_print_cnodes(TCB_PTR_CTE_PTR(curr, tcbCTable)->cap, curr);
         }
     }
+
+    printf("}\n");
 }
 
 void print_caps(void)
 {
+    printf("caps {\n");
+
     for (tcb_t *curr = NODE_STATE(ksDebugTCBs); curr != NULL; curr = TCB_PTR_DEBUG_PTR(curr)->tcbDebugNext) {
         if (root_or_idle_tcb(curr)) {
             continue;
@@ -401,6 +403,8 @@ void print_caps(void)
         obj_vtable_print_slots(curr);
         obj_tcb_print_slots(curr);
     }
+
+    printf("}\n");
 }
 
 void print_cap(cap_t cap)
@@ -514,5 +518,22 @@ void print_object(cap_t cap)
 }
 
 #endif /* CONFIG_PRINTING */
+
+void debug_capDL(void)
+{
+    /* Dumping requires some output channel. Currently, only printing to the
+     * kernel log is supported. One day, this might also go to a custom buffer,
+     * so enabling printing is no long a requirement
+     */
+#ifdef CONFIG_PRINTING
+    printf("arch %s\n", STRINGIFY(CONFIG_SEL4_ARCH));
+    print_objects();
+#endif /* CONFIG_PRINTING */
+    reset_seen_list();
+#ifdef CONFIG_PRINTING
+    print_caps();
+    obj_irq_print_maps();
+#endif /* CONFIG_PRINTING */
+}
 
 #endif /* CONFIG_DEBUG_BUILD */

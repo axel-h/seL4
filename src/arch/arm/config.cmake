@@ -261,6 +261,7 @@ add_sources(
         object/smmu.c
         object/smc.c
         smp/ipi.c
+    ASMFILES idle.S
 )
 
 add_bf_source_old("KernelArchARM" "structures.bf" "include/arch/arm" "arch/object")

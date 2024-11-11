@@ -6,13 +6,15 @@
  */
 
 #include <config.h>
+#include <util.h>
 #include <model/statedata.h>
 #include <arch/fastpath/fastpath.h>
 #include <arch/kernel/traps.h>
 #include <machine/debug.h>
 #include <api/syscall.h>
-#include <util.h>
+#include <api/debug.h>
 #include <arch/machine/hardware.h>
+#include <arch/sbi.h>
 #include <machine/fpu.h>
 
 #include <benchmark/benchmark_track.h>
@@ -210,6 +212,24 @@ void VISIBLE NORETURN c_handle_syscall(word_t cptr, word_t msgInfo, syscall_t sy
     ksKernelEntry.is_fastpath = 0;
 #endif /* DEBUG */
     slowpath(syscall);
+
+    UNREACHABLE();
+}
+
+/** DONT_TRANSLATE */
+void NORETURN VISIBLE NO_INLINE halt(void)
+{
+    /*
+     * ToDo: Halting is usually running the idle thread (which is basically
+     *       looping over a WFI) with all interrupts disabled. Even is we use
+     *       SBI to halt the platform here, we should still disbale all our
+     *       interrupts to play safe.
+     */
+#ifdef CONFIG_PRINTING
+    debug_msg_halt();
+#endif /* CONFIG_PRINTING */
+
+    sbi_shutdown();
 
     UNREACHABLE();
 }

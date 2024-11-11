@@ -222,9 +222,10 @@ static void arm64_cap_pud_print_slots(void *pgdSlot_or_vspace, vptr_t vptr)
 
 void obj_vtable_print_slots(tcb_t *tcb)
 {
-    if (isVTableRoot(TCB_PTR_CTE_PTR(tcb, tcbVTable)->cap) && !seen(TCB_PTR_CTE_PTR(tcb, tcbVTable)->cap)) {
-        add_to_seen(TCB_PTR_CTE_PTR(tcb, tcbVTable)->cap);
-        vspace_root_t *vspace = VSPACE_PTR(cap_vspace_cap_get_capVSBasePtr(TCB_PTR_CTE_PTR(tcb, tcbVTable)->cap));
+    cap_t cap = TCB_PTR_CTE_PTR(tcb, tcbVTable)->cap;
+    if (isVTableRoot(cap) && !seen(cap)) {
+        add_to_seen(cap);
+        vspace_root_t *vspace = VSPACE_PTR(cap_vspace_cap_get_capVSBasePtr(cap));
 
         /*
         * ARM hyp uses 3 level translation rather than the usual 4 level.
@@ -254,9 +255,10 @@ void obj_vtable_print_slots(tcb_t *tcb)
 
 void print_ipc_buffer_slot(tcb_t *tcb)
 {
+    cap_t cap = TCB_PTR_CTE_PTR(tcb, tcbVTable)->cap;
     word_t vptr = tcb->tcbIPCBuffer;
     printf("ipc_buffer_slot: ");
-    cap_frame_print_attrs_vptr(vptr, TCB_PTR_CTE_PTR(tcb, tcbVTable)->cap);
+    cap_frame_print_attrs_vptr(vptr, cap);
 }
 
 void print_cap_arch(cap_t cap)
@@ -459,9 +461,11 @@ void arm64_obj_pud_print_slots(void *pgdSlot_or_vspace)
 
 void obj_tcb_print_vtable(tcb_t *tcb)
 {
-    if (isVTableRoot(TCB_PTR_CTE_PTR(tcb, tcbVTable)->cap) && !seen(TCB_PTR_CTE_PTR(tcb, tcbVTable)->cap)) {
-        add_to_seen(TCB_PTR_CTE_PTR(tcb, tcbVTable)->cap);
-        vspace_root_t *vspace = VSPACE_PTR(cap_vspace_cap_get_capVSBasePtr(TCB_PTR_CTE_PTR(tcb, tcbVTable)->cap));
+    cap_t cap = TCB_PTR_CTE_PTR(tcb, tcbVTable)->cap;
+
+    if (isVTableRoot(cap) && !seen(cap)) {
+        add_to_seen(cap);
+        vspace_root_t *vspace = VSPACE_PTR(cap_vspace_cap_get_capVSBasePtr(cap));
 
         /*
          * ARM hyp uses 3 level translation rather than the usual 4 level.
@@ -484,27 +488,5 @@ void obj_tcb_print_vtable(tcb_t *tcb)
 }
 
 #endif /* CONFIG_PRINTING */
-
-void debug_capDL(void)
-{
-    printf("arch aarch64\n");
-    printf("objects {\n");
-#ifdef CONFIG_PRINTING
-    print_objects();
-#endif
-    printf("}\n");
-
-    printf("caps {\n");
-
-    /* reset the seen list */
-    reset_seen_list();
-
-#ifdef CONFIG_PRINTING
-    print_caps();
-    printf("}\n");
-
-    obj_irq_print_maps();
-#endif /* CONFIG_PRINTING */
-}
 
 #endif /* CONFIG_DEBUG_BUILD */

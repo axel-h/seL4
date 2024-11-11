@@ -44,9 +44,9 @@ typedef struct seL4_SlotRegion {
 } seL4_SlotRegion;
 
 typedef struct seL4_UntypedDesc {
-    seL4_Word  paddr;   /* physical address of untyped cap  */
-    seL4_Uint8 sizeBits;/* size (2^n) bytes of each untyped */
-    seL4_Uint8 isDevice;/* whether the untyped is a device  */
+    seL4_Word  paddr;    /* physical address of untyped cap  */
+    seL4_Uint8 sizeBits; /* size (2^n) bytes of each untyped */
+    seL4_Uint8 isDevice; /* whether the untyped is a device  */
     seL4_Uint8 padding[sizeof(seL4_Word) - 2 * sizeof(seL4_Uint8)];
 } seL4_UntypedDesc;
 
@@ -69,24 +69,41 @@ typedef struct seL4_BootInfo {
     seL4_Word         initThreadCNodeSizeBits; /* initial thread's root CNode size (2^n slots) */
     seL4_Domain       initThreadDomain; /* Initial thread's domain ID */
 #ifdef CONFIG_KERNEL_MCS
-    seL4_SlotRegion   schedcontrol; /* Caps to sched_control for each node */
+    seL4_SlotRegion   schedcontrol;    /* Caps to sched_control for each node */
 #endif
     seL4_SlotRegion   untyped;         /* untyped-object caps (untyped caps) */
-    seL4_UntypedDesc  untypedList[CONFIG_MAX_NUM_BOOTINFO_UNTYPED_CAPS]; /* information about each untyped */
-    /* the untypedList should be the last entry in this struct, in order
-     * to make this struct easier to represent in other languages */
+    seL4_UntypedDesc  untypedList[];   /* information about each untyped */
+    /* the untypedList[] must be the last entry */
 } seL4_BootInfo;
 
 /* The boot info frame must be large enough to hold the seL4_BootInfo data
  * structure. Due to internal restrictions, the size must be of the form 2^n and
  * the minimum is one page.
  */
+#define SEL4_BI_FRAME_PAGES  1
 #define seL4_BootInfoFrameBits  seL4_PageBits
-#define seL4_BootInfoFrameSize  LIBSEL4_BIT(seL4_BootInfoFrameBits)
+#define seL4_BootInfoFrameSize  (SEL4_BI_FRAME_PAGES * LIBSEL4_BIT(seL4_BootInfoFrameBits))
 
 SEL4_COMPILE_ASSERT(
     invalid_seL4_BootInfoFrameSize,
     sizeof(seL4_BootInfo) <= seL4_BootInfoFrameSize)
+
+/* The number of elements in untypedList[] is limited by the by the remaining
+ * space in the boot info frame. Currently, all remaining space is used. The
+ * calculation below is safe, because the size of the open array untypedList[]
+ * counts as zero for sizeof(seL4_BootInfo), but this still takes into account
+ * padding after the field 'untyped' to ensure a proper alignment of the array.
+ */
+#define MAX_NUM_BOOTINFO_UNTYPED_CAPS \
+    ((seL4_BootInfoFrameSize - sizeof(seL4_BootInfo)) / sizeof(seL4_UntypedDesc))
+
+/* The constant CONFIG_MAX_NUM_BOOTINFO_UNTYPED_CAPS was a CMake configuration
+ * parameter that allowed defining the size of the array untypedList[]. However,
+ * since the boot info frame always take full pages the array uses the remaining
+ * space. Thus, the configuration option has been dropped and the define is
+ * provided here for legacy compatibility.
+ */
+#define CONFIG_MAX_NUM_BOOTINFO_UNTYPED_CAPS  MAX_NUM_BOOTINFO_UNTYPED_CAPS
 
 /* If seL4_BootInfo.extraLen > 0, this indicate the presence of additional boot
  * information chunks starting at the offset seL4_BootInfoFrameSize. Userland

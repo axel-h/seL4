@@ -8,8 +8,10 @@
 
 #include <config.h>
 #include <types.h>
-#include <bootinfo.h>
+#include <sel4/bootinfo_types.h>
 #include <arch/bootinfo.h>
+
+#define S_REG_EMPTY (seL4_SlotRegion){ .start = 0, .end = 0 }
 
 /*
  * Resolve naming differences between the abstract specifications
@@ -43,7 +45,7 @@ p_region_t get_p_reg_kernel_img_boot(void);
 p_region_t get_p_reg_kernel_img(void);
 bool_t init_freemem(word_t n_available, const p_region_t *available,
                     word_t n_reserved, const region_t *reserved,
-                    v_region_t it_v_reg, word_t extra_bi_size_bits);
+                    v_region_t it_v_reg, word_t num_bi_pages);
 bool_t reserve_region(p_region_t reg);
 void write_slot(slot_ptr_t slot_ptr, cap_t cap);
 cap_t create_root_cnode(void);
@@ -56,10 +58,10 @@ void bi_finalise(void);
 void create_domain_cap(cap_t root_cnode_cap);
 
 cap_t create_ipcbuf_frame_cap(cap_t root_cnode_cap, cap_t pd_cap, vptr_t vptr);
-word_t calculate_extra_bi_size_bits(word_t extra_size);
 void populate_bi_frame(node_id_t node_id, word_t num_nodes, vptr_t ipcbuf_vptr,
-                       word_t extra_bi_size_bits);
-void create_bi_frame_cap(cap_t root_cnode_cap, cap_t pd_cap, vptr_t vptr);
+                       word_t num_bi_pages);
+bool_t create_bi_frame_caps(cap_t root_cnode_cap, cap_t pd_cap, vptr_t vptr,
+                            word_t bi_size);
 
 #ifdef CONFIG_KERNEL_MCS
 bool_t init_sched_control(cap_t root_cnode_cap, word_t num_nodes);
@@ -106,7 +108,6 @@ typedef struct {
     pptr_t asid_pool;
     pptr_t ipc_buf;
     pptr_t boot_info;
-    pptr_t extra_bi;
     pptr_t tcb;
 #ifdef CONFIG_KERNEL_MCS
     pptr_t sc;
@@ -138,12 +139,8 @@ static inline BOOT_CODE pptr_t it_alloc_paging(void)
 /* return the amount of paging structures required to cover v_reg */
 word_t arch_get_n_paging(v_region_t it_veg);
 
-#if defined(CONFIG_DEBUG_BUILD) && defined(ENABLE_SMP_SUPPORT) && defined(CONFIG_KERNEL_MCS) && !defined(CONFIG_PLAT_QEMU_ARM_VIRT)
-/* Test whether clocks are synchronised across nodes */
-#define ENABLE_SMP_CLOCK_SYNC_TEST_ON_BOOT
-#endif
-
 #ifdef ENABLE_SMP_CLOCK_SYNC_TEST_ON_BOOT
+/* Test whether clocks are synchronised across nodes */
 BOOT_CODE void clock_sync_test(void);
 #else
 #define clock_sync_test()

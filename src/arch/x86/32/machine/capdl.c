@@ -42,11 +42,4 @@ void obj_tcb_print_vtable(tcb_t *tcb)
     printf("obj_tcb_print_vtable not implemented for IA32\n");
 }
 
-void debug_capDL(void)
-{
-    printf("Debug CapDL snapshot not full implemented for IA32\n");
-    /* reset the seen list */
-    reset_seen_list();
-}
-
 #endif /* CONFIG_DEBUG_BUILD */
