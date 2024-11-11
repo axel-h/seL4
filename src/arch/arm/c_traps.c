@@ -19,6 +19,10 @@
 
 void VISIBLE NORETURN c_handle_undefined_instruction(void)
 {
+#ifdef CONFIG_KERNEL_MCS
+    updateTimestamp();
+#endif
+
     NODE_LOCK_SYS;
     c_entry_hook();
 
@@ -82,6 +86,10 @@ void NORETURN vm_fault_slowpath(vm_fault_type_t type)
 
 static inline void NORETURN c_handle_vm_fault(vm_fault_type_t type)
 {
+#ifdef CONFIG_KERNEL_MCS
+    updateTimestamp();
+#endif
+
     NODE_LOCK_SYS;
     c_entry_hook();
 
@@ -112,6 +120,10 @@ void VISIBLE NORETURN c_handle_instruction_fault(void)
 
 void VISIBLE NORETURN c_handle_interrupt(void)
 {
+#ifdef CONFIG_KERNEL_MCS
+    updateTimestamp();
+#endif
+
     NODE_LOCK_IRQ_IF(IRQT_TO_IRQ(getActiveIRQ()) != irq_remote_call_ipi);
     c_entry_hook();
 
@@ -149,6 +161,10 @@ void NORETURN slowpath(syscall_t syscall)
 
 void VISIBLE c_handle_syscall(word_t cptr, word_t msgInfo, syscall_t syscall)
 {
+#ifdef CONFIG_KERNEL_MCS
+    updateTimestamp();
+#endif
+
     NODE_LOCK_SYS;
 
     c_entry_hook();
@@ -165,6 +181,10 @@ void VISIBLE c_handle_syscall(word_t cptr, word_t msgInfo, syscall_t syscall)
 ALIGN(L1_CACHE_LINE_SIZE)
 void VISIBLE c_handle_fastpath_call(word_t cptr, word_t msgInfo)
 {
+#ifdef CONFIG_KERNEL_MCS
+    updateTimestamp();
+#endif
+
     NODE_LOCK_SYS;
 
     c_entry_hook();
@@ -202,6 +222,10 @@ void VISIBLE c_handle_fastpath_reply_recv(word_t cptr, word_t msgInfo, word_t re
 void VISIBLE c_handle_fastpath_reply_recv(word_t cptr, word_t msgInfo)
 #endif
 {
+#ifdef CONFIG_KERNEL_MCS
+    updateTimestamp();
+#endif
+
     NODE_LOCK_SYS;
 
     c_entry_hook();
@@ -223,6 +247,10 @@ void VISIBLE c_handle_fastpath_reply_recv(word_t cptr, word_t msgInfo)
 #ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
 VISIBLE NORETURN void c_handle_vcpu_fault(word_t hsr)
 {
+#ifdef CONFIG_KERNEL_MCS
+    updateTimestamp();
+#endif
+
     NODE_LOCK_SYS;
 
     c_entry_hook();

@@ -609,7 +609,7 @@ void chargeBudget(ticks_t consumed, bool_t canTimeoutFault)
             refill_budget_check(consumed);
         }
 
-        assert(refill_head(NODE_STATE(ksCurSC))->rAmount >= MIN_BUDGET);
+        assert(refill_sufficient(NODE_STATE(ksCurSC), 0));
         NODE_STATE(ksCurSC)->scConsumed += consumed;
     }
     NODE_STATE(ksConsumed) = 0;
