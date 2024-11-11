@@ -30,7 +30,7 @@
 BOOT_BSS static volatile word_t node_boot_lock;
 #endif
 
-BOOT_BSS static region_t res_reg[NUM_RESERVED_REGIONS];
+BOOT_BSS static p_region_t res_p_reg[NUM_RESERVED_REGIONS];
 
 BOOT_CODE cap_t create_mapped_it_frame_cap(cap_t pd_cap, pptr_t pptr, vptr_t vptr, asid_t asid, bool_t
                                            use_large, bool_t executable)
@@ -57,39 +57,36 @@ BOOT_CODE cap_t create_mapped_it_frame_cap(cap_t pd_cap, pptr_t pptr, vptr_t vpt
     return cap;
 }
 
-BOOT_CODE static bool_t arch_init_freemem(region_t ui_reg,
+BOOT_CODE static bool_t arch_init_freemem(p_region_t ui_p_reg,
                                           p_region_t dtb_p_reg,
                                           v_region_t it_v_reg,
                                           word_t extra_bi_size_bits)
 {
-    /* Reserve the kernel image region. This may look a bit awkward, as the
-     * symbols are a reference in the kernel image window, but all allocations
-     * are done in terms of the main kernel window, so we do some translation.
-     */
-    res_reg[0] = paddr_to_pptr_reg(get_p_reg_kernel_img());
+    /* reserve the kernel image region */
+    res_p_reg[0] = get_p_reg_kernel_img();
     int index = 1;
 
     /* add the dtb region, if it is not empty */
     if (dtb_p_reg.start) {
-        if (index >= ARRAY_SIZE(res_reg)) {
+        if (index >= ARRAY_SIZE(res_p_reg)) {
             printf("ERROR: no slot to add DTB to reserved regions\n");
             return false;
         }
-        res_reg[index] = paddr_to_pptr_reg(dtb_p_reg);
+        res_p_reg[index] = dtb_p_reg;
         index += 1;
     }
 
     /* reserve the user image region */
-    if (index >= ARRAY_SIZE(res_reg)) {
+    if (index >= ARRAY_SIZE(res_p_reg)) {
         printf("ERROR: no slot to add user image to reserved regions\n");
         return false;
     }
-    res_reg[index] = ui_reg;
+    res_p_reg[index] = ui_p_reg;
     index += 1;
 
     /* avail_p_regs comes from the auto-generated code */
     return init_freemem(ARRAY_SIZE(avail_p_regs), avail_p_regs,
-                        index, res_reg,
+                        index, res_p_reg,
                         it_v_reg, extra_bi_size_bits);
 }
 
@@ -203,9 +200,7 @@ static BOOT_CODE bool_t try_init_kernel(
     cap_t it_pd_cap;
     cap_t it_ap_cap;
     cap_t ipcbuf_cap;
-    region_t ui_reg = paddr_to_pptr_reg((p_region_t) {
-        ui_p_reg_start, ui_p_reg_end
-    });
+    p_region_t ui_p_reg = { .start = ui_p_reg_start, .end = ui_p_reg_end };
     word_t extra_bi_size = 0;
     pptr_t extra_bi_offset = 0;
     vptr_t extra_bi_frame_vptr;
@@ -290,7 +285,7 @@ static BOOT_CODE bool_t try_init_kernel(
     }
 
     /* make the free memory available to alloc_region() */
-    if (!arch_init_freemem(ui_reg, dtb_p_reg, it_v_reg, extra_bi_size_bits)) {
+    if (!arch_init_freemem(ui_p_reg, dtb_p_reg, it_v_reg, extra_bi_size_bits)) {
         printf("ERROR: free memory management initialization failed\n");
         return false;
     }
@@ -383,7 +378,7 @@ static BOOT_CODE bool_t try_init_kernel(
         create_frames_of_region(
             root_cnode_cap,
             it_pd_cap,
-            ui_reg,
+            paddr_to_pptr_reg(ui_p_reg),
             true,
             pv_offset
         );
