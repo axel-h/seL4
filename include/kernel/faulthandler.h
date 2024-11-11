@@ -6,20 +6,29 @@
 
 #pragma once
 
+#include <config.h>
+#include <types.h>
 #include <object.h>
 
-#ifdef CONFIG_KERNEL_MCS
-static inline bool_t validTimeoutHandler(tcb_t *tptr)
+/* ToDo: seems there is no dedicated value */
+#define NO_LOOKUP_FAULT lookup_fault_missing_capability_new(0)
+
+static bool_t isValidFaultHandlerEp(cap_t cap)
 {
-    return cap_get_capType(TCB_PTR_CTE_PTR(tptr, tcbTimeoutHandler)->cap) == cap_endpoint_cap;
+    return ((cap_get_capType(cap) == cap_endpoint_cap) &&
+            cap_endpoint_cap_get_capCanSend(cap) &&
+            (cap_endpoint_cap_get_capCanGrant(cap) ||
+             cap_endpoint_cap_get_capCanGrantReply(cap)));
 }
 
-void handleTimeout(tcb_t *tptr);
-void handleNoFaultHandler(tcb_t *tptr);
-bool_t sendFaultIPC(tcb_t *tptr, cap_t handlerCap, bool_t can_donate);
-#else
-exception_t sendFaultIPC(tcb_t *tptr);
-void handleDoubleFault(tcb_t *tptr, seL4_Fault_t ex1);
+#ifdef CONFIG_KERNEL_MCS
+
+static bool_t isValidFaultHandlerEpOrNull(cap_t cap)
+{
+    return ((cap_get_capType(cap) == cap_null_cap) || isValidFaultHandlerEp(cap));
+}
+
+bool_t tryRaisingTimeoutFault(tcb_t *tptr, word_t scBadge);
 #endif
 void handleFault(tcb_t *tptr);
 
