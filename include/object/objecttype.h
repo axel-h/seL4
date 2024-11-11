@@ -50,9 +50,34 @@ exception_t performInvocation_Reply(tcb_t *thread, cte_t *slot, bool_t canGrant)
 #endif
 word_t getObjectSize(word_t t, word_t userObjSize);
 
+static inline bool_t is_cap_null(cap_t cap)
+{
+    return (cap_get_capType(cap) == cap_null_cap);
+}
+
+static inline bool_t is_cap_endpoint(cap_t cap)
+{
+    return (cap_get_capType(cap) == cap_endpoint_cap);
+}
+
+static inline bool_t is_cap_irq_handler(cap_t cap)
+{
+    return (cap_get_capType(cap) == cap_irq_handler_cap);
+}
+
+static inline bool_t is_cap_frame(cap_t cap)
+{
+    return (cap_get_capType(cap) == cap_frame_cap);
+}
+
+static inline bool_t is_cap_page_table(cap_t cap)
+{
+    return (cap_get_capType(cap) == cap_page_table_cap);
+}
+
 static inline void postCapDeletion(cap_t cap)
 {
-    if (cap_get_capType(cap) == cap_irq_handler_cap) {
+    if (is_cap_irq_handler(cap)) {
         irq_t irq = IDX_TO_IRQT(cap_irq_handler_cap_get_capIRQ(cap));
         deletedIRQHandler(irq);
     } else if (isArchCap(cap)) {

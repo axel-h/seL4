@@ -712,12 +712,16 @@ static pte_t makeUserPagePTE(paddr_t paddr, vm_rights_t vm_rights, vm_attributes
 
 exception_t handleVMFault(tcb_t *thread, vm_fault_type_t vm_faultType)
 {
+    printf("Page fault in thread at PC %p\n", (void *)getRestartPC(thread));
+
     switch (vm_faultType) {
     case ARMDataAbort: {
         word_t addr, fault;
 
         addr = getFAR();
         fault = getDFSR();
+
+        printf("ARMDataAbort addr %p\n", (void *)addr);
 
 #ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
         /* use the IPA */
@@ -734,6 +738,8 @@ exception_t handleVMFault(tcb_t *thread, vm_fault_type_t vm_faultType)
 
         pc = getRestartPC(thread);
         fault = getIFSR();
+
+        printf("ARMPrefetchAbort PC %p\n", (void *)pc);
 
 #ifdef CONFIG_ARM_HYPERVISOR_SUPPORT
         if (ARCH_NODE_STATE(armHSVCPUActive)) {
@@ -1875,72 +1881,74 @@ void kernelDataAbort(word_t pc)
 #endif /* CONFIG_DEBUG_BUILD */
 
 #ifdef CONFIG_PRINTING
-typedef struct readWordFromVSpace_ret {
-    exception_t status;
-    word_t value;
-} readWordFromVSpace_ret_t;
 
-static readWordFromVSpace_ret_t readWordFromVSpace(vspace_root_t *pd, word_t vaddr)
+readWordFromVSpace_ret_t Arch_readWordFromVSpace(vspace_root_t *vspace_root,
+                                                 word_t vaddr)
 {
-    readWordFromVSpace_ret_t ret;
-    word_t offset;
-    pptr_t kernel_vaddr;
-    word_t *value;
-
-    lookupPTSlot_ret_t lookup_ret = lookupPTSlot(pd, vaddr);
+    lookupPTSlot_ret_t lookup_ret = lookupPTSlot(vspace_root, vaddr);
 
     /* Check that the returned slot is a page. */
     if (!pte_ptr_get_valid(lookup_ret.ptSlot) ||
         (pte_pte_table_ptr_get_present(lookup_ret.ptSlot) && lookup_ret.ptBitsLeft > PAGE_BITS)) {
-        ret.status = EXCEPTION_LOOKUP_FAULT;
-        return ret;
+        return (readWordFromVSpace_ret_t) {
+            .status = VSPACE_LOOKUP_FAILED,
+            .paddr  = 0,
+            .value  = 0
+        };
     }
 
-    offset = vaddr & MASK(lookup_ret.ptBitsLeft);
-    kernel_vaddr = (word_t)paddr_to_pptr(pte_page_ptr_get_page_base_address(lookup_ret.ptSlot));
-    value = (word_t *)(kernel_vaddr + offset);
+    paddr_t paddr_base = pte_page_ptr_get_page_base_address(lookup_ret.ptSlot)
+    word_t offset = vaddr & MASK(lookup_ret.ptBitsLeft);
 
-    ret.status = EXCEPTION_NONE;
-    ret.value = *value;
-    return ret;
+    paddr_t paddr = paddr_base + offset;
+    pptr_t pptr = (pptr_t)paddr_to_pptr(paddr);
+
+    /* Ensure this word-aligned, so the access does not fault */
+    if (!IS_ALIGNED(pptr, seL4_WordSizeBits)) {
+        return (readWordFromVSpace_ret_t) {
+            .status = VSPACE_INVALID_ALIGNMENT,
+            .paddr  = paddr,
+            .value  = 0
+        };
+    }
+
+    return (readWordFromVSpace_ret_t) {
+        .status = VSPACE_ACCESS_SUCCESSFUL,
+        .paddr  = paddr,
+        .value  = *((word_t *)pptr)
+    };
 }
 
-void Arch_userStackTrace(tcb_t *tptr)
+readWordFromStack_ret_t Arch_readWordFromThreadStack(tcb_t *tptr, word_t i)
 {
-    cap_t threadRoot;
-    vspace_root_t *vspaceRoot;
-    word_t sp;
+    /* Lookup the stack pointer and the requested stack word address. */
+    word_t sp = getRegister(tptr, SP_EL0);
+    /* Stack grows to lower addresses */
+    word_t vaddr = sp + (i * sizeof(word_t));
 
-    threadRoot = TCB_PTR_CTE_PTR(tptr, tcbVTable)->cap;
-
-    /* lookup the vspace root */
-    if (cap_get_capType(threadRoot) != cap_vspace_cap) {
-        printf("Invalid vspace\n");
-        return;
+    /* Lookup the vspace root. */
+    cap_t cap = TCB_PTR_CTE_PTR(tptr, tcbVTable)->cap;
+    if (cap_get_capType(cap) != cap_vtable_root_cap) {
+        /* Seems the capabilities are broken, so we can't access the stack. All
+         * we can tell the caller is the virtual address of the stack word.
+         */
+        return (readWordFromStack_ret_t) {
+            .status = VSPACE_INVALID_ROOT,
+            .vaddr  = vaddr,
+        };
     }
 
-    vspaceRoot = VSPACE_PTR(cap_vspace_cap_get_capVSBasePtr(threadRoot));
-    sp = getRegister(tptr, SP_EL0);
-
-    /* check for alignment so we don't have to worry about accessing
-     * words that might be on two different pages */
-    if (!IS_ALIGNED(sp, seL4_WordSizeBits)) {
-        printf("SP not aligned\n");
-        return;
-    }
-
-    for (unsigned int i = 0; i < CONFIG_USER_STACK_TRACE_LENGTH; i++) {
-        word_t address = sp + (i * sizeof(word_t));
-        readWordFromVSpace_ret_t result = readWordFromVSpace(vspaceRoot,
-                                                             address);
-        if (result.status == EXCEPTION_NONE) {
-            printf("0x%"SEL4_PRIx_word": 0x%"SEL4_PRIx_word"\n",
-                   address, result.value);
-        } else {
-            printf("0x%"SEL4_PRIx_word": INVALID\n", address);
-        }
-    }
+    vspace_root_t *vspace_root = VSPACE_PTR(cap_vtable_root_get_basePtr(cap));
+    readWordFromVSpace_ret_t ret = Arch_readWordFromVSpace(vspace_root, vaddr);
+    return (readWordFromStack_ret_t) {
+        .status      = ret.status,
+        .vspace_root = vspace_root,
+        .vaddr       = vaddr,
+        .paddr       = ret.paddr,
+        .value       = ret.value
+    };
 }
+
 #endif /* CONFIG_PRINTING */
 
 #if defined(CONFIG_KERNEL_LOG_BUFFER)

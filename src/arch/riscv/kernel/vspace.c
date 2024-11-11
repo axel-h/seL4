@@ -382,9 +382,14 @@ word_t *PURE lookupIPCBuffer(bool_t isReceiver, tcb_t *thread)
     }
 }
 
+static inline paddr_t getPaddrFromHWPTE(pte_t *pte)
+{
+    return pte_ptr_get_ppn(pte) << seL4_PageTableBits;
+}
+
 static inline pte_t *getPPtrFromHWPTE(pte_t *pte)
 {
-    return PTE_PTR(ptrFromPAddr(pte_ptr_get_ppn(pte) << seL4_PageTableBits));
+    return PTE_PTR(getPaddrFromHWPTE(pte));
 }
 
 lookupPTSlot_ret_t lookupPTSlot(pte_t *lvl1pt, vptr_t vptr)
@@ -582,7 +587,7 @@ void setVMRoot(tcb_t *tcb)
 
     threadRoot = TCB_PTR_CTE_PTR(tcb, tcbVTable)->cap;
 
-    if (cap_get_capType(threadRoot) != cap_page_table_cap) {
+    if (!is_cap_page_table(threadRoot)) {
         setVSpaceRoot(kpptr_to_paddr(&kernel_root_pageTable), 0);
         return;
     }
@@ -601,13 +606,13 @@ void setVMRoot(tcb_t *tcb)
 
 bool_t CONST isValidVTableRoot(cap_t cap)
 {
-    return (cap_get_capType(cap) == cap_page_table_cap &&
+    return (is_cap_page_table(cap) &&
             cap_page_table_cap_get_capPTIsMapped(cap));
 }
 
 exception_t checkValidIPCBuffer(vptr_t vptr, cap_t cap)
 {
-    if (unlikely(cap_get_capType(cap) != cap_frame_cap)) {
+    if (unlikely(!is_cap_frame(cap))) {
         userError("Requested IPC Buffer is not a frame cap.");
         current_syscall_error.type = seL4_IllegalOperation;
         return EXCEPTION_SYSCALL_ERROR;
@@ -1156,34 +1161,72 @@ exception_t performPageInvocationUnmap(cap_t cap, cte_t *ctSlot)
 }
 
 #ifdef CONFIG_PRINTING
-void Arch_userStackTrace(tcb_t *tptr)
+
+readWordFromVSpace_ret_t Arch_readWordFromVSpace(vspace_root_t *vspace_root,
+                                                 word_t vaddr)
 {
-    cap_t threadRoot = TCB_PTR_CTE_PTR(tptr, tcbVTable)->cap;
-    if (!isValidVTableRoot(threadRoot)) {
-        printf("Invalid vspace\n");
-        return;
+    lookupPTSlot_ret_t ret = lookupPTSlot(vspace_root, vaddr);
+    if (!pte_ptr_get_valid(ret.ptSlot) || isPTEPageTable(ret.ptSlot)) {
+        return (readWordFromVSpace_ret_t) {
+            .status = VSPACE_LOOKUP_FAILED,
+            .paddr  = 0,
+            .value  = 0
+        };
     }
 
-    word_t sp = getRegister(tptr, SP);
-    if (!IS_ALIGNED(sp, seL4_WordSizeBits)) {
-        printf("SP %p not aligned", (void *) sp);
-        return;
+    paddr_t paddr_base = getPaddrFromHWPTE(ret.ptSlot);
+    word_t offset = vaddr & MASK(ret.ptBitsLeft);
+
+    paddr_t paddr = paddr_base + offset;
+    pptr_t pptr = (pptr_t)paddr_to_pptr(paddr);
+
+    /* Ensure this word-aligned, so the access does not fault */
+    if (!IS_ALIGNED(pptr, seL4_WordSizeBits)) {
+        return (readWordFromVSpace_ret_t) {
+            .status = VSPACE_INVALID_ALIGNMENT,
+            .paddr  = paddr,
+            .value  = 0
+        };
     }
 
-    pte_t *vspace_root = PTE_PTR(pptr_of_cap(threadRoot));
-    for (int i = 0; i < CONFIG_USER_STACK_TRACE_LENGTH; i++) {
-        word_t address = sp + (i * sizeof(word_t));
-        lookupPTSlot_ret_t ret = lookupPTSlot(vspace_root, address);
-        if (pte_ptr_get_valid(ret.ptSlot) && !isPTEPageTable(ret.ptSlot)) {
-            pptr_t pptr = (pptr_t)(getPPtrFromHWPTE(ret.ptSlot));
-            word_t *value = (word_t *)((word_t)pptr + (address & MASK(ret.ptBitsLeft)));
-            printf("0x%lx: 0x%lx\n", (long) address, (long) *value);
-        } else {
-            printf("0x%lx: INVALID\n", (long) address);
-        }
-    }
+    return (readWordFromVSpace_ret_t) {
+        .status = VSPACE_ACCESS_SUCCESSFUL,
+        .paddr  = paddr,
+        .value  = *((word_t *)pptr)
+    };
 }
-#endif
+
+readWordFromStack_ret_t Arch_readWordFromThreadStack(tcb_t *tptr, word_t i)
+{
+    /* Lookup the stack pointer and the requested stack word address. */
+    word_t sp = getRegister(tptr, SP);
+    /* Stack grows to lower addresses */
+    word_t vaddr = sp + (i * sizeof(word_t));
+
+    /* Lookup the vspace root. */
+    cap_t cap = TCB_PTR_CTE_PTR(tptr, tcbVTable)->cap;
+    if (!isValidVTableRoot(cap)) {
+        /* Seems the capabilities are broken, so we can't access the stack. All
+         * we can tell the caller is the virtual address of the stack word.
+         */
+        return (readWordFromStack_ret_t) {
+            .status = VSPACE_INVALID_ROOT,
+            .vaddr  = vaddr,
+        };
+    }
+
+    vspace_root_t *vspace_root = VSPACE_PTR(pptr_of_cap(cap));
+    readWordFromVSpace_ret_t ret = Arch_readWordFromVSpace(vspace_root, vaddr);
+    return (readWordFromStack_ret_t) {
+        .status      = ret.status,
+        .vspace_root = vspace_root,
+        .vaddr       = vaddr,
+        .paddr       = ret.paddr,
+        .value       = ret.value
+    };
+}
+
+#endif /* CONFIG_PRINTING */
 
 #ifdef CONFIG_KERNEL_LOG_BUFFER
 exception_t benchmark_arch_map_logBuffer(word_t frame_cptr)
