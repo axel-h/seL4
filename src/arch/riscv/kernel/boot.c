@@ -30,7 +30,7 @@
 BOOT_BSS static volatile word_t node_boot_lock;
 #endif
 
-BOOT_BSS static region_t res_reg[NUM_RESERVED_REGIONS];
+BOOT_BSS static p_region_t res_p_reg[NUM_RESERVED_REGIONS];
 
 BOOT_CODE cap_t create_mapped_it_frame_cap(cap_t pd_cap, pptr_t pptr, vptr_t vptr, asid_t asid, bool_t
                                            use_large, bool_t executable)
@@ -57,39 +57,36 @@ BOOT_CODE cap_t create_mapped_it_frame_cap(cap_t pd_cap, pptr_t pptr, vptr_t vpt
     return cap;
 }
 
-BOOT_CODE static bool_t arch_init_freemem(region_t ui_reg,
+BOOT_CODE static bool_t arch_init_freemem(p_region_t ui_p_reg,
                                           p_region_t dtb_p_reg,
                                           v_region_t it_v_reg,
                                           word_t extra_bi_size_bits)
 {
-    /* Reserve the kernel image region. This may look a bit awkward, as the
-     * symbols are a reference in the kernel image window, but all allocations
-     * are done in terms of the main kernel window, so we do some translation.
-     */
-    res_reg[0] = paddr_to_pptr_reg(get_p_reg_kernel_img());
+    /* reserve the kernel image region */
+    res_p_reg[0] = get_p_reg_kernel_img();
     int index = 1;
 
     /* add the dtb region, if it is not empty */
     if (dtb_p_reg.start) {
-        if (index >= ARRAY_SIZE(res_reg)) {
+        if (index >= ARRAY_SIZE(res_p_reg)) {
             printf("ERROR: no slot to add DTB to reserved regions\n");
             return false;
         }
-        res_reg[index] = paddr_to_pptr_reg(dtb_p_reg);
+        res_p_reg[index] = dtb_p_reg;
         index += 1;
     }
 
     /* reserve the user image region */
-    if (index >= ARRAY_SIZE(res_reg)) {
+    if (index >= ARRAY_SIZE(res_p_reg)) {
         printf("ERROR: no slot to add user image to reserved regions\n");
         return false;
     }
-    res_reg[index] = ui_reg;
+    res_p_reg[index] = ui_p_reg;
     index += 1;
 
     /* avail_p_regs comes from the auto-generated code */
     return init_freemem(ARRAY_SIZE(avail_p_regs), avail_p_regs,
-                        index, res_reg,
+                        index, res_p_reg,
                         it_v_reg, extra_bi_size_bits);
 }
 
@@ -203,16 +200,12 @@ static BOOT_CODE bool_t try_init_kernel(
     cap_t it_pd_cap;
     cap_t it_ap_cap;
     cap_t ipcbuf_cap;
-    region_t ui_reg = paddr_to_pptr_reg((p_region_t) {
-        ui_p_reg_start, ui_p_reg_end
-    });
+    p_region_t ui_p_reg = { .start = ui_p_reg_start, .end = ui_p_reg_end };
     word_t extra_bi_size = 0;
     pptr_t extra_bi_offset = 0;
     vptr_t extra_bi_frame_vptr;
     vptr_t bi_frame_vptr;
     vptr_t ipcbuf_vptr;
-    create_frames_of_region_ret_t create_frames_ret;
-    create_frames_of_region_ret_t extra_bi_ret;
 
     /* convert from physical addresses to userland vptrs */
     v_region_t ui_v_reg = {
@@ -290,7 +283,7 @@ static BOOT_CODE bool_t try_init_kernel(
     }
 
     /* make the free memory available to alloc_region() */
-    if (!arch_init_freemem(ui_reg, dtb_p_reg, it_v_reg, extra_bi_size_bits)) {
+    if (!arch_init_freemem(ui_p_reg, dtb_p_reg, it_v_reg, extra_bi_size_bits)) {
         printf("ERROR: free memory management initialization failed\n");
         return false;
     }
@@ -348,23 +341,19 @@ static BOOT_CODE bool_t try_init_kernel(
 
     /* create and map extra bootinfo region */
     if (extra_bi_size > 0) {
-        region_t extra_bi_region = {
+        p_region_t extra_bi_p_reg = pptr_to_paddr_reg((region_t) {
             .start = rootserver.extra_bi,
             .end = rootserver.extra_bi + extra_bi_size
-        };
-        extra_bi_ret =
-            create_frames_of_region(
-                root_cnode_cap,
-                it_pd_cap,
-                extra_bi_region,
-                true,
-                pptr_to_paddr((void *)extra_bi_region.start) - extra_bi_frame_vptr
-            );
-        if (!extra_bi_ret.success) {
+        });
+        sword_t extra_bi_pv_offset = extra_bi_p_reg.start - extra_bi_frame_vptr;
+        if (!create_frames_of_phys_region(root_cnode_cap,
+                                          it_pd_cap,
+                                          extra_bi_p_reg,
+                                          extra_bi_pv_offset,
+                                          &ndks_boot.bi_frame->extraBIPages)) {
             printf("ERROR: mapping extra boot info to initial thread failed\n");
             return false;
         }
-        ndks_boot.bi_frame->extraBIPages = extra_bi_ret.region;
     }
 
 #ifdef CONFIG_KERNEL_MCS
@@ -378,20 +367,17 @@ static BOOT_CODE bool_t try_init_kernel(
         return false;
     }
 
-    /* create all userland image frames */
-    create_frames_ret =
-        create_frames_of_region(
-            root_cnode_cap,
-            it_pd_cap,
-            ui_reg,
-            true,
-            pv_offset
-        );
-    if (!create_frames_ret.success) {
-        printf("ERROR: could not create all userland image frames\n");
+    /* Create image frames for the part of the user image that is visible in the
+     * kernel window.
+     */
+    if (!create_frames_of_phys_region(root_cnode_cap,
+                                      it_pd_cap,
+                                      ui_p_reg,
+                                      pv_offset,
+                                      &ndks_boot.bi_frame->userImageFrames)) {
+        printf("ERROR: could not create userland image frames\n");
         return false;
     }
-    ndks_boot.bi_frame->userImageFrames = create_frames_ret.region;
 
     /* create the initial thread's ASID pool */
     it_ap_cap = create_it_asid_pool(root_cnode_cap);
