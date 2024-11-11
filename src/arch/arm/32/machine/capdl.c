@@ -153,9 +153,10 @@ static void arm32_cap_pt_print_slots(pte_t *pt)
 
 void obj_vtable_print_slots(tcb_t *tcb)
 {
-    if (isValidVTableRoot(TCB_PTR_CTE_PTR(tcb, tcbVTable)->cap) && !seen(TCB_PTR_CTE_PTR(tcb, tcbVTable)->cap)) {
-        add_to_seen(TCB_PTR_CTE_PTR(tcb, tcbVTable)->cap);
-        pde_t *pd = (pde_t *)pptr_of_cap(TCB_PTR_CTE_PTR(tcb, tcbVTable)->cap);
+    cap_t cap = TCB_PTR_CTE_PTR(tcb, tcbVTable)->cap;
+    if (isValidVTableRoot(cap) && !seen(cap)) {
+        add_to_seen(cap);
+        pde_t *pd = (pde_t *)pptr_of_cap(cap);
         vm_page_size_t page_size;
         printf("%p_pd {\n", pd);
 
@@ -257,8 +258,9 @@ static void cap_frame_print_attrs_vptr(word_t vptr, pde_t *pd)
 
 void print_ipc_buffer_slot(tcb_t *tcb)
 {
+    cap_t cap = TCB_PTR_CTE_PTR(tcb, tcbVTable)->cap;
     word_t vptr = tcb->tcbIPCBuffer;
-    asid_t asid = cap_page_directory_cap_get_capPDMappedASID(TCB_PTR_CTE_PTR(tcb, tcbVTable)->cap);
+    asid_t asid = cap_page_directory_cap_get_capPDMappedASID(cap);
     findPDForASID_ret_t find_ret = findPDForASID(asid);
     printf("ipc_buffer_slot: ");
     cap_frame_print_attrs_vptr(vptr, find_ret.pd);
@@ -447,9 +449,10 @@ static void arm32_obj_pt_print_slots(pte_t *pt)
 
 void obj_tcb_print_vtable(tcb_t *tcb)
 {
-    if (isValidVTableRoot(TCB_PTR_CTE_PTR(tcb, tcbVTable)->cap) && !seen(TCB_PTR_CTE_PTR(tcb, tcbVTable)->cap)) {
-        add_to_seen(TCB_PTR_CTE_PTR(tcb, tcbVTable)->cap);
-        pde_t *pd = (pde_t *)pptr_of_cap(TCB_PTR_CTE_PTR(tcb, tcbVTable)->cap);
+    cap_t cap = TCB_PTR_CTE_PTR(tcb, tcbVTable)->cap;
+    if (isValidVTableRoot(cap) && !seen(cap)) {
+        add_to_seen(cap);
+        pde_t *pd = (pde_t *)pptr_of_cap(cap);
         resolve_ret_t ret = {};
         printf("%p_pd = pd\n", pd);
 
@@ -501,28 +504,5 @@ void obj_tcb_print_vtable(tcb_t *tcb)
 }
 
 #endif /* CONFIG_PRINTING */
-
-void debug_capDL(void)
-{
-    printf("arch aarch32\n");
-    printf("objects {\n");
-#ifdef CONFIG_PRINTING
-    print_objects();
-#endif
-    printf("}\n");
-
-    printf("caps {\n");
-
-    /* reset the seen list */
-    reset_seen_list();
-
-#ifdef CONFIG_PRINTING
-    print_caps();
-    printf("}\n");
-
-    obj_irq_print_maps();
-#endif /* CONFIG_PRINTING */
-}
-
 
 #endif /* CONFIG_DEBUG_BUILD */
