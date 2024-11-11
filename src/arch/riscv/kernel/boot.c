@@ -30,8 +30,6 @@
 BOOT_BSS static volatile word_t node_boot_lock;
 #endif
 
-BOOT_BSS static region_t res_reg[NUM_RESERVED_REGIONS];
-
 BOOT_CODE cap_t create_mapped_it_frame_cap(cap_t pd_cap, pptr_t pptr, vptr_t vptr, asid_t asid, bool_t
                                            use_large, bool_t executable)
 {
@@ -55,42 +53,6 @@ BOOT_CODE cap_t create_mapped_it_frame_cap(cap_t pd_cap, pptr_t pptr, vptr_t vpt
 
     map_it_frame_cap(pd_cap, cap);
     return cap;
-}
-
-BOOT_CODE static bool_t arch_init_freemem(region_t ui_reg,
-                                          p_region_t dtb_p_reg,
-                                          v_region_t it_v_reg,
-                                          word_t extra_bi_size_bits)
-{
-    /* Reserve the kernel image region. This may look a bit awkward, as the
-     * symbols are a reference in the kernel image window, but all allocations
-     * are done in terms of the main kernel window, so we do some translation.
-     */
-    res_reg[0] = paddr_to_pptr_reg(get_p_reg_kernel_img());
-    int index = 1;
-
-    /* add the dtb region, if it is not empty */
-    if (dtb_p_reg.start) {
-        if (index >= ARRAY_SIZE(res_reg)) {
-            printf("ERROR: no slot to add DTB to reserved regions\n");
-            return false;
-        }
-        res_reg[index] = paddr_to_pptr_reg(dtb_p_reg);
-        index += 1;
-    }
-
-    /* reserve the user image region */
-    if (index >= ARRAY_SIZE(res_reg)) {
-        printf("ERROR: no slot to add user image to reserved regions\n");
-        return false;
-    }
-    res_reg[index] = ui_reg;
-    index += 1;
-
-    /* avail_p_regs comes from the auto-generated code */
-    return init_freemem(ARRAY_SIZE(avail_p_regs), avail_p_regs,
-                        index, res_reg,
-                        it_v_reg, extra_bi_size_bits);
 }
 
 BOOT_CODE static void init_irqs(cap_t root_cnode_cap)
@@ -203,9 +165,6 @@ static BOOT_CODE bool_t try_init_kernel(
     cap_t it_pd_cap;
     cap_t it_ap_cap;
     cap_t ipcbuf_cap;
-    region_t ui_reg = paddr_to_pptr_reg((p_region_t) {
-        ui_p_reg_start, ui_p_reg_end
-    });
     word_t extra_bi_size = 0;
     pptr_t extra_bi_offset = 0;
     vptr_t extra_bi_frame_vptr;
@@ -233,6 +192,22 @@ static BOOT_CODE bool_t try_init_kernel(
 
     /* initialize the platform */
     init_plat();
+
+    /* Reserve the kernel image region. */
+    if (!reserve_region(get_p_reg_kernel_img())) {
+        printf("ERROR: can't add reserved region for kernel image\n");
+        return false;
+    }
+
+    /* Reserve the user image region. */
+    p_region_t ui_p_reg = {
+        .start = ui_p_reg_start,
+        .end = ui_p_reg_end
+    };
+    if (!reserve_region(ui_p_reg)) {
+        printf("ERROR: can't add reserved region for user image\n");
+        return false;
+    }
 
     /* If a DTB was provided, pass the data on as extra bootinfo */
     p_region_t dtb_p_reg = P_REG_EMPTY;
@@ -270,6 +245,12 @@ static BOOT_CODE bool_t try_init_kernel(
             .start = dtb_phys_addr,
             .end   = dtb_phys_end
         };
+
+        /* Reserve the DTB region. */
+        if (!reserve_region(dtb_p_reg)) {
+            printf("ERROR: can't add reserved region for DTB\n");
+            return false;
+        }
     }
 
     /* The region of the initial thread is the user image + ipcbuf + boot info + extra */
@@ -289,9 +270,12 @@ static BOOT_CODE bool_t try_init_kernel(
         return false;
     }
 
-    /* make the free memory available to alloc_region() */
-    if (!arch_init_freemem(ui_reg, dtb_p_reg, it_v_reg, extra_bi_size_bits)) {
-        printf("ERROR: free memory management initialization failed\n");
+    /* make the free memory available to alloc_region(), avail_p_regs comes from
+     * the auto-generated code.
+     */
+    if (!init_freemem(ARRAY_SIZE(avail_p_regs), avail_p_regs, it_v_reg,
+                      extra_bi_size_bits)) {
+        printf("ERROR: free memory initn faiuled\n");
         return false;
     }
 
@@ -383,7 +367,7 @@ static BOOT_CODE bool_t try_init_kernel(
         create_frames_of_region(
             root_cnode_cap,
             it_pd_cap,
-            ui_reg,
+            paddr_to_pptr_reg(ui_p_reg),
             true,
             pv_offset
         );

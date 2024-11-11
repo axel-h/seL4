@@ -6,15 +6,17 @@
 
 #pragma once
 
+/* The value for the max number of free memory region is basically an arbitrary
+ * choice. We could make the macro calculate the exact number, but just picking
+ * a value will also do for now. Increase this value if the boot fails.
+ */
 #define MAX_NUM_FREEMEM_REG 16
 
-/*
- * The maximum number of reserved regions we have is:
- * - 1 for each physical memory region (MAX_NUM_FREEMEM_REG)
- * - 1 for each kernel device:
- *      - ioapics (CONFIG_MAX_NUM_IOAPIC)
- *      - iommus (MAX_NUM_DRHU)
- *      - apic (1)
- *      - the reserved MSI region (1)
- */
-#define MAX_NUM_RESV_REG (MAX_NUM_FREEMEM_REG + CONFIG_MAX_NUM_IOAPIC + MAX_NUM_DRHU + 2)
+#define NUM_RESERVED_REGIONS \
+    ( \
+        CONFIG_MAX_NUM_IOAPIC \
+        + MAX_NUM_DRHU \
+        + 1 /* APIC */ \
+        + 1 /* MSI region */ \
+        + 1 /* user image */ \
+    )
