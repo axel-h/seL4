@@ -93,6 +93,12 @@ BOOT_CODE static bool_t arch_init_freemem(region_t ui_reg,
                         it_v_reg, extra_bi_size_bits);
 }
 
+/* This is called from init_core_state() */
+BOOT_CODE void arch_init_core_state()
+{
+    /* Nothing to be done */
+}
+
 BOOT_CODE static void init_irqs(cap_t root_cnode_cap)
 {
     irq_t i;
@@ -158,16 +164,11 @@ BOOT_CODE static bool_t try_init_kernel_secondary_core(word_t hart_id, word_t co
     fence_r_rw();
 
     init_cpu();
-    NODE_LOCK_SYS;
 
-    clock_sync_test();
-    ksNumCPUs++;
-    init_core_state(SchedulerAction_ResumeCurrentThread);
-    ifence_local();
-    return true;
+    return finalize_init_kernel_on_secondary_core();
 }
 
-BOOT_CODE static void release_secondary_cores(void)
+BOOT_CODE void release_secondary_cores(void)
 {
     assert(0 == node_boot_lock); /* Sanity check for a proper lock state. */
     node_boot_lock = 1;
@@ -180,10 +181,9 @@ BOOT_CODE static void release_secondary_cores(void)
     fence_rw_rw();
 
     while (ksNumCPUs != CONFIG_MAX_NUM_NODES) {
-#ifdef ENABLE_SMP_CLOCK_SYNC_TEST_ON_BOOT
-        NODE_STATE(ksCurTime) = getCurrentTime();
-#endif
-        __atomic_thread_fence(__ATOMIC_ACQ_REL);
+        SMP_CLOCK_SYNC_TEST_UPDATE_TIME();
+        /* perform a memory acquire to get new values of ksNumCPUs */
+        __atomic_thread_fence(__ATOMIC_ACQUIRE);
     }
 }
 #endif /* ENABLE_SMP_SUPPORT */
@@ -439,18 +439,7 @@ static BOOT_CODE bool_t try_init_kernel(
 
     ksNumCPUs = 1;
 
-    SMP_COND_STATEMENT(clh_lock_init());
-    SMP_COND_STATEMENT(release_secondary_cores());
-
-    /* All cores are up now, so there can be concurrency. The kernel booting is
-     * supposed to be finished before the secondary cores are released, all the
-     * primary has to do now is schedule the initial thread. Currently there is
-     * nothing that touches any global data structures, nevertheless we grab the
-     * BKL here to play safe. It is released when the kernel is left. */
-    NODE_LOCK_SYS;
-
-    printf("Booting all finished, dropped to user space\n");
-    return true;
+    return finalize_init_kernel();
 }
 
 BOOT_CODE VISIBLE void init_kernel(
@@ -467,38 +456,20 @@ BOOT_CODE VISIBLE void init_kernel(
 #endif
 )
 {
-    bool_t result;
-
 #ifdef ENABLE_SMP_SUPPORT
     add_hart_to_core_map(hart_id, core_id);
-    if (core_id == 0) {
-        result = try_init_kernel(ui_p_reg_start,
-                                 ui_p_reg_end,
-                                 pv_offset,
-                                 v_entry,
-                                 dtb_addr_p,
-                                 dtb_size);
-    } else {
-        result = try_init_kernel_secondary_core(hart_id, core_id);
+    if (core_id != 0) {
+        if (!try_init_kernel_secondary_core(hart_id, core_id)) {
+            fail("ERROR: kernel init for secondary hart failed");
+            UNREACHABLE();
+        }
+        return;
     }
-#else
-    result = try_init_kernel(ui_p_reg_start,
-                             ui_p_reg_end,
-                             pv_offset,
-                             v_entry,
-                             dtb_addr_p,
-                             dtb_size);
 #endif
-    if (!result) {
+
+    if (!try_init_kernel(ui_p_reg_start, ui_p_reg_end, pv_offset, v_entry,
+                         dtb_addr_p, dtb_size)) {
         fail("ERROR: kernel init failed");
         UNREACHABLE();
     }
-
-#ifdef CONFIG_KERNEL_MCS
-    NODE_STATE(ksCurTime) = getCurrentTime();
-    NODE_STATE(ksConsumed) = 0;
-#endif
-
-    schedule();
-    activateThread();
 }

@@ -92,7 +92,7 @@ NODE_STATE_DECLARE(timestamp_t, benchmark_kernel_number_schedules);
 
 NODE_STATE_END(nodeState);
 
-extern word_t ksNumCPUs;
+extern volatile word_t ksNumCPUs;
 
 #if defined ENABLE_SMP_SUPPORT && defined CONFIG_ARCH_ARM
 #define INT_STATE_ARRAY_SIZE ((CONFIG_MAX_NUM_NODES - 1) * NUM_PPI + maxIRQ + 1)

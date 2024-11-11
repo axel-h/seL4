@@ -48,13 +48,11 @@ extern char _start[1];
 
 #define HIGHMEM_PADDR 0x100000
 
-BOOT_BSS
-boot_state_t boot_state;
+BOOT_BSS boot_state_t boot_state;
 
 /* global variables (not covered by abstract specification) */
 
-BOOT_BSS
-cmdline_opt_t cmdline_opt;
+BOOT_BSS cmdline_opt_t cmdline_opt;
 
 /* functions not modeled in abstract specification */
 
@@ -139,52 +137,6 @@ BOOT_CODE static paddr_t load_boot_module(word_t boot_module_start, paddr_t load
     elf_load(elf_file, boot_state.ui_info.pv_offset);
 
     return load_paddr;
-}
-
-static BOOT_CODE bool_t try_boot_sys_node(cpu_id_t cpu_id)
-{
-    if (!map_kernel_window(
-            boot_state.num_ioapic,
-            boot_state.ioapic_paddr,
-            boot_state.num_drhu,
-            boot_state.drhu_list
-        )) {
-        return false;
-    }
-    setCurrentVSpaceRoot(kpptr_to_paddr(X86_KERNEL_VSPACE_ROOT), 0);
-    /* Sync up the compilers view of the world here to force the PD to actually
-     * be set *right now* instead of delayed */
-    asm volatile("" ::: "memory");
-
-#ifdef CONFIG_KERNEL_SKIM_WINDOW
-    if (!map_skim_window((vptr_t)ki_skim_start, (vptr_t)ki_skim_end)) {
-        return false;
-    }
-#endif
-
-    /* initialise the CPU */
-    if (!init_cpu(config_set(CONFIG_IRQ_IOAPIC) ? 1 : 0)) {
-        return false;
-    }
-
-    /* initialise NDKS and kernel heap */
-    if (!init_sys_state(
-            cpu_id,
-            &boot_state.mem_p_regs,
-            boot_state.ui_info,
-            /* parameters below not modelled in abstract specification */
-            boot_state.num_drhu,
-            boot_state.drhu_list,
-            &boot_state.rmrr_list,
-            &boot_state.acpi_rsdp,
-            &boot_state.vbe_info,
-            &boot_state.mb_mmap_info,
-            &boot_state.fb_info
-        )) {
-        return false;
-    }
-
-    return true;
 }
 
 static BOOT_CODE bool_t add_mem_p_regs(p_region_t reg)
@@ -484,9 +436,48 @@ static BOOT_CODE bool_t try_boot_sys(void)
 
     /* Total number of cores we intend to boot */
     ksNumCPUs = boot_state.num_cpus;
+    cpu_id_t boot_cpu_id = boot_state.cpus[0];
 
-    printf("Starting node #0 with APIC ID %lu\n", boot_state.cpus[0]);
-    if (!try_boot_sys_node(boot_state.cpus[0])) {
+    printf("Starting node #0 with APIC ID %lu\n", boot_cpu_id);
+
+    if (!map_kernel_window(
+            boot_state.num_ioapic,
+            boot_state.ioapic_paddr,
+            boot_state.num_drhu,
+            boot_state.drhu_list
+        )) {
+        return false;
+    }
+    setCurrentVSpaceRoot(kpptr_to_paddr(X86_KERNEL_VSPACE_ROOT), 0);
+    /* Sync up the compilers view of the world here to force the PD to actually
+     * be set *right now* instead of delayed */
+    asm volatile("" ::: "memory");
+
+#ifdef CONFIG_KERNEL_SKIM_WINDOW
+    if (!map_skim_window((vptr_t)ki_skim_start, (vptr_t)ki_skim_end)) {
+        return false;
+    }
+#endif
+
+    /* initialise the CPU */
+    if (!init_cpu(config_set(CONFIG_IRQ_IOAPIC) ? 1 : 0)) {
+        return false;
+    }
+
+    /* initialise NDKS and kernel heap */
+    if (!init_sys_state(
+            boot_cpu_id,
+            &boot_state.mem_p_regs,
+            boot_state.ui_info,
+            /* parameters below not modelled in abstract specification */
+            boot_state.num_drhu,
+            boot_state.drhu_list,
+            &boot_state.rmrr_list,
+            &boot_state.acpi_rsdp,
+            &boot_state.vbe_info,
+            &boot_state.mb_mmap_info,
+            &boot_state.fb_info
+        )) {
         return false;
     }
 
@@ -494,16 +485,7 @@ static BOOT_CODE bool_t try_boot_sys(void)
         ioapic_init(1, boot_state.cpus, boot_state.num_ioapic);
     }
 
-    /* initialize BKL before booting up APs */
-    SMP_COND_STATEMENT(clh_lock_init());
-    SMP_COND_STATEMENT(start_boot_aps());
-
-    /* grab BKL before leaving the kernel */
-    NODE_LOCK_SYS;
-
-    printf("Booting all finished, dropped to user space\n");
-
-    return true;
+    return finalize_init_kernel();
 }
 
 static BOOT_CODE bool_t try_boot_sys_mbi1(
@@ -704,33 +686,24 @@ BOOT_CODE VISIBLE void boot_sys(
     unsigned long multiboot_magic,
     void *mbi)
 {
-    bool_t result = false;
-
-    if (multiboot_magic == MULTIBOOT_MAGIC) {
-        result = try_boot_sys_mbi1(mbi);
-    } else if (multiboot_magic == MULTIBOOT2_MAGIC) {
-        result = try_boot_sys_mbi2(mbi);
-    } else {
+    switch (multiboot_magic) {
+    case MULTIBOOT_MAGIC:
+        if (!try_boot_sys_mbi1(mbi)) {
+            fail("try_boot_sys_mbi1 failed\n");
+        }
+        break;
+    case MULTIBOOT2_MAGIC:
+        if (!try_boot_sys_mbi2(mbi)) {
+            fail("try_boot_sys_mbi2 failed\n");
+        }
+        break;
+    default:
         printf("Boot loader is not multiboot 1 or 2 compliant %lx\n", multiboot_magic);
+        break;
     }
 
-    if (result) {
-        result = try_boot_sys();
-    }
-
-    if (!result) {
+    if (!try_boot_sys()) {
         fail("boot_sys failed for some reason :(\n");
+        UNREACHABLE();
     }
-
-    ARCH_NODE_STATE(x86KScurInterrupt) = int_invalid;
-    ARCH_NODE_STATE(x86KSPendingInterrupt) = int_invalid;
-
-#ifdef CONFIG_KERNEL_MCS
-    NODE_STATE(ksCurTime) = getCurrentTime();
-    NODE_STATE(ksConsumed) = 0;
-#endif
-
-    schedule();
-    activateThread();
 }
-
