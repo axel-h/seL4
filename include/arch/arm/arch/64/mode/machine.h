@@ -35,14 +35,6 @@
 #endif
 #define CNTFRQ   "cntfrq_el0"
 
-#ifdef ENABLE_SMP_SUPPORT
-/* Use the first two SGI (Software Generated Interrupt) IDs
- * for seL4 IPI implementation. SGIs are per-core banked.
- */
-#define irq_remote_call_ipi        0
-#define irq_reschedule_ipi         1
-#endif /* ENABLE_SMP_SUPPORT */
-
 word_t PURE getRestartPC(tcb_t *thread);
 void setNextPC(tcb_t *thread, word_t v);
 
