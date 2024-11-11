@@ -11,36 +11,43 @@
 
 #ifdef CONFIG_DEBUG_BUILD
 
-void _fail(
+void debug_msg_fail(
     const char  *str,
     const char  *file,
     unsigned int line,
     const char  *function
-) NORETURN;
+);
 
-#define fail(s) _fail(s, __FILE__, __LINE__, __func__)
+#define fail(s) \
+    do { \
+        debug_msg_fail(s, __FILE__, __LINE__, __func__); \
+        halt(); \
+        UNREACHABLE(); \
+    } while(0)
 
-void _assert_fail(
+void debug_msg_assert_fail(
     const char  *assertion,
     const char  *file,
     unsigned int line,
     const char  *function
-) NORETURN;
+);
 
 #define assert(expr) \
     do { \
         if (!(expr)) { \
-            _assert_fail(#expr, __FILE__, __LINE__, __func__); \
+            debug_msg_assert_fail(#expr, __FILE__, __LINE__, __func__); \
+            halt(); \
+            UNREACHABLE(); \
         } \
     } while(0)
 
-#else /* !DEBUG */
+#else /* not CONFIG_DEBUG_BUILD */
 
 #define fail(s) halt()
 
 #define assert(expr)
 
-#endif /* DEBUG */
+#endif /* [not] CONFIG_DEBUG_BUILD */
 
 /* Create an assert that triggers a compile error if the condition fails. We do
  * not include sel4/macros.h that provides SEL4_COMPILE_ASSERT() for two

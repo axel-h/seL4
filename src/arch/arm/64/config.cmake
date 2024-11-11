@@ -17,7 +17,6 @@ add_sources(
         machine/debug.c
         model/statedata.c
         c_traps.c
-        idle.c
         kernel/thread.c
         kernel/vspace.c
     ASMFILES head.S traps.S
