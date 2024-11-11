@@ -505,7 +505,7 @@ static exception_t decodeSetAffinity(cap_t cap, word_t length, word_t *buffer)
     tcb = TCB_PTR(cap_thread_cap_get_capTCBPtr(cap));
 
     affinity = getSyscallArg(0, buffer);
-    if (affinity >= ksNumCPUs) {
+    if !is_valid_core(affinity) {
         userError("TCB SetAffinity: Requested CPU does not exist.");
         current_syscall_error.type = seL4_IllegalOperation;
         return EXCEPTION_SYSCALL_ERROR;
